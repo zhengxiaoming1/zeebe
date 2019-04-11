@@ -66,7 +66,7 @@ public class BrokerInfoImpl implements BrokerInfo {
     return this.partitions;
   }
 
-  class PartitionInfoImpl implements PartitionInfo {
+  static class PartitionInfoImpl implements PartitionInfo {
 
     private final int partitionId;
     private final PartitionBrokerRole role;

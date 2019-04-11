@@ -117,7 +117,7 @@ public class CompositeServiceBuilder {
   }
 
   class ComposedServiceBuilder<S> extends ServiceBuilder<S> {
-    private ServiceName<S> serviceName;
+    private final ServiceName<S> serviceName;
 
     ComposedServiceBuilder(
         ServiceName<S> name, Service<S> service, ServiceContainerImpl serviceContainer) {
@@ -130,11 +130,11 @@ public class CompositeServiceBuilder {
     public ActorFuture<S> install() {
       final ActorFuture<S> installFuture = super.install();
       installFutures.put(serviceName, (ActorFuture) installFuture);
-      return (ActorFuture) installFuture;
+      return installFuture;
     }
   }
 
-  class CompositeService implements Service<Void> {
+  static class CompositeService implements Service<Void> {
     @Override
     public void start(ServiceStartContext startContext) {}
 
@@ -145,9 +145,5 @@ public class CompositeServiceBuilder {
     public Void get() {
       return null;
     }
-  }
-
-  public static ServiceName<Void> compositeServiceName(String name) {
-    return ServiceName.newServiceName(String.format("%s.install", name), Void.class);
   }
 }

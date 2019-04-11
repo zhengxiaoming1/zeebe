@@ -337,7 +337,6 @@ public class ServiceController extends Actor {
     boolean isValid = true;
     boolean isAsync = false;
     boolean isInterruptible = false;
-    boolean stopOnCompletion = false;
     Runnable action;
 
     public void invalidate() {

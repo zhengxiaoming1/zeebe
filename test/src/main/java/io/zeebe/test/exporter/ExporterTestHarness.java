@@ -42,11 +42,11 @@ import org.slf4j.Logger;
  * allowing callers to control the execution flow.
  */
 public class ExporterTestHarness {
+  private static final Logger LOGGER = new ZbLogger("io.zeebe.broker.exporter");
+  private static final int PARTITION_ID = 0;
 
-  private final Logger logger = new ZbLogger("io.zeebe.broker.exporter");
   private final MockController controller = new MockController();
   private final Exporter exporter;
-  private final int partitionId = 0;
 
   private long position = 1;
 
@@ -270,7 +270,7 @@ public class ExporterTestHarness {
   }
 
   private <T> MockContext newContext(MockConfiguration<T> configuration) {
-    return new MockContext(logger, configuration);
+    return new MockContext(LOGGER, configuration);
   }
 
   private MockRecord generateNextRecord() {
@@ -279,7 +279,7 @@ public class ExporterTestHarness {
 
   private MockRecord generateNextRecord(MockRecord seed) {
     return ((MockRecord) seed.clone())
-        .setMetadata(new MockRecordMetadata().setPartitionId(partitionId))
+        .setMetadata(new MockRecordMetadata().setPartitionId(PARTITION_ID))
         .setTimestamp(Instant.now())
         .setPosition(++position);
   }

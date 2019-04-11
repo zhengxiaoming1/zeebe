@@ -200,7 +200,7 @@ public class ZeebeClientImpl implements ZeebeClient {
   }
 
   private JobClient newJobClient() {
-    return new JobClientImpl(asyncStub, config, objectMapper, executorService, closeables);
+    return new JobClientImpl(asyncStub, objectMapper);
   }
 
   @Override
