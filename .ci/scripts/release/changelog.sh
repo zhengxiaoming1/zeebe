@@ -1,12 +1,13 @@
 #!/bin/bash -xue
 
-CLOG_VERSION=v0.9.3
-curl -sL https://github.com/clog-tool/clog-cli/releases/download/${CLOG_VERSION}/clog-${CLOG_VERSION}-x86_64-unknown-linux-musl.tar.gz | tar xzvf - -C /usr/bin clog
+ZCL_VERSION=0.4.0
+curl -sL https://github.com/zeebe-io/zeebe-changelog/releases/download/${ZCL_VERSION}/zeebe-changelog_${ZCL_VERSION}_Linux_x86_64.tar.gz | tar xzvf - -C /usr/bin zcl
 
-chmod +x /usr/bin/clog
+chmod +x /usr/bin/zcl
 
-clog --setversion ${RELEASE_VERSION}
+label="Release: ${RELEASE_VERSION}"
 
-cat CHANGELOG.md
+zcl add-labels --label "${label}" --from "${PREVIOUS_VERSION}" --target "${RELEASE_VERSION}"
+zcl generate --label "${label}" > /tmp/CHANGELOG
 
-git commit -am 'chore(project): update CHANGELOG'
+cat /tmp/CHANGELOG

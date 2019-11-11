@@ -10,6 +10,7 @@ pipelineJob('zeebe-release') {
     }
 
     parameters {
+        stringParam('PREVIOUS_VERSION', '0.Z.0', 'Which was the previous version for this release? Used for changelog generation, i.e. last alpha or stable version.')
         stringParam('RELEASE_VERSION', '0.X.0', 'Which version to release?')
         stringParam('DEVELOPMENT_VERSION', '0.Y.0-SNAPSHOT', 'Next development version?')
         booleanParam('PUSH_CHANGES', true, 'Push release to remote repositories and github?')

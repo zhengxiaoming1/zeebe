@@ -62,6 +62,7 @@ spec:
         GPG_PUB_KEY = credentials('maven_central_gpg_signing_key_pub')
         GPG_SEC_KEY = credentials('maven_central_gpg_signing_key_sec')
         GITHUB_TOKEN = credentials('camunda-jenkins-github')
+        PREVIOUS_VERSION = "${params.PREVIOUS_VERSION}"
         RELEASE_VERSION = "${params.RELEASE_VERSION}"
         RELEASE_BRANCH = "release-${params.RELEASE_VERSION}"
         DEVELOPMENT_VERSION = "${params.DEVELOPMENT_VERSION}"
