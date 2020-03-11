@@ -52,4 +52,6 @@ public interface ZeebeDb<ColumnFamilyType extends Enum<ColumnFamilyType>> extend
   void createSnapshot(File snapshotDir);
 
   DbContext createContext();
+
+  void dumpMetrics(String name);
 }

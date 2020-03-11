@@ -56,6 +56,7 @@ import io.zeebe.util.health.HealthStatus;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.ActorControl;
 import io.zeebe.util.sched.ActorScheduler;
+import io.zeebe.util.sched.ScheduledTimer;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
 import java.time.Duration;
@@ -98,6 +99,7 @@ public final class ZeebePartition extends Actor
   private final HealthMonitor criticalComponentsHealthMonitor;
   private final ZeebeIndexMapping zeebeIndexMapping;
   private final HealthMetrics healthMetrics;
+  private ScheduledTimer metricsTimer;
 
   public ZeebePartition(
       final BrokerInfo localBroker,
@@ -352,6 +354,16 @@ public final class ZeebePartition extends Actor
                     .onComplete(
                         (nonResult, errorOnInstallSnapshotDirector) -> {
                           if (errorOnInstallSnapshotDirector == null) {
+
+                            metricsTimer =
+                                actor.runAtFixedRate(
+                                    Duration.ofSeconds(5),
+                                    () -> {
+                                      if (zeebeDb != null) {
+                                        zeebeDb.dumpMetrics(Integer.toString(partitionId));
+                                      }
+                                    });
+
                             installExporter(zeebeDb).onComplete(installFuture);
                           } else {
                             // TODO https://github.com/zeebe-io/zeebe/issues/3499
@@ -424,6 +436,11 @@ public final class ZeebePartition extends Actor
   }
 
   private CompletableActorFuture<Void> closePartition() {
+    if (metricsTimer != null) {
+      metricsTimer.cancel();
+      metricsTimer = null;
+    }
+
     Collections.reverse(closeables);
     final var closeActorsFuture = new CompletableActorFuture<Void>();
     stepByStepClosing(closeActorsFuture, closeables);

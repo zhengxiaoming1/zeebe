@@ -9,6 +9,7 @@ package io.zeebe.db.impl.rocksdb.transaction;
 
 import static io.zeebe.util.buffer.BufferUtil.startsWith;
 
+import io.prometheus.client.Gauge;
 import io.zeebe.db.ColumnFamily;
 import io.zeebe.db.DbContext;
 import io.zeebe.db.DbKey;
@@ -46,6 +47,25 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
   private static final Logger LOG = Loggers.DB_LOGGER;
   private static final String ERROR_MESSAGE_CLOSE_RESOURCE =
       "Expected to close RocksDB resource successfully, but exception was thrown. Will continue to close remaining resources.";
+
+  private static final Gauge CURRENT_ROCKSDB_PROPERTIES =
+      Gauge.build()
+          .namespace("zeebe")
+          .name("rocksdb_properties")
+          .help("Current property value per column family and partition")
+          .labelNames("partition", "columnFamilyName", "propertyName")
+          .register();
+
+  private static final String[] PROPERTIES = {
+    "rocksdb.cur-size-all-mem-tables",
+    "rocksdb.cur-size-active-mem-table",
+    "rocksdb.size-all-mem-tables",
+    "rocksdb.block-cache-usage",
+    "rocksdb.block-cache-capacity",
+    "rocksdb.block-cache-pinned-usage",
+    "rocksdb.estimate-num-keys"
+  };
+
   private final OptimisticTransactionDB optimisticTransactionDB;
   private final List<AutoCloseable> closables;
   private final EnumMap<ColumnFamilyNames, Long> columnFamilyMap;
@@ -140,6 +160,37 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
     final ZeebeTransaction zeebeTransaction = new ZeebeTransaction(transaction);
     closables.add(zeebeTransaction);
     return new DefaultDbContext(zeebeTransaction);
+  }
+
+  @Override
+  public void dumpMetrics(final String name) {
+
+    final var handles = handelToEnumMap.values();
+    for (final ColumnFamilyHandle handle : handles) {
+      for (final String propertyName : PROPERTIES) {
+        CURRENT_ROCKSDB_PROPERTIES
+            .labels(name, getColumnFamilyName(handle), propertyName)
+            .set(Double.parseDouble(readProperty(handle, propertyName)));
+      }
+    }
+  }
+
+  private String getColumnFamilyName(final ColumnFamilyHandle handle) {
+    try {
+      return new String(handle.getName());
+    } catch (final RocksDBException e) {
+      return null; // meh
+    }
+  }
+
+  private String readProperty(final ColumnFamilyHandle handle, final String propertyName) {
+    String propertyValue = null;
+    try {
+      propertyValue = optimisticTransactionDB.getProperty(handle, propertyName);
+    } catch (final RocksDBException rde) {
+      // it's fine
+    }
+    return propertyValue;
   }
 
   ////////////////////////////////////////////////////////////////////
