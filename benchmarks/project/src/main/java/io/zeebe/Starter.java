@@ -23,8 +23,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,8 +41,21 @@ public class Starter extends App {
 
   private final AppCfg appCfg;
 
-  Starter(AppCfg appCfg) {
+  Starter(final AppCfg appCfg) {
     this.appCfg = appCfg;
+  }
+
+  public String generateRandomString(final int targetLength) {
+    final int leftLimit = 48; // numeral '0'
+    final int rightLimit = 122; // letter 'z'
+    final Random random = new Random();
+
+    return random
+        .ints(leftLimit, rightLimit + 1)
+        .filter(i -> (i <= 57 || i >= 65) && (i <= 90 || i >= 97))
+        .limit(targetLength)
+        .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+        .toString();
   }
 
   @Override
@@ -63,10 +79,11 @@ public class Starter extends App {
     final int intervalMs = Math.floorDiv(1000, rate);
     LOG.info("Creating an instance every {}ms", intervalMs);
 
-    final String variables = readVariables(starterCfg, classLoader);
+    final Map<String, Object> variables = new ConcurrentHashMap<>();
     executorService.scheduleAtFixedRate(
         () -> {
           try {
+            variables.put("var", generateRandomString(1024 * 32));
             requestFutures.put(
                 client
                     .newCreateInstanceCommand()
@@ -74,7 +91,7 @@ public class Starter extends App {
                     .latestVersion()
                     .variables(variables)
                     .send());
-          } catch (Exception e) {
+          } catch (final Exception e) {
             LOG.error("Error on creating new workflow instance", e);
           }
         },
@@ -92,7 +109,7 @@ public class Starter extends App {
                   executorService.shutdown();
                   try {
                     executorService.awaitTermination(60, TimeUnit.SECONDS);
-                  } catch (InterruptedException e) {
+                  } catch (final InterruptedException e) {
                     e.printStackTrace();
                   }
                   client.close();
@@ -112,7 +129,7 @@ public class Starter extends App {
                   + ", but failed to open an input stream.");
         }
 
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(variablesStream))) {
+        try (final BufferedReader br = new BufferedReader(new InputStreamReader(variablesStream))) {
           String line;
           while ((line = br.readLine()) != null) {
             stringBuilder.append(line).append("\n");
@@ -121,7 +138,7 @@ public class Starter extends App {
       }
 
       return stringBuilder.toString();
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new UncheckedExecutionException(e);
     }
   }
@@ -136,23 +153,23 @@ public class Starter extends App {
         .build();
   }
 
-  private void deployWorkflow(ZeebeClient client, String bpmnXmlPath) {
+  private void deployWorkflow(final ZeebeClient client, final String bpmnXmlPath) {
     while (true) {
       try {
         client.newDeployCommand().addResourceFromClasspath(bpmnXmlPath).send().join();
         break;
-      } catch (Exception e) {
+      } catch (final Exception e) {
         LOG.warn("Failed to deploy workflow, retrying", e);
         try {
           Thread.sleep(200);
-        } catch (InterruptedException ex) {
+        } catch (final InterruptedException ex) {
           // ignore
         }
       }
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     createApp(Starter::new);
   }
 }

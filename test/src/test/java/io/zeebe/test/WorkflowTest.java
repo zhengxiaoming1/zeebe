@@ -13,6 +13,7 @@ import io.zeebe.protocol.record.intent.DeploymentIntent;
 import io.zeebe.test.util.record.RecordingExporter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,6 +32,28 @@ public class WorkflowTest {
     RecordingExporter.deploymentRecords(DeploymentIntent.CREATED).getFirst();
   }
 
+  @Test
+  public void test()
+  {
+kp
+
+    final String st = generateRandomString(1024 * 32);
+  }
+
+
+
+  public String generateRandomString(final int targetLength) {
+    final int leftLimit = 48; // numeral '0'
+    final int rightLimit = 122; // letter 'z'
+    final Random random = new Random();
+
+    return random
+        .ints(leftLimit, rightLimit + 1)
+        .filter(i -> (i <= 57 || i >= 65) && (i <= 90 || i >= 97))
+        .limit(targetLength)
+        .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+        .toString();
+  }
   @Test
   public void shouldCompleteWorkflowInstance() {
     final WorkflowInstanceEvent workflowInstance =
