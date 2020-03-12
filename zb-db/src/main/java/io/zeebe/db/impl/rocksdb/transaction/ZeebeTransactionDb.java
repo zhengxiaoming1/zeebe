@@ -48,22 +48,73 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
   private static final String ERROR_MESSAGE_CLOSE_RESOURCE =
       "Expected to close RocksDB resource successfully, but exception was thrown. Will continue to close remaining resources.";
 
-  private static final Gauge CURRENT_ROCKSDB_PROPERTIES =
+  private static final String PARTITION = "partition";
+  private static final String COLUMN_FAMILY_NAME = "columnFamilyName";
+  private static final String PROPERTY_NAME = "propertyName";
+  private static final String ZEEBE_NAMESPACE = "zeebe";
+
+  private static final Gauge MEMORY_PROPERTIES =
       Gauge.build()
-          .namespace("zeebe")
-          .name("rocksdb_properties")
-          .help("Current property value per column family and partition")
-          .labelNames("partition", "columnFamilyName", "propertyName")
+          .namespace(ZEEBE_NAMESPACE)
+          .name("rocksdb_memory")
+          .help(
+              "Everything which might be related to current memory consumption of RocksDB per column family and partition")
+          .labelNames(PARTITION, COLUMN_FAMILY_NAME, PROPERTY_NAME)
           .register();
 
-  private static final String[] PROPERTIES = {
+  private static final String[] MEMORY_PROPERTIES_STRINGS = {
     "rocksdb.cur-size-all-mem-tables",
     "rocksdb.cur-size-active-mem-table",
     "rocksdb.size-all-mem-tables",
     "rocksdb.block-cache-usage",
     "rocksdb.block-cache-capacity",
     "rocksdb.block-cache-pinned-usage",
-    "rocksdb.estimate-num-keys"
+    "rocksdb.estimate-table-readers-mem",
+  };
+
+  private static final Gauge SST_PROPERTIES =
+      Gauge.build()
+          .namespace(ZEEBE_NAMESPACE)
+          .name("rocksdb_sst")
+          .help(
+              "Everything which is related to SST files in RocksDB per column family and partition")
+          .labelNames(PARTITION, COLUMN_FAMILY_NAME, PROPERTY_NAME)
+          .register();
+
+  private static final String[] SST_PROPERTIES_STRINGS = {
+    "rocksdb.total-sst-files-size", "rocksdb.live-sst-files-size",
+  };
+
+  private static final Gauge LIVE_PROPERTIES =
+      Gauge.build()
+          .namespace(ZEEBE_NAMESPACE)
+          .name("rocksdb_live")
+          .help(
+              "Other estimated properties based on entries in RocksDb per column family and partition")
+          .labelNames(PARTITION, COLUMN_FAMILY_NAME, PROPERTY_NAME)
+          .register();
+
+  private static final String[] LIVE_PROPERTIES_STRINGS = {
+    "rocksdb.num-entries-imm-mem-tables",
+    "rocksdb.estimate-num-keys",
+    "rocksdb.estimate-live-data-size"
+  };
+
+  private static final Gauge WRITE_PROPERTIES =
+      Gauge.build()
+          .namespace(ZEEBE_NAMESPACE)
+          .name("rocksdb_writes")
+          .help(
+              "Properties related to writes, flushes and compactions for RocksDb per column family and partition")
+          .labelNames(PARTITION, COLUMN_FAMILY_NAME, PROPERTY_NAME)
+          .register();
+
+  private static final String[] WRITE_PROPERTIES_STRINGS = {
+    "rocksdb.is-write-stopped",
+    "rocksdb.actual-delayed-write-rate",
+    "rocksdb.mem-table-flush-pending",
+    "rocksdb.num-running-flushes",
+    "rocksdb.num-running-compactions"
   };
 
   private final OptimisticTransactionDB optimisticTransactionDB;
@@ -167,11 +218,22 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
 
     final var handles = handelToEnumMap.values();
     for (final ColumnFamilyHandle handle : handles) {
-      for (final String propertyName : PROPERTIES) {
-        CURRENT_ROCKSDB_PROPERTIES
-            .labels(name, getColumnFamilyName(handle), propertyName)
-            .set(Double.parseDouble(readProperty(handle, propertyName)));
-      }
+      exportMetrics(name, handle, MEMORY_PROPERTIES_STRINGS, MEMORY_PROPERTIES);
+      exportMetrics(name, handle, LIVE_PROPERTIES_STRINGS, LIVE_PROPERTIES);
+      exportMetrics(name, handle, SST_PROPERTIES_STRINGS, SST_PROPERTIES);
+      exportMetrics(name, handle, WRITE_PROPERTIES_STRINGS, WRITE_PROPERTIES);
+    }
+  }
+
+  private void exportMetrics(
+      final String name,
+      final ColumnFamilyHandle handle,
+      final String[] propertyNames,
+      final Gauge gaugeMetric) {
+    for (final String propertyName : propertyNames) {
+      gaugeMetric
+          .labels(name, getColumnFamilyName(handle), propertyName)
+          .set(Double.parseDouble(readProperty(handle, propertyName)));
     }
   }
 
