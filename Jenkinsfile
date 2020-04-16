@@ -2,6 +2,8 @@
 
 
 def buildName = "${env.JOB_BASE_NAME.replaceAll("%2F", "-").replaceAll("\\.", "-").take(20)}-${env.BUILD_ID}"
+def daysToKeep = (env.BRANCH_NAME=='4183-do-not-merge-improve-build-process') ? '7' : '-1'
+def numToKeep = (env.BRANCH_NAME=='4183-do-not-merge-improve-build-process') ? '-1' : '10'
 
 pipeline {
     agent {
@@ -18,10 +20,11 @@ pipeline {
       SONARCLOUD_TOKEN = credentials('zeebe-sonarcloud-token')
     }
 
+
     options {
-        buildDiscarder(logRotator(daysToKeepStr: '-1', numToKeepStr: '10'))
-        timestamps()
-        timeout(time: 45, unit: 'MINUTES')
+      buildDiscarder(logRotator(daysToKeepStr: daysToKeep, numToKeepStr: numToKeep))
+      timestamps()
+      timeout(time: 45, unit: 'MINUTES')
     }
 
     stages {
