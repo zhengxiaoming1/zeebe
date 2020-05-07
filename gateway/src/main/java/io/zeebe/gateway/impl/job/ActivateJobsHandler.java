@@ -12,6 +12,7 @@ import io.zeebe.gateway.Loggers;
 import io.zeebe.gateway.RequestMapper;
 import io.zeebe.gateway.ResponseMapper;
 import io.zeebe.gateway.impl.broker.BrokerClient;
+import io.zeebe.gateway.impl.broker.cluster.BrokerTopologyManager;
 import io.zeebe.gateway.impl.broker.request.BrokerActivateJobsRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.ActivateJobsRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.ActivateJobsResponse;
@@ -22,9 +23,11 @@ public class ActivateJobsHandler {
 
   private final Map<String, Integer> jobTypeToNextPartitionId = new HashMap<>();
   private final BrokerClient brokerClient;
+  private final BrokerTopologyManager topologyManager;
 
-  public ActivateJobsHandler(BrokerClient brokerClient) {
+  public ActivateJobsHandler(BrokerClient brokerClient, BrokerTopologyManager topologyManager) {
     this.brokerClient = brokerClient;
+    this.topologyManager = topologyManager;
   }
 
   public void activateJobs(
@@ -55,7 +58,6 @@ public class ActivateJobsHandler {
       String jobType,
       StreamObserver<ActivateJobsResponse> responseObserver,
       boolean pollPrevPartition) {
-
     if (remainingAmount > 0 && (pollPrevPartition || partitionIdIterator.hasNext())) {
       final int partitionId =
           pollPrevPartition
@@ -100,6 +102,6 @@ public class ActivateJobsHandler {
 
   private PartitionIdIterator partitionIdIteratorForType(String jobType, int partitionsCount) {
     final Integer nextPartitionId = jobTypeToNextPartitionId.computeIfAbsent(jobType, t -> 0);
-    return new PartitionIdIterator(nextPartitionId, partitionsCount);
+    return new PartitionIdIterator(nextPartitionId, partitionsCount, topologyManager);
   }
 }

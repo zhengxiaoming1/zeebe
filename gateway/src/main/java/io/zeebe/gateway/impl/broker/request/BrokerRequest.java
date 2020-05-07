@@ -47,6 +47,8 @@ public abstract class BrokerRequest<T> implements BufferWriter {
   // public so we can do assertions in tests
   public abstract BufferWriter getRequestWriter();
 
+  public abstract String getRequestType();
+
   public void serializeValue() {
     final BufferWriter valueWriter = getRequestWriter();
     if (valueWriter != null) {
