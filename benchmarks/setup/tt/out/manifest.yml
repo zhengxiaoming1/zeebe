@@ -18,7 +18,7 @@ data:
     />\n    </Root>\n  </Loggers>\n</Configuration>"
   zeebe.cfg.toml: |
     [cluster]
-    partitionsCount = 5
+    partitionsCount = 25
     replicationFactor = 1
 
     [threads]
@@ -35,13 +35,19 @@ data:
     [gateway]
     enable = true
 
+    [gateway.monitoring]
+    enabled = true
+
+    [gateway.threads]
+    managementThreads = 1
+
     [monitoring]
     enabled = true
 kind: ConfigMap
 metadata:
   labels:
     app: tecnotree
-  name: broker-config-8m25b4d62b
+  name: broker-config-9672gh4745
   namespace: tt
 ---
 apiVersion: v1
@@ -233,7 +239,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 484
-          name: broker-config-8m25b4d62b
+          name: broker-config-9672gh4745
         name: configuration
       - configMap:
           defaultMode: 493
