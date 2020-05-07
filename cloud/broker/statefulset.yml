@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: broker
+spec:
+  serviceName: broker
+  replicas: 5
+  podManagementPolicy: Parallel
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+       accessModes:
+         - ReadWriteOnce
+       storageClassName: ssd
+       resources:
+         requests:
+           storage: 256Gi
+  template:
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: broker-config
+            defaultMode: 0744
+        - name: scripts
+          configMap:
+            name: broker-scripts
+            defaultMode: 0755
+      containers:
+        - name: broker
+          image: camunda/zeebe:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 26500
+              name: gateway
+            - containerPort: 26501
+              name: command
+            - containerPort: 26502
+              name: cluster
+            - containerPort: 9600
+              name: monitoring
+          env:
+            - name: ZEEBE_CLUSTER_SIZE
+              value: "5"
+            - name: ZEEBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: data
+              mountPath: /usr/local/zeebe/data
+            - name: configuration
+              mountPath: /usr/local/zeebe/conf/zeebe.cfg.toml
+              subPath: zeebe.cfg.toml
+            - name: configuration
+              mountPath: /usr/local/zeebe/conf/log4j2.xml
+              subPath: log4j2.xml
+            - name: scripts
+              mountPath: /usr/local/bin/init.sh
+              subPath: init.sh
+          command: ["/bin/sh"]
+          args: ["-c", "exec tini -- /usr/local/bin/init.sh"]
+          securityContext:
+            capabilities:
+                add: ["NET_ADMIN", "SYS_ADMIN"]
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: monitoring
+            initialDelaySeconds: 20
+            periodSeconds: 5

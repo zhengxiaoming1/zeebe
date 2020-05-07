@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starter
+spec:
+  replicas: 0
+  template:
+    spec:
+      containers:
+      - name: starter
+        image: gcr.io/zeebe-io/starter:zeebe
+        imagePullPolicy: Always
+        env:
+          - name: JAVA_OPTIONS
+            value: >-
+              -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
+              -Dzeebe.client.requestTimeout=62000
+              -Dapp.starter.rate=100
+              -Dapp.starter.threads=2
+        resources:
+          limits:
+            cpu: 2
+            memory: 512Mi
+          requests:
+            cpu: 2
+            memory: 512Mi
