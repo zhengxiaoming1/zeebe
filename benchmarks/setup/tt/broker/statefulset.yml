@@ -43,6 +43,8 @@ spec:
           env:
             - name: ZEEBE_CLUSTER_SIZE
               value: "5"
+            - name: ZEEBE_BROKER_EXECUTIONMETRICSEXPORTERENABLED
+              value: "true"
             - name: ZEEBE_NODE_NAME
               valueFrom:
                 fieldRef:

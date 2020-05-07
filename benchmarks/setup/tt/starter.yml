@@ -22,5 +22,5 @@ spec:
             cpu: 2
             memory: 512Mi
           requests:
-            cpu: 2
-            memory: 512Mi
+            cpu: 1
+            memory: 128Mi

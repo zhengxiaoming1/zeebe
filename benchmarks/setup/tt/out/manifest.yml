@@ -133,8 +133,8 @@ spec:
             cpu: 2
             memory: 512Mi
           requests:
-            cpu: 2
-            memory: 512Mi
+            cpu: 1
+            memory: 128Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -157,17 +157,17 @@ spec:
       - env:
         - name: JAVA_OPTIONS
           value: -Dapp.brokerUrl=broker:26500 -Dzeebe.client.requestTimeout=62000
-            -Dapp.worker.capacity=100 -Dapp.worker.threads=30
+            -Dapp.worker.capacity=100 -Dapp.worker.threads=50
         image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         name: starter
         resources:
           limits:
-            cpu: 4
+            cpu: 6
             memory: 512Mi
           requests:
-            cpu: 4
-            memory: 512Mi
+            cpu: 3
+            memory: 128Mi
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -197,6 +197,8 @@ spec:
         env:
         - name: ZEEBE_CLUSTER_SIZE
           value: "5"
+        - name: ZEEBE_BROKER_EXECUTIONMETRICSEXPORTERENABLED
+          value: "true"
         - name: ZEEBE_NODE_NAME
           valueFrom:
             fieldRef:
