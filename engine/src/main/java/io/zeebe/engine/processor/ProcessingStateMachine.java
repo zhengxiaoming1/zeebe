@@ -75,10 +75,9 @@ import org.slf4j.Logger;
  */
 public final class ProcessingStateMachine {
 
-  private static final Logger LOG = Loggers.PROCESSOR_LOGGER;
-
   public static final String ERROR_MESSAGE_WRITE_EVENT_ABORTED =
       "Expected to write one or more follow up events for event '{}' without errors, but exception was thrown.";
+  private static final Logger LOG = Loggers.PROCESSOR_LOGGER;
   private static final String ERROR_MESSAGE_ROLLBACK_ABORTED =
       "Expected to roll back the current transaction for event '{}' successfully, but exception was thrown.";
   private static final String ERROR_MESSAGE_EXECUTE_SIDE_EFFECT_ABORTED =
@@ -100,33 +99,38 @@ public final class ProcessingStateMachine {
       "Error record was written at {}, we will continue with processing if event was committed. Current commit position is {}.";
 
   private static final Duration PROCESSING_RETRY_DELAY = Duration.ofMillis(250);
-
+  protected final ZeebeState zeebeState;
+  protected final RecordMetadata metadata = new RecordMetadata();
+  protected final TypedResponseWriterImpl responseWriter;
   private final ActorControl actor;
   private final EventFilter eventFilter;
   private final LogStream logStream;
   private final LogStreamReader logStreamReader;
   private final TypedStreamWriter logStreamWriter;
-
   private final DbContext dbContext;
   private final RetryStrategy writeRetryStrategy;
   private final RetryStrategy sideEffectsRetryStrategy;
   private final RetryStrategy updateStateRetryStrategy;
-
   private final BooleanSupplier shouldProcessNext;
   private final BooleanSupplier abortCondition;
-
-  protected final ZeebeState zeebeState;
-
   private final ErrorRecord errorRecord = new ErrorRecord();
-  protected final RecordMetadata metadata = new RecordMetadata();
   private final Map<ValueType, UnifiedRecordValue> eventCache;
   private final RecordProcessorMap recordProcessorMap;
-
   private final TypedEventImpl typedEvent = new TypedEventImpl();
-  protected final TypedResponseWriterImpl responseWriter;
   private SideEffectProducer sideEffectProducer;
 
   private final StreamProcessorMetrics metrics;
+
+  private long delayMs;
+  // current iteration
+  private LoggedEvent currentEvent;
+  private TypedRecordProcessor<?> currentProcessor;
+  private ZeebeDbTransaction zeebeDbTransaction;
+  private long writtenEventPosition = -1L;
+  private long lastSuccessfulProcessedEventPosition = -1L;
+  private long lastWrittenEventPosition = -1L;
+  private boolean onErrorHandling;
+  private long errorRecordPosition = -1;
 
   public ProcessingStateMachine(ProcessingContext context, BooleanSupplier shouldProcessNext) {
 
@@ -146,23 +150,24 @@ public final class ProcessingStateMachine {
     this.updateStateRetryStrategy = new RecoverableRetryStrategy(actor);
     this.shouldProcessNext = shouldProcessNext;
 
+    final int partitionId = logStream.getPartitionId();
     this.responseWriter =
-        new TypedResponseWriterImpl(context.getCommandResponseWriter(), logStream.getPartitionId());
+        new TypedResponseWriterImpl(context.getCommandResponseWriter(), partitionId);
 
-    this.metrics = new StreamProcessorMetrics(logStream.getPartitionId());
+    this.metrics = new StreamProcessorMetrics(partitionId);
+    final String delayMsEnv = System.getenv("ZEEBE_PARTITION_DELAY_MS_" + partitionId);
+    if (delayMsEnv != null) {
+      try {
+        delayMs = Long.parseLong(delayMsEnv);
+        LOG.warn(
+            "Stream processor for partition {} will delay all event processing by {} milliseconds",
+            partitionId,
+            delayMsEnv);
+      } catch (Exception e) {
+        delayMs = 0;
+      }
+    }
   }
-
-  // current iteration
-  private LoggedEvent currentEvent;
-  private TypedRecordProcessor<?> currentProcessor;
-  private ZeebeDbTransaction zeebeDbTransaction;
-
-  private long writtenEventPosition = -1L;
-  private long lastSuccessfulProcessedEventPosition = -1L;
-  private long lastWrittenEventPosition = -1L;
-
-  private boolean onErrorHandling;
-  private long errorRecordPosition = -1;
 
   private void skipRecord() {
     actor.submit(this::readNextEvent);
@@ -183,6 +188,13 @@ public final class ProcessingStateMachine {
       currentEvent = logStreamReader.next();
 
       if (eventFilter == null || eventFilter.applies(currentEvent)) {
+        if (delayMs > 0) {
+          try {
+            Thread.sleep(delayMs);
+          } catch (InterruptedException e) {
+            LOG.warn("Interrupted while delaying event processing", e);
+          }
+        }
         processEvent(currentEvent);
       } else {
         skipRecord();
