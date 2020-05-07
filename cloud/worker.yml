@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 0
+  template:
+    spec:
+      containers:
+      - name: starter
+        image: gcr.io/zeebe-io/worker:zeebe
+        imagePullPolicy: Always
+        env:
+          - name: JAVA_OPTIONS
+            value: >-
+              -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
+              -Dzeebe.client.requestTimeout=62000
+              -Dapp.worker.capacity=100
+              -Dapp.worker.threads=4
+        resources:
+          limits:
+            cpu: 4
+            memory: 512Mi
+          requests:
+            cpu: 4
+            memory: 512Mi

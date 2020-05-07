@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-monitor
+  labels:
+    release: metrics
+spec:
+  selector:
+    matchLabels:
+      app: tecnotree
+  endpoints:
+      - honorLabels: true
+        port: monitoring
+        interval: 10s
