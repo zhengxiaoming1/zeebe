@@ -7,12 +7,12 @@
  */
 package io.zeebe.transport;
 
+import io.zeebe.transport.impl.IncomingResponse;
 import io.zeebe.util.buffer.BufferWriter;
 import io.zeebe.util.sched.future.ActorFuture;
 import java.time.Duration;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import org.agrona.DirectBuffer;
 
 public interface ClientOutput {
 
@@ -70,7 +70,7 @@ public interface ClientOutput {
    */
   ActorFuture<ClientResponse> sendRequestWithRetry(
       Supplier<Integer> nodeIdSupplier,
-      Predicate<DirectBuffer> responseInspector,
+      Predicate<IncomingResponse> responseInspector,
       BufferWriter writer,
       Duration timeout);
 }

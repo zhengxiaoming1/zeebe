@@ -7,6 +7,8 @@
  */
 package io.zeebe.transport.impl.sender;
 
+import io.zeebe.protocol.impl.encoding.ErrorResponse;
+import io.zeebe.protocol.record.ErrorCode;
 import io.zeebe.transport.ClientResponse;
 import io.zeebe.transport.Loggers;
 import io.zeebe.transport.RemoteAddress;
@@ -32,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import org.agrona.DeadlineTimerWheel;
 import org.agrona.DeadlineTimerWheel.TimerHandler;
 import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.ManyToOneConcurrentLinkedQueue;
@@ -44,39 +47,30 @@ public class Sender extends Actor implements TimerHandler {
   private static final int DEFAULT_BATCH_SIZE = (int) ByteValue.ofKilobytes(128).toBytes();
 
   private static final Logger LOG = Loggers.TRANSPORT_LOGGER;
-
+  protected final Duration keepAlivePeriod;
   private long nextRequestId = 0;
-
   private final ConcurrentQueueChannel<IncomingResponse> submittedResponses =
       new ConcurrentQueueChannel<>(new ManyToOneConcurrentLinkedQueue<>());
   private final ConcurrentQueueChannel<OutgoingRequest> submittedRequests =
       new ConcurrentQueueChannel<>(new ManyToOneConcurrentLinkedQueue<>());
   private final ConcurrentQueueChannel<OutgoingMessage> submittedMessages =
       new ConcurrentQueueChannel<>(new ManyToOneConcurrentLinkedQueue<>());
-
   private final Long2ObjectHashMap<OutgoingRequest> inFlightRequests = new Long2ObjectHashMap<>();
   private final Long2ObjectHashMap<OutgoingRequest> requestsByTimeoutIds =
       new Long2ObjectHashMap<>();
-
   private final Int2ObjectHashMap<ChannelWriteQueue> channelMap = new Int2ObjectHashMap<>();
   private final List<ChannelWriteQueue> channelList = new ArrayList<>();
-
   private final Deque<Batch> recycledBuffers = new LinkedList<>();
-
   private DeadlineTimerWheel requestTimeouts;
-
   private final Runnable sendNext = this::sendNext;
-
-  protected final Duration keepAlivePeriod;
-
   private final TransportMemoryPool messageMemoryPool;
   private final TransportMemoryPool requestMemoryPool;
 
   public Sender(
-      ActorContext actorContext,
-      TransportMemoryPool messageMemoryPool,
-      TransportMemoryPool requestMemoryPool,
-      Duration keepalivePeriod) {
+      final ActorContext actorContext,
+      final TransportMemoryPool messageMemoryPool,
+      final TransportMemoryPool requestMemoryPool,
+      final Duration keepalivePeriod) {
     this.messageMemoryPool = messageMemoryPool;
     this.requestMemoryPool = requestMemoryPool;
     this.keepAlivePeriod = keepalivePeriod;
@@ -154,7 +148,7 @@ public class Sender extends Actor implements TimerHandler {
 
       try {
         shouldRetry = !request.tryComplete(response);
-      } catch (Exception e) {
+      } catch (final Exception e) {
         request.fail(e);
         reclaimRequestBuffer(request.getRequestBuffer().byteBuffer());
         return;
@@ -198,8 +192,17 @@ public class Sender extends Actor implements TimerHandler {
           actor.runDelayed(Duration.ofMillis(10), () -> submittedRequests.offer(request));
         }
       } else {
-        // no remote address available, retry
-        actor.runDelayed(Duration.ofMillis(10), () -> submittedRequests.offer(request));
+
+        final ErrorResponse response = new ErrorResponse();
+        response.reset();
+        response.setErrorCode(ErrorCode.INTERNAL_ERROR);
+        final MutableDirectBuffer responseBuffer = new UnsafeBuffer();
+        response.write(responseBuffer, 0);
+
+        request.tryComplete(
+            new IncomingResponse(
+                request.getLastRequestId(), responseBuffer, new NoRemoteAddressFoundException()));
+        //  actor.runDelayed(Duration.ofMillis(10), () -> submittedRequests.offer(request));
       }
     }
   }
@@ -239,7 +242,7 @@ public class Sender extends Actor implements TimerHandler {
   }
 
   private void sendKeepalives() {
-    for (ChannelWriteQueue channelWriteQueue : channelList) {
+    for (final ChannelWriteQueue channelWriteQueue : channelList) {
       if (!channelWriteQueue.hasPending()) {
         channelWriteQueue
             .getPendingWrites()
@@ -250,6 +253,76 @@ public class Sender extends Actor implements TimerHandler {
     sendNext();
   }
 
+  public ActorFuture<ClientResponse> submitRequest(final OutgoingRequest request) {
+    submittedRequests.add(request);
+    return request.getResponseFuture();
+  }
+
+  public void submitMessage(final OutgoingMessage outgoingMessage) {
+    submittedMessages.add(outgoingMessage);
+  }
+
+  public void submitResponse(final IncomingResponse incomingClientResponse) {
+    submittedResponses.add(incomingClientResponse);
+  }
+
+  public ActorFuture<Void> close() {
+    return actor.close();
+  }
+
+  public ActorFuture<Void> onChannelConnected(final TransportChannel ch) {
+    return actor.call(
+        () -> {
+          final ChannelWriteQueue sendQueue = new ChannelWriteQueue(ch);
+          channelMap.put(ch.getStreamId(), sendQueue);
+          channelList.add(sendQueue);
+        });
+  }
+
+  public ActorFuture<Void> onChannelClosed(final TransportChannel channel) {
+    return actor.call(
+        () -> {
+          final ChannelWriteQueue sendQueue = channelMap.remove(channel.getStreamId());
+          if (sendQueue != null) {
+            channelList.remove(sendQueue);
+            // re-submit pending requests so that they can be retried
+            sendQueue.pendingWrites.forEach(Batch::onChannelClosed);
+          }
+        });
+  }
+
+  @Override
+  public boolean onTimerExpiry(final TimeUnit timeUnit, final long now, final long timerId) {
+    final OutgoingRequest request = requestsByTimeoutIds.get(timerId);
+
+    if (request != null) {
+      reclaimRequestBuffer(request.getRequestBuffer().byteBuffer());
+      request.timeout();
+      inFlightRequests.remove(request.getLastRequestId());
+    }
+
+    return true;
+  }
+
+  public ByteBuffer allocateMessageBuffer(final int length) {
+    return messageMemoryPool.allocate(length);
+  }
+
+  public void reclaimMessageBuffer(final ByteBuffer allocatedBuffer) {
+    messageMemoryPool.reclaim(allocatedBuffer);
+  }
+
+  public ByteBuffer allocateRequestBuffer(final int requestedCapacity) {
+    return requestMemoryPool.allocate(requestedCapacity);
+  }
+
+  public void reclaimRequestBuffer(final ByteBuffer allocatedBuffer) {
+    requestMemoryPool.reclaim(allocatedBuffer);
+  }
+
+  public void failPendingRequestsToRemote(
+      final RemoteAddressImpl remoteAddress, final String reason) {}
+
   public class ChannelWriteQueue {
     private final Deque<Batch> pendingWrites = new LinkedList<>();
 
@@ -257,7 +330,7 @@ public class Sender extends Actor implements TimerHandler {
 
     private Batch currentWrite;
 
-    public ChannelWriteQueue(TransportChannel channel) {
+    public ChannelWriteQueue(final TransportChannel channel) {
       this.channel = channel;
     }
 
@@ -281,7 +354,7 @@ public class Sender extends Actor implements TimerHandler {
       }
     }
 
-    public void offer(OutgoingRequest request) {
+    public void offer(final OutgoingRequest request) {
       // try to fit into last pending batch
       final Batch existingBatch = pendingWrites.peekLast();
 
@@ -306,7 +379,7 @@ public class Sender extends Actor implements TimerHandler {
       }
     }
 
-    public void offer(OutgoingMessage message) {
+    public void offer(final OutgoingMessage message) {
       // try to fit into last pending batch
       Batch batch = pendingWrites.peekLast();
 
@@ -340,6 +413,19 @@ public class Sender extends Actor implements TimerHandler {
     }
   }
 
+  class ControlMessage extends Batch {
+    ControlMessage(final DirectBuffer controlMessageTemplate) {
+      super(controlMessageTemplate.capacity());
+      view.putBytes(0, controlMessageTemplate, 0, controlMessageTemplate.capacity());
+      this.writeOffset = controlMessageTemplate.capacity();
+    }
+
+    @Override
+    public void recycle() {
+      // don't do it
+    }
+  }
+
   private class Batch {
     final List<OutgoingRequest> requestsInBatch = new ArrayList<>();
 
@@ -347,12 +433,12 @@ public class Sender extends Actor implements TimerHandler {
     final ByteBuffer batchBuffer;
     int writeOffset = 0;
 
-    Batch(int size) {
+    Batch(final int size) {
       batchBuffer = ByteBuffer.allocateDirect(size);
       view.wrap(batchBuffer);
     }
 
-    public boolean addToBatch(OutgoingRequest request, TransportChannel channel) {
+    public boolean addToBatch(final OutgoingRequest request, final TransportChannel channel) {
       final DirectBuffer requestBuffer = request.getRequestBuffer();
       final int requestLength = requestBuffer.capacity();
 
@@ -375,7 +461,7 @@ public class Sender extends Actor implements TimerHandler {
       }
     }
 
-    public boolean addToBatch(OutgoingMessage message) {
+    public boolean addToBatch(final OutgoingMessage message) {
       final DirectBuffer buffer = message.getBuffer();
       final int requiredLength = buffer.capacity();
 
@@ -389,7 +475,7 @@ public class Sender extends Actor implements TimerHandler {
       }
     }
 
-    public boolean writeTo(TransportChannel channel) {
+    public boolean writeTo(final TransportChannel channel) {
       return channel.write(batchBuffer) > 0;
     }
 
@@ -414,86 +500,4 @@ public class Sender extends Actor implements TimerHandler {
       recycle();
     }
   }
-
-  class ControlMessage extends Batch {
-    ControlMessage(DirectBuffer controlMessageTemplate) {
-      super(controlMessageTemplate.capacity());
-      view.putBytes(0, controlMessageTemplate, 0, controlMessageTemplate.capacity());
-      this.writeOffset = controlMessageTemplate.capacity();
-    }
-
-    @Override
-    public void recycle() {
-      // don't do it
-    }
-  }
-
-  public ActorFuture<ClientResponse> submitRequest(OutgoingRequest request) {
-    submittedRequests.add(request);
-    return request.getResponseFuture();
-  }
-
-  public void submitMessage(OutgoingMessage outgoingMessage) {
-    submittedMessages.add(outgoingMessage);
-  }
-
-  public void submitResponse(IncomingResponse incomingClientResponse) {
-    submittedResponses.add(incomingClientResponse);
-  }
-
-  public ActorFuture<Void> close() {
-    return actor.close();
-  }
-
-  public ActorFuture<Void> onChannelConnected(TransportChannel ch) {
-    return actor.call(
-        () -> {
-          final ChannelWriteQueue sendQueue = new ChannelWriteQueue(ch);
-          channelMap.put(ch.getStreamId(), sendQueue);
-          channelList.add(sendQueue);
-        });
-  }
-
-  public ActorFuture<Void> onChannelClosed(TransportChannel channel) {
-    return actor.call(
-        () -> {
-          final ChannelWriteQueue sendQueue = channelMap.remove(channel.getStreamId());
-          if (sendQueue != null) {
-            channelList.remove(sendQueue);
-            // re-submit pending requests so that they can be retried
-            sendQueue.pendingWrites.forEach(Batch::onChannelClosed);
-          }
-        });
-  }
-
-  @Override
-  public boolean onTimerExpiry(TimeUnit timeUnit, long now, long timerId) {
-    final OutgoingRequest request = requestsByTimeoutIds.get(timerId);
-
-    if (request != null) {
-      reclaimRequestBuffer(request.getRequestBuffer().byteBuffer());
-      request.timeout();
-      inFlightRequests.remove(request.getLastRequestId());
-    }
-
-    return true;
-  }
-
-  public ByteBuffer allocateMessageBuffer(int length) {
-    return messageMemoryPool.allocate(length);
-  }
-
-  public void reclaimMessageBuffer(ByteBuffer allocatedBuffer) {
-    messageMemoryPool.reclaim(allocatedBuffer);
-  }
-
-  public ByteBuffer allocateRequestBuffer(int requestedCapacity) {
-    return requestMemoryPool.allocate(requestedCapacity);
-  }
-
-  public void reclaimRequestBuffer(ByteBuffer allocatedBuffer) {
-    requestMemoryPool.reclaim(allocatedBuffer);
-  }
-
-  public void failPendingRequestsToRemote(RemoteAddressImpl remoteAddress, String reason) {}
 }

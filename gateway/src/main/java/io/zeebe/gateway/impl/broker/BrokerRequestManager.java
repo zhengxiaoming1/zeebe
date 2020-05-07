@@ -30,6 +30,8 @@ import io.zeebe.protocol.record.ErrorCode;
 import io.zeebe.protocol.record.MessageHeaderDecoder;
 import io.zeebe.transport.ClientOutput;
 import io.zeebe.transport.ClientResponse;
+import io.zeebe.transport.impl.IncomingResponse;
+import io.zeebe.transport.impl.sender.NoRemoteAddressFoundException;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
@@ -62,17 +64,22 @@ public class BrokerRequestManager extends Actor {
   private final Duration requestTimeout;
 
   public BrokerRequestManager(
-      ClientOutput clientOutput,
-      BrokerTopologyManagerImpl topologyManager,
-      RequestDispatchStrategy dispatchStrategy,
-      Duration requestTimeout) {
+      final ClientOutput clientOutput,
+      final BrokerTopologyManagerImpl topologyManager,
+      final RequestDispatchStrategy dispatchStrategy,
+      final Duration requestTimeout) {
     this.clientOutput = clientOutput;
     this.dispatchStrategy = dispatchStrategy;
     this.topologyManager = topologyManager;
     this.requestTimeout = requestTimeout;
   }
 
-  private static boolean shouldRetryRequest(final DirectBuffer responseContent) {
+  private static boolean shouldRetryRequest(final IncomingResponse response) {
+    if (response.getException() instanceof NoRemoteAddressFoundException) {
+      return true;
+    }
+
+    final DirectBuffer responseContent = response.getResponseBuffer();
     final ErrorResponseHandler errorHandler = new ErrorResponseHandler();
     final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     headerDecoder.wrap(responseContent, 0);
@@ -91,7 +98,7 @@ public class BrokerRequestManager extends Actor {
     }
   }
 
-  public <T> ActorFuture<BrokerResponse<T>> sendRequest(BrokerRequest<T> request) {
+  public <T> ActorFuture<BrokerResponse<T>> sendRequest(final BrokerRequest<T> request) {
     final ActorFuture<BrokerResponse<T>> responseFuture = new CompletableActorFuture<>();
 
     sendRequest(
@@ -108,9 +115,9 @@ public class BrokerRequestManager extends Actor {
   }
 
   public <T> void sendRequest(
-      BrokerRequest<T> request,
-      BrokerResponseConsumer<T> responseConsumer,
-      Consumer<Throwable> throwableConsumer) {
+      final BrokerRequest<T> request,
+      final BrokerResponseConsumer<T> responseConsumer,
+      final Consumer<Throwable> throwableConsumer) {
     sendRequest(
         request,
         responseConsumer,
@@ -120,11 +127,11 @@ public class BrokerRequestManager extends Actor {
   }
 
   private <T> void sendRequest(
-      BrokerRequest<T> request,
-      BrokerResponseConsumer<T> responseConsumer,
-      Consumer<BrokerRejection> rejectionConsumer,
-      Consumer<BrokerError> errorConsumer,
-      Consumer<Throwable> throwableConsumer) {
+      final BrokerRequest<T> request,
+      final BrokerResponseConsumer<T> responseConsumer,
+      final Consumer<BrokerRejection> rejectionConsumer,
+      final Consumer<BrokerError> errorConsumer,
+      final Consumer<Throwable> throwableConsumer) {
 
     sendRequest(
         request,
@@ -145,21 +152,24 @@ public class BrokerRequestManager extends Actor {
             } else {
               throwableConsumer.accept(error);
             }
-          } catch (RuntimeException e) {
+          } catch (final RuntimeException e) {
             throwableConsumer.accept(new BrokerResponseException(e));
           }
         });
   }
 
   private <T> void sendRequest(
-      BrokerRequest<T> request, BiConsumer<BrokerResponse<T>, Throwable> responseConsumer) {
+      final BrokerRequest<T> request,
+      final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer) {
     request.serializeValue();
     actor.run(() -> sendRequestInternal(request, responseConsumer));
   }
 
   private <T> void sendRequestInternal(
-      BrokerRequest<T> request, BiConsumer<BrokerResponse<T>, Throwable> responseConsumer) {
+      final BrokerRequest<T> request,
+      final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer) {
     final BrokerNodeIdProvider nodeIdProvider = determineBrokerNodeIdProvider(request);
+
 
     final ActorFuture<ClientResponse> responseFuture =
         clientOutput.sendRequestWithRetry(
@@ -184,7 +194,7 @@ public class BrokerRequestManager extends Actor {
               REQUEST_LATENCY
                   .labels(String.valueOf(request.getPartitionId()), request.getRequestType())
                   .observe((System.currentTimeMillis() - start) / 1000.0);
-            } catch (RuntimeException e) {
+            } catch (final RuntimeException e) {
               responseConsumer.accept(null, new ClientResponseException(e));
             }
           });
@@ -193,7 +203,7 @@ public class BrokerRequestManager extends Actor {
     }
   }
 
-  private BrokerNodeIdProvider determineBrokerNodeIdProvider(BrokerRequest<?> request) {
+  private BrokerNodeIdProvider determineBrokerNodeIdProvider(final BrokerRequest<?> request) {
     if (request.addressesSpecificPartition()) {
       // already know partition id
       return new BrokerNodeIdProvider(request.getPartitionId());
@@ -218,7 +228,8 @@ public class BrokerRequestManager extends Actor {
     }
   }
 
-  private void determinePartitionIdForPublishMessageRequest(BrokerPublishMessageRequest request) {
+  private void determinePartitionIdForPublishMessageRequest(
+      final BrokerPublishMessageRequest request) {
     final BrokerClusterState topology = topologyManager.getTopology();
     if (topology != null) {
       final int partitionsCount = topology.getPartitionsCount();
