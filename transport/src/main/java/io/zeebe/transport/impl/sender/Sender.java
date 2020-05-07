@@ -107,7 +107,8 @@ public class Sender extends Actor implements TimerHandler {
       final IncomingResponse response = submittedResponses.poll();
 
       if (response != null) {
-        onResponseReceived(response);
+        final OutgoingRequest request = inFlightRequests.remove(response.getRequestId());
+        onResponseReceived(request, response);
       }
     }
 
@@ -140,9 +141,7 @@ public class Sender extends Actor implements TimerHandler {
     sendNext();
   }
 
-  private void onResponseReceived(final IncomingResponse response) {
-    final OutgoingRequest request = inFlightRequests.remove(response.getRequestId());
-
+  private void onResponseReceived(final OutgoingRequest request, final IncomingResponse response) {
     if (request != null) {
       boolean shouldRetry = false;
 
@@ -196,11 +195,13 @@ public class Sender extends Actor implements TimerHandler {
         final ErrorResponse response = new ErrorResponse();
         response.reset();
         response.setErrorCode(ErrorCode.INTERNAL_ERROR);
-        final MutableDirectBuffer responseBuffer = new UnsafeBuffer();
+        final MutableDirectBuffer responseBuffer =
+            new UnsafeBuffer(ByteBuffer.allocate(response.getLength()));
         response.write(responseBuffer, 0);
 
         LOG.info("FINDME: No remote address found");
         onResponseReceived(
+            request,
             new IncomingResponse(
                 request.getLastRequestId(), responseBuffer, new NoRemoteAddressFoundException()));
         //        request.tryComplete(
