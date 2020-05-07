@@ -65,7 +65,7 @@ public class EndpointManager extends GatewayGrpc.GatewayImplBase {
   public EndpointManager(final BrokerClient brokerClient) {
     this.brokerClient = brokerClient;
     this.topologyManager = brokerClient.getTopologyManager();
-    this.activateJobsHandler = new ActivateJobsHandler(brokerClient);
+    this.activateJobsHandler = new ActivateJobsHandler(brokerClient, topologyManager);
   }
 
   @Override

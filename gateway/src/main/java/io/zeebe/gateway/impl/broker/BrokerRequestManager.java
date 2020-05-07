@@ -7,6 +7,8 @@
  */
 package io.zeebe.gateway.impl.broker;
 
+import io.prometheus.client.Counter;
+import io.prometheus.client.Histogram;
 import io.zeebe.gateway.cmd.BrokerErrorException;
 import io.zeebe.gateway.cmd.BrokerRejectionException;
 import io.zeebe.gateway.cmd.BrokerResponseException;
@@ -39,6 +41,20 @@ import java.util.function.Supplier;
 import org.agrona.DirectBuffer;
 
 public class BrokerRequestManager extends Actor {
+  private static final Histogram REQUEST_LATENCY =
+      Histogram.build()
+          .help("The latency distribution of requests from gateway to broker")
+          .namespace("zeebe")
+          .name("gateway_latency")
+          .labelNames("partition", "requestType")
+          .register();
+  private static final Counter REQUEST_COUNT =
+      Counter.build()
+          .help("The count of requests from gateway to broker")
+          .name("gateway_request_count")
+          .namespace("zeebe")
+          .labelNames("partition", "requestType")
+          .register();
 
   private final ClientOutput clientOutput;
   private final RequestDispatchStrategy dispatchStrategy;
@@ -150,6 +166,10 @@ public class BrokerRequestManager extends Actor {
             nodeIdProvider, BrokerRequestManager::shouldRetryRequest, request, requestTimeout);
 
     if (responseFuture != null) {
+      REQUEST_COUNT
+          .labels(String.valueOf(request.getPartitionId()), request.getRequestType())
+          .inc();
+      final long start = System.currentTimeMillis();
       actor.runOnCompletion(
           responseFuture,
           (clientResponse, error) -> {
@@ -160,6 +180,10 @@ public class BrokerRequestManager extends Actor {
               } else {
                 responseConsumer.accept(null, error);
               }
+
+              REQUEST_LATENCY
+                  .labels(String.valueOf(request.getPartitionId()), request.getRequestType())
+                  .observe((System.currentTimeMillis() - start) / 1000.0);
             } catch (RuntimeException e) {
               responseConsumer.accept(null, new ClientResponseException(e));
             }

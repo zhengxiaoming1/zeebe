@@ -45,6 +45,11 @@ public abstract class BrokerExecuteCommand<T> extends BrokerRequest<T> {
   }
 
   @Override
+  public String getRequestType() {
+    return String.format("%s.%s", getValueType().name(), getIntent().name());
+  }
+
+  @Override
   public int getPartitionId() {
     return request.getPartitionId();
   }
