@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.agrona.DirectBuffer;
 
@@ -109,7 +110,8 @@ public class BrokerRequestManager extends Actor {
           } else {
             responseFuture.completeExceptionally(error);
           }
-        });
+        },
+        BrokerRequestManager::shouldRetryRequest);
 
     return responseFuture;
   }
@@ -117,13 +119,15 @@ public class BrokerRequestManager extends Actor {
   public <T> void sendRequest(
       final BrokerRequest<T> request,
       final BrokerResponseConsumer<T> responseConsumer,
-      final Consumer<Throwable> throwableConsumer) {
+      final Consumer<Throwable> throwableConsumer,
+      final Predicate<IncomingResponse> shouldRetryPredicate) {
     sendRequest(
         request,
         responseConsumer,
         rejection -> throwableConsumer.accept(new BrokerRejectionException(rejection)),
         error -> throwableConsumer.accept(new BrokerErrorException(error)),
-        throwableConsumer);
+        throwableConsumer,
+        shouldRetryPredicate);
   }
 
   private <T> void sendRequest(
@@ -131,7 +135,8 @@ public class BrokerRequestManager extends Actor {
       final BrokerResponseConsumer<T> responseConsumer,
       final Consumer<BrokerRejection> rejectionConsumer,
       final Consumer<BrokerError> errorConsumer,
-      final Consumer<Throwable> throwableConsumer) {
+      final Consumer<Throwable> throwableConsumer,
+      final Predicate<IncomingResponse> shouldRetryPredicate) {
 
     sendRequest(
         request,
@@ -155,25 +160,27 @@ public class BrokerRequestManager extends Actor {
           } catch (final RuntimeException e) {
             throwableConsumer.accept(new BrokerResponseException(e));
           }
-        });
+        },
+        shouldRetryPredicate);
   }
 
   private <T> void sendRequest(
       final BrokerRequest<T> request,
-      final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer) {
+      final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer,
+      final Predicate<IncomingResponse> shouldRetryPredicate) {
     request.serializeValue();
-    actor.run(() -> sendRequestInternal(request, responseConsumer));
+    actor.run(() -> sendRequestInternal(request, responseConsumer, shouldRetryPredicate));
   }
 
   private <T> void sendRequestInternal(
       final BrokerRequest<T> request,
-      final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer) {
+      final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer,
+      final Predicate<IncomingResponse> shouldRetryPredicate) {
     final BrokerNodeIdProvider nodeIdProvider = determineBrokerNodeIdProvider(request);
-
 
     final ActorFuture<ClientResponse> responseFuture =
         clientOutput.sendRequestWithRetry(
-            nodeIdProvider, BrokerRequestManager::shouldRetryRequest, request, requestTimeout);
+            nodeIdProvider, shouldRetryPredicate, request, requestTimeout);
 
     if (responseFuture != null) {
       REQUEST_COUNT
@@ -246,6 +253,14 @@ public class BrokerRequestManager extends Actor {
               "Expected to pick partition for message with correlation key '%s', but no topology is available",
               request.getCorrelationKey()));
     }
+  }
+
+  public <T> void sendRequest(
+      final BrokerRequest<T> request,
+      final BrokerResponseConsumer<T> responseConsumer,
+      final Consumer<Throwable> throwableConsumer) {
+    sendRequest(
+        request, responseConsumer, throwableConsumer, BrokerRequestManager::shouldRetryRequest);
   }
 
   private class BrokerNodeIdProvider implements Supplier<Integer> {

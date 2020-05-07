@@ -12,7 +12,6 @@ import io.zeebe.gateway.Loggers;
 import io.zeebe.gateway.RequestMapper;
 import io.zeebe.gateway.ResponseMapper;
 import io.zeebe.gateway.impl.broker.BrokerClient;
-import io.zeebe.gateway.impl.broker.cluster.BrokerClusterState;
 import io.zeebe.gateway.impl.broker.cluster.BrokerTopologyManager;
 import io.zeebe.gateway.impl.broker.request.BrokerActivateJobsRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.ActivateJobsRequest;
@@ -66,15 +65,6 @@ public class ActivateJobsHandler {
               ? partitionIdIterator.getCurrentPartitionId()
               : partitionIdIterator.next();
 
-      if (topologyManager.getTopology().getLeaderForPartition(partitionId)
-          == BrokerClusterState.NODE_ID_NULL) {
-        Loggers.GATEWAY_LOGGER.info(
-            "No leader for partition {}. Trying with next partition", partitionId);
-        activateJobs(
-            request, partitionIdIterator, remainingAmount, jobType, responseObserver, false);
-        return;
-      }
-
       // partitions to check and jobs to activate left
       request.setPartitionId(partitionId);
       request.setMaxJobsToActivate(remainingAmount);
@@ -103,7 +93,8 @@ public class ActivateJobsHandler {
                 partitionIdIterator.getCurrentPartitionId(),
                 error);
             activateJobs(request, partitionIdIterator, remainingAmount, jobType, responseObserver);
-          });
+          },
+          response -> false);
     } else {
       // enough jobs activated or no more partitions left to check
       jobTypeToNextPartitionId.put(jobType, partitionIdIterator.getCurrentPartitionId());
