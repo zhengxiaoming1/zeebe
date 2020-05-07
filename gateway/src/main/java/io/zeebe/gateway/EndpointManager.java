@@ -51,6 +51,7 @@ import io.zeebe.gateway.protocol.GatewayOuterClass.TopologyResponse;
 import io.zeebe.gateway.protocol.GatewayOuterClass.UpdateJobRetriesRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.UpdateJobRetriesResponse;
 import io.zeebe.msgpack.MsgpackPropertyException;
+import io.zeebe.transport.impl.sender.NoRemoteAddressFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -275,7 +276,14 @@ public class EndpointManager extends GatewayGrpc.GatewayImplBase {
           streamObserver.onCompleted();
         },
         error -> streamObserver.onError(convertThrowable(error)),
-        b -> false);
+        b -> {
+          if (b.getException() instanceof NoRemoteAddressFoundException) {
+            Loggers.GATEWAY_LOGGER.info(
+                "FINDME: error on create workflow instance request. We don't retry",
+                b.getException());
+          }
+          return false;
+        });
   }
 
   private <GrpcRequestT, BrokerResponseT, GrpcResponseT> void sendRequest(

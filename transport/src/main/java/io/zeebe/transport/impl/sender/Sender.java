@@ -199,10 +199,16 @@ public class Sender extends Actor implements TimerHandler {
         final MutableDirectBuffer responseBuffer = new UnsafeBuffer();
         response.write(responseBuffer, 0);
 
-        request.tryComplete(
+        LOG.info("FINDME: No remote address found");
+        onResponseReceived(
             new IncomingResponse(
                 request.getLastRequestId(), responseBuffer, new NoRemoteAddressFoundException()));
-        //  actor.runDelayed(Duration.ofMillis(10), () -> submittedRequests.offer(request));
+        //        request.tryComplete(
+        //            new IncomingResponse(
+        //                request.getLastRequestId(), responseBuffer, new
+        // NoRemoteAddressFoundException()));
+        //        //  actor.runDelayed(Duration.ofMillis(10), () ->
+        // submittedRequests.offer(request));
       }
     }
   }
