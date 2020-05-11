@@ -67,6 +67,10 @@ public class OutgoingRequest {
     return remoteAddressSupplier.get();
   }
 
+  public boolean shouldRetry (final IncomingResponse incomingResponse) {
+    return retryPredicate.test(incomingResponse);
+  }
+
   public boolean tryComplete(final IncomingResponse incomingResponse) {
     if (responseFuture.isDone()) {
       return true;

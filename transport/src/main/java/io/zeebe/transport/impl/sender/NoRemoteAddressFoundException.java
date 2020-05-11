@@ -7,4 +7,10 @@
  */
 package io.zeebe.transport.impl.sender;
 
-public class NoRemoteAddressFoundException extends Exception {}
+public class NoRemoteAddressFoundException extends Exception {
+  public static final NoRemoteAddressFoundException INSTANCE = new NoRemoteAddressFoundException();
+
+  private NoRemoteAddressFoundException() {
+    super("No remote address found");
+  }
+}

@@ -259,6 +259,19 @@ public class ClientTransportTest {
   }
 
   @Test
+  public void shouldNotTimeoutRequestWhenNodNullAndRetryDisabled() {
+    // given
+    final ClientOutput output = clientTransport.getOutput();
+
+    // when
+    final ActorFuture<ClientResponse> responseFuture =
+        output.sendRequest(NODE_ID1, WRITER1, Duration.ofMillis(500));
+
+    // then
+    assertThatThrownBy(responseFuture::join).hasMessageContaining("No remote address found");
+  }
+
+  @Test
   public void shouldOpenRequestWhenClientRequestPoolCapacityIsExceeded() {
     // given
     final ClientOutput clientOutput = clientTransport.getOutput();

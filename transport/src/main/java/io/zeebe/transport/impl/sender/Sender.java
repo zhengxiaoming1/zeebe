@@ -7,8 +7,6 @@
  */
 package io.zeebe.transport.impl.sender;
 
-import io.zeebe.protocol.impl.encoding.ErrorResponse;
-import io.zeebe.protocol.record.ErrorCode;
 import io.zeebe.transport.ClientResponse;
 import io.zeebe.transport.Loggers;
 import io.zeebe.transport.RemoteAddress;
@@ -19,7 +17,6 @@ import io.zeebe.transport.impl.TransportChannel;
 import io.zeebe.transport.impl.actor.ActorContext;
 import io.zeebe.transport.impl.memory.TransportMemoryPool;
 import io.zeebe.util.ByteValue;
-import io.zeebe.util.buffer.BufferUtil;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.channel.ConcurrentQueueChannel;
 import io.zeebe.util.sched.clock.ActorClock;
@@ -35,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import org.agrona.DeadlineTimerWheel;
 import org.agrona.DeadlineTimerWheel.TimerHandler;
 import org.agrona.DirectBuffer;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.ManyToOneConcurrentLinkedQueue;
@@ -192,26 +188,14 @@ public class Sender extends Actor implements TimerHandler {
           actor.runDelayed(Duration.ofMillis(10), () -> submittedRequests.offer(request));
         }
       } else {
-
-        final ErrorResponse response = new ErrorResponse();
-        response.reset();
-        response.setErrorCode(ErrorCode.INTERNAL_ERROR);
-        response.setErrorData(BufferUtil.wrapString("No remote node available"));
-        final MutableDirectBuffer responseBuffer =
-            new UnsafeBuffer(ByteBuffer.allocate(response.getLength()));
-        response.write(responseBuffer, 0);
-
         LOG.info("FINDME: No remote address found");
-        onResponseReceived(
-            request,
+        if (request.shouldRetry(
             new IncomingResponse(
-                request.getLastRequestId(), responseBuffer, new NoRemoteAddressFoundException()));
-        //        request.tryComplete(
-        //            new IncomingResponse(
-        //                request.getLastRequestId(), responseBuffer, new
-        // NoRemoteAddressFoundException()));
-        //        //  actor.runDelayed(Duration.ofMillis(10), () ->
-        // submittedRequests.offer(request));
+                request.getLastRequestId(), null, NoRemoteAddressFoundException.INSTANCE))) {
+          actor.runDelayed(Duration.ofMillis(10), () -> submittedRequests.offer(request));
+        } else {
+          request.fail(NoRemoteAddressFoundException.INSTANCE);
+        }
       }
     }
   }
