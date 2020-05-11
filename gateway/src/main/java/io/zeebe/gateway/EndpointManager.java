@@ -19,10 +19,12 @@ import io.zeebe.gateway.cmd.GrpcStatusExceptionImpl;
 import io.zeebe.gateway.impl.broker.BrokerClient;
 import io.zeebe.gateway.impl.broker.cluster.BrokerClusterState;
 import io.zeebe.gateway.impl.broker.cluster.BrokerTopologyManager;
+import io.zeebe.gateway.impl.broker.request.BrokerCreateWorkflowInstanceRequest;
 import io.zeebe.gateway.impl.broker.request.BrokerRequest;
 import io.zeebe.gateway.impl.broker.response.BrokerError;
 import io.zeebe.gateway.impl.broker.response.BrokerRejection;
 import io.zeebe.gateway.impl.job.ActivateJobsHandler;
+import io.zeebe.gateway.impl.job.CreateWorkflowHandler;
 import io.zeebe.gateway.protocol.GatewayGrpc;
 import io.zeebe.gateway.protocol.GatewayOuterClass.ActivateJobsRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.ActivateJobsResponse;
@@ -51,7 +53,7 @@ import io.zeebe.gateway.protocol.GatewayOuterClass.TopologyResponse;
 import io.zeebe.gateway.protocol.GatewayOuterClass.UpdateJobRetriesRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.UpdateJobRetriesResponse;
 import io.zeebe.msgpack.MsgpackPropertyException;
-import io.zeebe.transport.impl.sender.NoRemoteAddressFoundException;
+import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceCreationRecord;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -62,11 +64,13 @@ public class EndpointManager extends GatewayGrpc.GatewayImplBase {
   private final BrokerClient brokerClient;
   private final BrokerTopologyManager topologyManager;
   private final ActivateJobsHandler activateJobsHandler;
+  private final CreateWorkflowHandler createWorkflowHandler;
 
   public EndpointManager(final BrokerClient brokerClient) {
     this.brokerClient = brokerClient;
     this.topologyManager = brokerClient.getTopologyManager();
     this.activateJobsHandler = new ActivateJobsHandler(brokerClient, topologyManager);
+    createWorkflowHandler = new CreateWorkflowHandler(brokerClient, topologyManager);
   }
 
   private void addBrokerInfo(
@@ -138,11 +142,31 @@ public class EndpointManager extends GatewayGrpc.GatewayImplBase {
   public void createWorkflowInstance(
       final CreateWorkflowInstanceRequest request,
       final StreamObserver<CreateWorkflowInstanceResponse> responseObserver) {
-    sendRequestWithOutRetry(
-        request,
-        RequestMapper::toCreateWorkflowInstanceRequest,
-        ResponseMapper::toCreateWorkflowInstanceResponse,
-        responseObserver);
+
+    final BrokerResponseMapper<WorkflowInstanceCreationRecord, CreateWorkflowInstanceResponse>
+        responseMapper = ResponseMapper::toCreateWorkflowInstanceResponse;
+
+    final BrokerCreateWorkflowInstanceRequest brokerRequest;
+    try {
+      brokerRequest = RequestMapper.toCreateWorkflowInstanceRequest(request);
+    } catch (final MsgpackPropertyException e) {
+      responseObserver.onError(
+          convertThrowable(
+              new GrpcStatusExceptionImpl(e.getMessage(), Status.INVALID_ARGUMENT, e)));
+      return;
+    } catch (final Exception e) {
+      responseObserver.onError(convertThrowable(e));
+      return;
+    }
+
+    createWorkflowHandler.createWorkflow(
+        topologyManager.getTopology().getPartitionsCount(),
+        brokerRequest,
+        (key, response) -> {
+          responseObserver.onNext(responseMapper.apply(key, response));
+          responseObserver.onCompleted();
+        },
+        error -> responseObserver.onError(convertThrowable(error)));
   }
 
   @Override
@@ -247,43 +271,6 @@ public class EndpointManager extends GatewayGrpc.GatewayImplBase {
         RequestMapper::toUpdateJobRetriesRequest,
         ResponseMapper::toUpdateJobRetriesResponse,
         responseObserver);
-  }
-
-  private <GrpcRequestT, BrokerResponseT, GrpcResponseT> void sendRequestWithOutRetry(
-      final GrpcRequestT grpcRequest,
-      final Function<GrpcRequestT, BrokerRequest<BrokerResponseT>> requestMapper,
-      final BrokerResponseMapper<BrokerResponseT, GrpcResponseT> responseMapper,
-      final StreamObserver<GrpcResponseT> streamObserver) {
-
-    final BrokerRequest<BrokerResponseT> brokerRequest;
-    try {
-      brokerRequest = requestMapper.apply(grpcRequest);
-    } catch (final MsgpackPropertyException e) {
-      streamObserver.onError(
-          convertThrowable(
-              new GrpcStatusExceptionImpl(e.getMessage(), Status.INVALID_ARGUMENT, e)));
-      return;
-    } catch (final Exception e) {
-      streamObserver.onError(convertThrowable(e));
-      return;
-    }
-
-    brokerClient.sendRequest(
-        brokerRequest,
-        (key, response) -> {
-          final GrpcResponseT grpcResponse = responseMapper.apply(key, response);
-          streamObserver.onNext(grpcResponse);
-          streamObserver.onCompleted();
-        },
-        error -> streamObserver.onError(convertThrowable(error)),
-        b -> {
-          if (b.getException() instanceof NoRemoteAddressFoundException) {
-            Loggers.GATEWAY_LOGGER.info(
-                "FINDME: error on create workflow instance request. We don't retry",
-                b.getException());
-          }
-          return false;
-        });
   }
 
   private <GrpcRequestT, BrokerResponseT, GrpcResponseT> void sendRequest(
