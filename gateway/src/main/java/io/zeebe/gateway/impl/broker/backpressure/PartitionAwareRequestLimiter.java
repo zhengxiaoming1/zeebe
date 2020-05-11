@@ -5,12 +5,13 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.transport.impl.sender;
+package io.zeebe.gateway.impl.broker.backpressure;
 
-public final class NoRemoteAddressFoundException extends Exception {
-  public static final NoRemoteAddressFoundException INSTANCE = new NoRemoteAddressFoundException();
+import com.netflix.concurrency.limits.Limiter.Listener;
+import io.zeebe.gateway.impl.broker.request.BrokerRequest;
+import java.util.Optional;
 
-  private NoRemoteAddressFoundException() {
-    super("No remote address found");
-  }
+@FunctionalInterface
+public interface PartitionAwareRequestLimiter {
+  Optional<Listener> acquire(int partitionId, BrokerRequest<?> request);
 }

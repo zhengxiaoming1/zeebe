@@ -7,6 +7,7 @@
  */
 package io.zeebe.gateway.impl.broker;
 
+import com.netflix.concurrency.limits.Limiter.Listener;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Histogram;
 import io.zeebe.gateway.cmd.BrokerErrorException;
@@ -17,6 +18,8 @@ import io.zeebe.gateway.cmd.ClientResponseException;
 import io.zeebe.gateway.cmd.IllegalBrokerResponseException;
 import io.zeebe.gateway.cmd.NoTopologyAvailableException;
 import io.zeebe.gateway.impl.ErrorResponseHandler;
+import io.zeebe.gateway.impl.broker.backpressure.PartitionAwareRequestLimiter;
+import io.zeebe.gateway.impl.broker.backpressure.ResourceExhaustedException;
 import io.zeebe.gateway.impl.broker.cluster.BrokerClusterState;
 import io.zeebe.gateway.impl.broker.cluster.BrokerTopologyManagerImpl;
 import io.zeebe.gateway.impl.broker.request.BrokerPublishMessageRequest;
@@ -30,12 +33,14 @@ import io.zeebe.protocol.record.ErrorCode;
 import io.zeebe.protocol.record.MessageHeaderDecoder;
 import io.zeebe.transport.ClientOutput;
 import io.zeebe.transport.ClientResponse;
+import io.zeebe.transport.RequestTimeoutException;
 import io.zeebe.transport.impl.IncomingResponse;
 import io.zeebe.transport.impl.sender.NoRemoteAddressFoundException;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -63,16 +68,19 @@ public class BrokerRequestManager extends Actor {
   private final RequestDispatchStrategy dispatchStrategy;
   private final BrokerTopologyManagerImpl topologyManager;
   private final Duration requestTimeout;
+  private final PartitionAwareRequestLimiter partitionLimiter;
 
   public BrokerRequestManager(
       final ClientOutput clientOutput,
       final BrokerTopologyManagerImpl topologyManager,
       final RequestDispatchStrategy dispatchStrategy,
-      final Duration requestTimeout) {
+      final Duration requestTimeout,
+      final PartitionAwareRequestLimiter partitionLimiter) {
     this.clientOutput = clientOutput;
     this.dispatchStrategy = dispatchStrategy;
     this.topologyManager = topologyManager;
     this.requestTimeout = requestTimeout;
+    this.partitionLimiter = partitionLimiter;
   }
 
   private static boolean shouldRetryRequest(final IncomingResponse response) {
@@ -177,35 +185,55 @@ public class BrokerRequestManager extends Actor {
       final BiConsumer<BrokerResponse<T>, Throwable> responseConsumer,
       final Predicate<IncomingResponse> shouldRetryPredicate) {
     final BrokerNodeIdProvider nodeIdProvider = determineBrokerNodeIdProvider(request);
+    final int partitionId = request.getPartitionId();
+    final Optional<Listener> acquiredLimiterListener =
+        partitionLimiter.acquire(partitionId, request);
 
+    if (!acquiredLimiterListener.isPresent()) {
+      responseConsumer.accept(null, new ResourceExhaustedException(partitionId));
+      return;
+    }
+
+    final Listener limiterListener = acquiredLimiterListener.get();
     final ActorFuture<ClientResponse> responseFuture =
         clientOutput.sendRequestWithRetry(
             nodeIdProvider, shouldRetryPredicate, request, requestTimeout);
 
     if (responseFuture != null) {
-      REQUEST_COUNT
-          .labels(String.valueOf(request.getPartitionId()), request.getRequestType())
-          .inc();
+      REQUEST_COUNT.labels(String.valueOf(partitionId), request.getRequestType()).inc();
       final long start = System.currentTimeMillis();
       actor.runOnCompletion(
           responseFuture,
           (clientResponse, error) -> {
+            boolean wasDropped = false;
+
             try {
               if (error == null) {
                 final BrokerResponse<T> response = request.getResponse(clientResponse);
                 responseConsumer.accept(response, null);
+                wasDropped =
+                    (response.isError()
+                        && response.getError().getCode() == ErrorCode.RESOURCE_EXHAUSTED);
               } else {
                 responseConsumer.accept(null, error);
+                wasDropped = (error instanceof RequestTimeoutException);
               }
 
               REQUEST_LATENCY
-                  .labels(String.valueOf(request.getPartitionId()), request.getRequestType())
+                  .labels(String.valueOf(partitionId), request.getRequestType())
                   .observe((System.currentTimeMillis() - start) / 1000.0);
             } catch (final RuntimeException e) {
               responseConsumer.accept(null, new ClientResponseException(e));
+            } finally {
+              if (wasDropped) {
+                limiterListener.onDropped();
+              } else {
+                limiterListener.onSuccess();
+              }
             }
           });
     } else {
+      limiterListener.onIgnore();
       responseConsumer.accept(null, new ClientOutOfMemoryException());
     }
   }

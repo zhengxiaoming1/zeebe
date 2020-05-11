@@ -24,17 +24,6 @@
 
     <dependency>
       <groupId>io.zeebe</groupId>
-      <artifactId>zeebe-protocol-impl</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.zeebe</groupId>
-      <artifactId>zeebe-protocol</artifactId>
-    </dependency>
-
-
-    <dependency>
-      <groupId>io.zeebe</groupId>
       <artifactId>zeebe-util</artifactId>
     </dependency>
 
