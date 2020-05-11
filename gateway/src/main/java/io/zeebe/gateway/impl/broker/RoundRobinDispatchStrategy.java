@@ -25,10 +25,16 @@ public class RoundRobinDispatchStrategy implements RequestDispatchStrategy {
     final BrokerClusterState topology = topologyManager.getTopology();
 
     if (topology != null) {
-      final int offset = partitions.getAndIncrement();
-      return topology.getPartition(offset);
-    } else {
-      return BrokerClusterState.PARTITION_ID_NULL;
+      // go over all partitions once
+      for (int i = 0; i < topology.getPartitionsCount(); i++) {
+        final int offset = partitions.getAndIncrement();
+        final int partition = topology.getPartition(offset);
+        if (topology.getLeaderForPartition(partition) != BrokerClusterState.NODE_ID_NULL) {
+          return partition;
+        }
+      }
     }
+
+    return BrokerClusterState.PARTITION_ID_NULL;
   }
 }
