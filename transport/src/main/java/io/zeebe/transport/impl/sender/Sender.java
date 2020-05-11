@@ -19,6 +19,7 @@ import io.zeebe.transport.impl.TransportChannel;
 import io.zeebe.transport.impl.actor.ActorContext;
 import io.zeebe.transport.impl.memory.TransportMemoryPool;
 import io.zeebe.util.ByteValue;
+import io.zeebe.util.buffer.BufferUtil;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.channel.ConcurrentQueueChannel;
 import io.zeebe.util.sched.clock.ActorClock;
@@ -195,6 +196,7 @@ public class Sender extends Actor implements TimerHandler {
         final ErrorResponse response = new ErrorResponse();
         response.reset();
         response.setErrorCode(ErrorCode.INTERNAL_ERROR);
+        response.setErrorData(BufferUtil.wrapString("No remote node available"));
         final MutableDirectBuffer responseBuffer =
             new UnsafeBuffer(ByteBuffer.allocate(response.getLength()));
         response.write(responseBuffer, 0);
