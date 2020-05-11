@@ -11,6 +11,7 @@ import io.zeebe.transport.ClientOutput;
 import io.zeebe.transport.ClientResponse;
 import io.zeebe.transport.EndpointRegistry;
 import io.zeebe.transport.RemoteAddress;
+import io.zeebe.transport.impl.sender.NoRemoteAddressFoundException;
 import io.zeebe.transport.impl.sender.OutgoingMessage;
 import io.zeebe.transport.impl.sender.OutgoingRequest;
 import io.zeebe.transport.impl.sender.Sender;
@@ -86,7 +87,11 @@ public class ClientOutputImpl implements ClientOutput {
   @Override
   public ActorFuture<ClientResponse> sendRequest(
       final Integer nodeId, final BufferWriter writer, final Duration timeout) {
-    return sendRequestWithRetry(() -> nodeId, (b) -> false, writer, timeout);
+    return sendRequestWithRetry(() -> nodeId, this::shouldRetry, writer, timeout);
+  }
+
+  private boolean shouldRetry(final IncomingResponse response) {
+    return response.getException() instanceof NoRemoteAddressFoundException;
   }
 
   @Override
