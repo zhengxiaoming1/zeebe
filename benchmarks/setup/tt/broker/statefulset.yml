@@ -45,6 +45,8 @@ spec:
               value: "5"
             - name: ZEEBE_BROKER_EXECUTIONMETRICSEXPORTERENABLED
               value: "true"
+            - name: ZEEBE_GATEWAY_MONITORING_ENABLED
+              value: "true"
             - name: ZEEBE_NODE_NAME
               valueFrom:
                 fieldRef:
