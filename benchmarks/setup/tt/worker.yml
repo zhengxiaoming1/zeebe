@@ -15,9 +15,9 @@ spec:
             value: >-
               -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
               -Dzeebe.client.requestTimeout=62000
-              -Dapp.worker.capacity=200
-              -Dapp.worker.threads=100
-              -Dapp.worker.completionDelay=25
+              -Dapp.worker.capacity=64
+              -Dapp.worker.threads=16
+              -Dapp.worker.completionDelay=20
         resources:
           limits:
             cpu: 8

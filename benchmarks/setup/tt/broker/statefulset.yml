@@ -49,6 +49,8 @@ spec:
               value: "true"
             - name: ZEEBE_BROKER_CLUSTER_GOSSIPBROADCASTUPDATES
               value: "true"
+            - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
+              value: "6s"
             - name: ZEEBE_NODE_NAME
               valueFrom:
                 fieldRef:

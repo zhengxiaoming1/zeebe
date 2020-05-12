@@ -41,13 +41,16 @@ data:
     [gateway.threads]
     managementThreads = 1
 
+    [gateway.backpressure]
+    enabled = true
+
     [monitoring]
     enabled = true
 kind: ConfigMap
 metadata:
   labels:
     app: tecnotree
-  name: broker-config-9672gh4745
+  name: broker-config-kh8t5bb576
   namespace: tt
 ---
 apiVersion: v1
@@ -157,7 +160,7 @@ spec:
       - env:
         - name: JAVA_OPTIONS
           value: -Dapp.brokerUrl=broker:26500 -Dzeebe.client.requestTimeout=62000
-            -Dapp.worker.capacity=200 -Dapp.worker.threads=100 -Dapp.worker.completionDelay=25
+            -Dapp.worker.capacity=64 -Dapp.worker.threads=16 -Dapp.worker.completionDelay=20
         image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         name: starter
@@ -203,11 +206,13 @@ spec:
           value: "true"
         - name: ZEEBE_BROKER_CLUSTER_GOSSIPBROADCASTUPDATES
           value: "true"
+        - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
+          value: 6s
         - name: ZEEBE_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: gcr.io/zeebe-io/zeebe:0.20.2
+        image: gcr.io/zeebe-io/zeebe:0.20.2-backpressure
         imagePullPolicy: Always
         name: broker
         ports:
@@ -245,7 +250,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 484
-          name: broker-config-9672gh4745
+          name: broker-config-kh8t5bb576
         name: configuration
       - configMap:
           defaultMode: 493

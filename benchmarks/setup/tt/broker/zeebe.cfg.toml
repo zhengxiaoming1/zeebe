@@ -22,5 +22,8 @@ enabled = true
 [gateway.threads]
 managementThreads = 1
 
+[gateway.backpressure]
+enabled = true
+
 [monitoring]
 enabled = true
