@@ -157,7 +157,7 @@ spec:
       - env:
         - name: JAVA_OPTIONS
           value: -Dapp.brokerUrl=broker:26500 -Dzeebe.client.requestTimeout=62000
-            -Dapp.worker.capacity=200 -Dapp.worker.threads=100
+            -Dapp.worker.capacity=200 -Dapp.worker.threads=100 -Dapp.worker.completionDelay=25
         image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         name: starter
@@ -205,7 +205,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: gcr.io/zeebe-io/zeebe:np-support-tt
+        image: gcr.io/zeebe-io/zeebe:0.20.2
         imagePullPolicy: Always
         name: broker
         ports:
