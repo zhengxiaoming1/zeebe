@@ -6,13 +6,6 @@ replicationFactor = 1
 cpuThreadCount = 6
 ioThreadCount = 6
 
-[data]
-# snapshotPeriod = "3m"
-# maxSnapshots = "3"
-
-[backpressure]
-enabled = true
-
 [gateway]
 enable = true
 
@@ -21,9 +14,6 @@ enabled = true
 
 [gateway.threads]
 managementThreads = 1
-
-[gateway.backpressure]
-enabled = true
 
 [monitoring]
 enabled = true

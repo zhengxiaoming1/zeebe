@@ -51,6 +51,20 @@ spec:
               value: "true"
             - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
               value: "6s"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_ENABLED
+              value: "true"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_ALGORITHM
+              value: "aimd"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_REQUEST_TIMEOUT
+              value: "2s"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MAX_LIMIT
+              value: "200"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MIN_LIMIT
+              value: "1"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_INITIAL_LIMIT
+              value: "100"
+            - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_BACKOFF_RATIO
+              value: "0.8"
             - name: ZEEBE_NODE_NAME
               valueFrom:
                 fieldRef:

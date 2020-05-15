@@ -25,13 +25,6 @@ data:
     cpuThreadCount = 6
     ioThreadCount = 6
 
-    [data]
-    # snapshotPeriod = "3m"
-    # maxSnapshots = "3"
-
-    [backpressure]
-    enabled = true
-
     [gateway]
     enable = true
 
@@ -41,16 +34,13 @@ data:
     [gateway.threads]
     managementThreads = 1
 
-    [gateway.backpressure]
-    enabled = true
-
     [monitoring]
     enabled = true
 kind: ConfigMap
 metadata:
   labels:
     app: tecnotree
-  name: broker-config-kh8t5bb576
+  name: broker-config-c89mdfbbh7
   namespace: tt
 ---
 apiVersion: v1
@@ -208,6 +198,20 @@ spec:
           value: "true"
         - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
           value: 6s
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_ENABLED
+          value: "true"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_ALGORITHM
+          value: aimd
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_REQUEST_TIMEOUT
+          value: 2s
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MAX_LIMIT
+          value: "200"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MIN_LIMIT
+          value: "1"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_INITIAL_LIMIT
+          value: "100"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_BACKOFF_RATIO
+          value: "0.8"
         - name: ZEEBE_NODE_NAME
           valueFrom:
             fieldRef:
@@ -250,7 +254,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 484
-          name: broker-config-kh8t5bb576
+          name: broker-config-c89mdfbbh7
         name: configuration
       - configMap:
           defaultMode: 493
