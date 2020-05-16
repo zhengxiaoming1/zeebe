@@ -17,7 +17,8 @@ spec:
               -Dzeebe.client.requestTimeout=62000
               -Dapp.worker.capacity=64
               -Dapp.worker.threads=16
-              -Dapp.worker.completionDelay=20
+              -Dapp.worker.completionDelay=20ms
+              -Dapp.worker.pollingDelay=100ms
         resources:
           limits:
             cpu: 8

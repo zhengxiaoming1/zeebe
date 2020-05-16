@@ -216,7 +216,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: gcr.io/zeebe-io/zeebe:0.20.2-backpressure
+        image: gcr.io/zeebe-io/zeebe:0.20.3-SNAPSHOT
         imagePullPolicy: Always
         name: broker
         ports:
