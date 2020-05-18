@@ -30,7 +30,7 @@ commonLabels:
 images:
   - name: camunda/zeebe
     newName: gcr.io/zeebe-io/zeebe
-    newTag: 0.20.3-SNAPSHOT
+    newTag: v0.20.3-SNAPSHOT
 
 vars:
   - name: BROKER_SERVICE_NAME
