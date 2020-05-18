@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starter
+spec:
+  replicas: 0
+  template:
+    spec:
+      containers:
+      - name: starter
+        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3
+        imagePullPolicy: Always
+        env:
+          - name: JAVA_OPTIONS
+            value: >-
+              -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
+              -Dapp.ttstarter.threads=2
+              -Dapp.worker.jobType="benchmark-task-1"
+        resources:
+          limits:
+            cpu: 2
+            memory: 512Mi
+          requests:
+            cpu: 1
+            memory: 128Mi

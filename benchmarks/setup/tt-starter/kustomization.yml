@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Hard-code deploy everything into the tt namespace
+namespace: tt-test-bp
+
+bases:
+  - broker
+
+resources:
+  - servicemonitor.yml
+  - starter.yml
+  - worker1.yml
+  - worker2.yml
+
+configMapGenerator:
+  - name: java-tool-options
+    literals:
+      - JAVA_TOOL_OPTIONS=-XX:+PrintFlagsFinal -XX:MaxRAMPercentage=25.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/usr/local/zeebe/data -XX:ErrorFile=/usr/local/zeebe/data/zeebe_error%p.log
+      # Append the following options to the above to enable remote JMX
+      # -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.rmi.port=9010 -Djava.rmi.server.hostname=127.0.0.1
+
+commonLabels:
+  app: tecnotree
+
+# commonAnnotations:
+  # linkerd.io/inject: enabled
+  # config.linkerd.io/enable-debug-sidecar: "true"
+
+images:
+  - name: camunda/zeebe
+    newName: gcr.io/zeebe-io/zeebe
+    newTag: 0.20.3-SNAPSHOT
+
+vars:
+  - name: BROKER_SERVICE_NAME
+    objref:
+      kind: Service
+      name: broker
+      apiVersion: v1
+    fieldref:
+      fieldpath: metadata.name
