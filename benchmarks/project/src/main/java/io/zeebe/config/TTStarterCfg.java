@@ -23,6 +23,7 @@ public class TTStarterCfg {
 
   private String lastJobType;
   private WorkerCfg worker;
+  private int numTasks;
 
   public String getProcessId() {
     return processId;
@@ -62,5 +63,13 @@ public class TTStarterCfg {
 
   public void setWorker(final WorkerCfg worker) {
     this.worker = worker;
+  }
+
+  public int getNumTasks() {
+    return this.numTasks;
+  }
+
+  public void setNumTasks(final int numTasks) {
+    this.numTasks = numTasks;
   }
 }

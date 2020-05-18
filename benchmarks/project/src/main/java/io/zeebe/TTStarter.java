@@ -25,6 +25,7 @@ import io.zeebe.config.WorkerCfg;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.builder.ServiceTaskBuilder;
+import io.zeebe.model.bpmn.builder.StartEventBuilder;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -43,8 +44,6 @@ public class TTStarter extends App {
   private JobWorker worker;
   private TTStarterCfg ttCfg;
   private String processId;
-  private String lastJobType;
-  private long completionDelay;
   private int numTasks;
 
   public TTStarter(final AppCfg appCfg) {
@@ -56,8 +55,7 @@ public class TTStarter extends App {
   public void run() {
     ttCfg = appCfg.getTtStarter();
     processId = ttCfg.getProcessId();
-    lastJobType = ttCfg.getLastJobType();
-    completionDelay = ttCfg.getWorker().getCompletionDelay().toMillis();
+    numTasks = ttCfg.getNumTasks();
 
     client = createZeebeClient();
 
@@ -72,7 +70,7 @@ public class TTStarter extends App {
     // start instances
     LOG.info("Creating 250 instances");
 
-    startWorker(client);
+    startResponseWorker(client, ttCfg.getWorker());
 
     for (int i = 0; i < 250; i++) {
       createInstance();
@@ -89,11 +87,12 @@ public class TTStarter extends App {
                 }));
   }
 
-  private void startWorker(final ZeebeClient client) {
+  private void startResponseWorker(final ZeebeClient client, WorkerCfg workerCfg) {
+    final long completionDelay = workerCfg.getCompletionDelay().toMillis();
     worker =
         client
             .newWorker()
-            .jobType(lastJobType)
+            .jobType(workerCfg.getJobType())
             .handler(
                 (jobClient, job) -> {
                   try {
@@ -131,15 +130,20 @@ public class TTStarter extends App {
   }
 
   private BpmnModelInstance createWorkflow() {
+    final String jobType = appCfg.getWorker().getJobType();
+
+    final StartEventBuilder startEventBuilder =
+        Bpmn.createExecutableProcess(ttCfg.getProcessId()).startEvent();
+
+    // create N sequential tasks
     ServiceTaskBuilder processBuilder =
-        Bpmn.createExecutableProcess(ttCfg.getProcessId())
-            .startEvent()
-            .serviceTask("task-1", b -> b.zeebeTaskType(appCfg.getWorker().getJobType()));
-    for (int i = 2; i < numTasks; i++) {
-      processBuilder = processBuilder.serviceTask("task-" + i, b -> b.zeebeTaskType("benchmark"));
+        startEventBuilder.serviceTask("task-1", b -> b.zeebeTaskType(jobType + 1));
+    for (int i = 2; i <= numTasks; i++) {
+      final String jobTypeI = jobType + i;
+      processBuilder = processBuilder.serviceTask("task-" + i, b -> b.zeebeTaskType(jobTypeI));
     }
     return processBuilder
-        .serviceTask("task-" + numTasks, b -> b.zeebeTaskType(lastJobType))
+        .serviceTask("task-" + numTasks, b -> b.zeebeTaskType(ttCfg.getWorker().getJobType()))
         .endEvent()
         .done();
   }
@@ -158,7 +162,6 @@ public class TTStarter extends App {
   }
 
   private ZeebeClient createZeebeClient() {
-    final WorkerCfg workerCfg = appCfg.getWorker();
     return ZeebeClient.newClientBuilder()
         .brokerContactPoint(appCfg.getBrokerUrl())
         .numJobWorkerExecutionThreads(ttCfg.getWorker().getThreads())
