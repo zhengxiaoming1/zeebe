@@ -15,16 +15,14 @@
  */
 package io.zeebe.config;
 
-public class StarterCfg {
+public class TTStarterCfg {
 
   private String processId;
   private int rate;
   private int threads;
 
-  /** Paths are relative to classpath. */
-  private String bpmnXmlPath;
-
-  private String payloadPath;
+  private String lastJobType;
+  private WorkerCfg worker;
 
   public String getProcessId() {
     return processId;
@@ -50,19 +48,19 @@ public class StarterCfg {
     this.threads = threads;
   }
 
-  public String getBpmnXmlPath() {
-    return bpmnXmlPath;
+  public String getLastJobType() {
+    return lastJobType;
   }
 
-  public void setBpmnXmlPath(String bpmnXmlPath) {
-    this.bpmnXmlPath = bpmnXmlPath;
+  public void setLastJobType(final String lastJobType) {
+    this.lastJobType = lastJobType;
   }
 
-  public String getPayloadPath() {
-    return payloadPath;
+  public WorkerCfg getWorker() {
+    return this.worker;
   }
 
-  public void setPayloadPath(String payloadPath) {
-    this.payloadPath = payloadPath;
+  public void setWorker(final WorkerCfg worker) {
+    this.worker = worker;
   }
 }
