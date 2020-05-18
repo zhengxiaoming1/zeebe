@@ -14,9 +14,16 @@ USER nobody
 CMD java $JAVA_OPTIONS -jar app.jar
 COPY --from=builder /usr/src/app/target/worker.jar /app.jar
 
+FROM openjdk:8-jre-alpine as ttstarter
+USER nobody
+CMD java $JAVA_OPTIONS -jar app.jar
+COPY --from=builder /usr/src/app/target/ttstarter.jar /app.jar
+
 FROM openjdk:8-jre-alpine as all-in-one
 USER root
 RUN apk update && apk add libc6-compat
 USER nobody
 CMD java $JAVA_OPTIONS -jar app.jar
 COPY --from=builder /usr/src/app/target/all-in-one.jar /app.jar
+
+
