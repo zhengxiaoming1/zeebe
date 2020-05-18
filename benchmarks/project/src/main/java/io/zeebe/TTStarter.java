@@ -25,7 +25,6 @@ import io.zeebe.config.WorkerCfg;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.builder.ServiceTaskBuilder;
-import io.zeebe.model.bpmn.builder.StartEventBuilder;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -132,16 +131,21 @@ public class TTStarter extends App {
   private BpmnModelInstance createWorkflow() {
     final String jobType = appCfg.getWorker().getJobType();
 
-    final StartEventBuilder startEventBuilder =
-        Bpmn.createExecutableProcess(ttCfg.getProcessId()).startEvent();
-
     // create N sequential tasks
     ServiceTaskBuilder processBuilder =
-        startEventBuilder.serviceTask("task-1", b -> b.zeebeTaskType(jobType + 1));
-    for (int i = 2; i <= numTasks; i++) {
+        Bpmn.createExecutableProcess(ttCfg.getProcessId())
+            .startEvent()
+            .serviceTask("task-1", b -> b.zeebeTaskType(jobType + 1))
+            .serviceTask("task-2", b -> b.zeebeTaskType(jobType + 2));
+    /*.serviceTask("task-3", b -> b.zeebeTaskType(jobType + 3))
+    .serviceTask("task-4", b -> b.zeebeTaskType(jobType + 4))
+    .serviceTask("task-5", b -> b.zeebeTaskType(jobType + 5))
+    .serviceTask("task-6", b -> b.zeebeTaskType(jobType + 6))
+    .serviceTask("task-7", b -> b.zeebeTaskType(jobType + 7));*/
+    /* for (int i = 2; i <= numTasks; i++) {
       final String jobTypeI = jobType + i;
       processBuilder = processBuilder.serviceTask("task-" + i, b -> b.zeebeTaskType(jobTypeI));
-    }
+    }*/
     return processBuilder
         .serviceTask("task-" + numTasks, b -> b.zeebeTaskType(ttCfg.getWorker().getJobType()))
         .endEvent()

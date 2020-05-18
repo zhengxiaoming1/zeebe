@@ -21,7 +21,6 @@ public class TTStarterCfg {
   private int rate;
   private int threads;
 
-  private String lastJobType;
   private WorkerCfg worker;
   private int numTasks;
 
@@ -47,14 +46,6 @@ public class TTStarterCfg {
 
   public void setThreads(int threads) {
     this.threads = threads;
-  }
-
-  public String getLastJobType() {
-    return lastJobType;
-  }
-
-  public void setLastJobType(final String lastJobType) {
-    this.lastJobType = lastJobType;
   }
 
   public WorkerCfg getWorker() {
