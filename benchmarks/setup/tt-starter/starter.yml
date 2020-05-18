@@ -15,7 +15,7 @@ spec:
             value: >-
               -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
               -Dapp.ttstarter.threads=2
-              -Dapp.worker.jobType="benchmark-task-1"
+              -Dapp.worker.jobType=benchmark-task-
         resources:
           limits:
             cpu: 2

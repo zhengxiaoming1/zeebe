@@ -65,6 +65,10 @@ spec:
               value: "100"
             - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_BACKOFF_RATIO
               value: "0.8"
+            - name: ZEEBE_DEBUG
+              value: "true"
+            - name: ZEEBE_LOG_LEVEL
+              value: "debug"
             - name: ZEEBE_NODE_NAME
               valueFrom:
                 fieldRef:

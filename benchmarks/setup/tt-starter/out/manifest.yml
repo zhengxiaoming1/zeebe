@@ -116,7 +116,7 @@ spec:
       containers:
       - env:
         - name: JAVA_OPTIONS
-          value: -Dapp.brokerUrl=broker:26500 -Dapp.ttstarter.threads=2 -Dapp.worker.jobType="benchmark-task-"
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.ttstarter.threads=2 -Dapp.worker.jobType=benchmark-task-
         image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3
         imagePullPolicy: Always
         name: starter
@@ -149,7 +149,7 @@ spec:
       - env:
         - name: JAVA_OPTIONS
           value: -Dapp.brokerUrl=broker:26500 -Dapp.worker.capacity=16 -Dapp.worker.threads=16
-            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType="benchmark-task-1"
+            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType=benchmark-task-1
         image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         name: starter
@@ -182,7 +182,7 @@ spec:
       - env:
         - name: JAVA_OPTIONS
           value: -Dapp.brokerUrl=broker:26500 -Dapp.worker.capacity=16 -Dapp.worker.threads=16
-            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType="benchmark-task-2"
+            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType=benchmark-task-2
         image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         name: starter
@@ -244,6 +244,8 @@ spec:
           value: "100"
         - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_BACKOFF_RATIO
           value: "0.8"
+        - name: ZEEBE_LOG_LEVEL
+          value: debug
         - name: ZEEBE_NODE_NAME
           valueFrom:
             fieldRef:

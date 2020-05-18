@@ -135,8 +135,8 @@ public class TTStarter extends App {
     ServiceTaskBuilder processBuilder =
         Bpmn.createExecutableProcess(ttCfg.getProcessId())
             .startEvent()
-            .serviceTask("task-1", b -> b.zeebeTaskType(jobType + 1))
-            .serviceTask("task-2", b -> b.zeebeTaskType(jobType + 2));
+            .serviceTask("task-1", b -> b.zeebeTaskType(String.format("%s%d", jobType, 1)))
+            .serviceTask("task-2", b -> b.zeebeTaskType(String.format("%s%d", jobType, 2)));
     /*.serviceTask("task-3", b -> b.zeebeTaskType(jobType + 3))
     .serviceTask("task-4", b -> b.zeebeTaskType(jobType + 4))
     .serviceTask("task-5", b -> b.zeebeTaskType(jobType + 5))

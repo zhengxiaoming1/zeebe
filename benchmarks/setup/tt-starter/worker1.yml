@@ -18,8 +18,7 @@ spec:
               -Dapp.worker.threads=16
               -Dapp.worker.completionDelay=100ms
               -Dapp.worker.pollingDelay=100ms
-              -Dapp.worker.jobType="benchmark-task-1"
-  -1"
+              -Dapp.worker.jobType=benchmark-task-1
         resources:
           limits:
             cpu: 8
