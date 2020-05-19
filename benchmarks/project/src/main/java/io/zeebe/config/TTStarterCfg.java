@@ -15,6 +15,8 @@
  */
 package io.zeebe.config;
 
+import java.time.Duration;
+
 public class TTStarterCfg {
 
   private String processId;
@@ -23,6 +25,7 @@ public class TTStarterCfg {
 
   private WorkerCfg worker;
   private int numTasks;
+  private Duration instanceTimeout;
 
   public String getProcessId() {
     return processId;
@@ -62,5 +65,13 @@ public class TTStarterCfg {
 
   public void setNumTasks(final int numTasks) {
     this.numTasks = numTasks;
+  }
+
+  public Duration getInstanceTimeout() {
+    return this.instanceTimeout;
+  }
+
+  public void setInstanceTimeout(final Duration instanceTimeout) {
+    this.instanceTimeout = instanceTimeout;
   }
 }

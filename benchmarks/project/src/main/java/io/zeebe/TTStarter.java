@@ -24,25 +24,29 @@ import io.zeebe.config.TTStarterCfg;
 import io.zeebe.config.WorkerCfg;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class TTStarter extends App {
   private final AppCfg appCfg;
   private BlockingQueue<ZeebeFuture<WorkflowInstanceEvent>> requestFutures;
   private ScheduledExecutorService executorService;
   private ScheduledExecutorService responseCheckExecutor;
-  private Set<Long> runningWorkflows = new ConcurrentSkipListSet<>();
+  private Map<Long, Long> runningWorkflows = new ConcurrentHashMap<>();
   private ZeebeClient client;
   private JobWorker worker;
   private TTStarterCfg ttCfg;
   private String processId;
   private int numTasks;
+  private ScheduledExecutorService timeoutExecutor;
 
   public TTStarter(final AppCfg appCfg) {
     this.appCfg = appCfg;
@@ -61,6 +65,7 @@ public class TTStarter extends App {
 
     executorService = Executors.newScheduledThreadPool(ttCfg.getThreads());
     responseCheckExecutor = Executors.newScheduledThreadPool(1);
+    timeoutExecutor = Executors.newScheduledThreadPool(1);
 
     final BpmnModelInstance workflow = createWorkflow();
     deployWorkflow(client, workflow);
@@ -70,11 +75,14 @@ public class TTStarter extends App {
 
     startResponseWorker(client, ttCfg.getWorker());
 
+    if (ttCfg.getInstanceTimeout().toMillis() > 0) {
+      timeoutExecutor.scheduleAtFixedRate(
+          this::timeoutRunningInstances, 500, 500, TimeUnit.MILLISECONDS);
+    }
+
     for (int i = 0; i < 250; i++) {
       createInstance();
     }
-
-    LOG.info("Created 250 instances");
 
     Runtime.getRuntime()
         .addShutdownHook(
@@ -85,6 +93,25 @@ public class TTStarter extends App {
                   executorService.shutdown();
                   responseCheckExecutor.shutdown();
                 }));
+  }
+
+  private void timeoutRunningInstances() {
+    long currentTime = System.currentTimeMillis();
+    long timeout = ttCfg.getInstanceTimeout().toMillis();
+    Set<Long> toRemove = new HashSet<>();
+    runningWorkflows.forEach(
+        (w, startTime) -> {
+          if (currentTime - startTime > timeout) {
+            toRemove.add(w);
+          }
+        });
+    toRemove.forEach(
+        w -> {
+          if (runningWorkflows.remove(w) != null) {
+            LOG.info("Workflow instance {} timed out", w);
+            createInstance();
+          }
+        });
   }
 
   private void startResponseWorker(final ZeebeClient client, WorkerCfg workerCfg) {
@@ -104,8 +131,8 @@ public class TTStarter extends App {
                   }
                   jobClient.newCompleteCommand(job.getKey()).variables(job.getVariables()).send();
 
-                  final boolean removed = runningWorkflows.remove(job.getWorkflowInstanceKey());
-                  if (removed) {
+                  final Long startTime = runningWorkflows.remove(job.getWorkflowInstanceKey());
+                  if (startTime != null) {
                     LOG.info("Completed last job for workflow {}", job.getWorkflowInstanceKey());
                     createInstance();
                   } else {
@@ -120,7 +147,8 @@ public class TTStarter extends App {
   private void checkResponse() {
     try {
       final WorkflowInstanceEvent workflowInstanceEvent = requestFutures.take().get();
-      runningWorkflows.add(workflowInstanceEvent.getWorkflowInstanceKey());
+      runningWorkflows.put(
+          workflowInstanceEvent.getWorkflowInstanceKey(), System.currentTimeMillis());
     } catch (InterruptedException e) {
       e.printStackTrace();
     } catch (ExecutionException e) {
