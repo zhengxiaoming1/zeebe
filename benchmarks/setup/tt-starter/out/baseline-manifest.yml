@@ -25,10 +25,6 @@ data:
     cpuThreadCount = 6
     ioThreadCount = 6
 
-    [data]
-    # snapshotPeriod = "3m"
-    # maxSnapshots = "3"
-
     [gateway]
     enable = true
 
@@ -44,7 +40,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: tecnotree
-  name: broker-config-k7mch55ctb
+  name: broker-config-c89mdfbbh7
   namespace: baseline-tt
 ---
 apiVersion: v1
@@ -120,9 +116,8 @@ spec:
       containers:
       - env:
         - name: JAVA_OPTIONS
-          value: -Dapp.brokerUrl=broker:26500 -Dzeebe.client.requestTimeout=62000
-            -Dapp.starter.rate=100 -Dapp.starter.threads=2
-        image: gcr.io/zeebe-io/starter:zeebe
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.ttstarter.threads=2 -Dapp.worker.jobType=benchmark-task-
+        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3
         imagePullPolicy: Always
         name: starter
         resources:
@@ -138,7 +133,7 @@ kind: Deployment
 metadata:
   labels:
     app: tecnotree
-  name: worker
+  name: worker-1
   namespace: baseline-tt
 spec:
   replicas: 0
@@ -153,8 +148,41 @@ spec:
       containers:
       - env:
         - name: JAVA_OPTIONS
-          value: -Dapp.brokerUrl=broker:26500 -Dzeebe.client.requestTimeout=62000
-            -Dapp.worker.capacity=64 -Dapp.worker.threads=16 -Dapp.worker.completionDelay=20
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.worker.capacity=16 -Dapp.worker.threads=16
+            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType=benchmark-task-1
+        image: gcr.io/zeebe-io/worker:zeebe
+        imagePullPolicy: Always
+        name: starter
+        resources:
+          limits:
+            cpu: 8
+            memory: 512Mi
+          requests:
+            cpu: 3
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tecnotree
+  name: worker-2
+  namespace: baseline-tt
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: tecnotree
+  template:
+    metadata:
+      labels:
+        app: tecnotree
+    spec:
+      containers:
+      - env:
+        - name: JAVA_OPTIONS
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.worker.capacity=16 -Dapp.worker.threads=16
+            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType=benchmark-task-2
         image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         name: starter
@@ -202,11 +230,27 @@ spec:
           value: "true"
         - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
           value: 6s
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_ENABLED
+          value: "true"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_ALGORITHM
+          value: aimd
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_REQUEST_TIMEOUT
+          value: 2s
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MAX_LIMIT
+          value: "200"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MIN_LIMIT
+          value: "1"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_INITIAL_LIMIT
+          value: "100"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_BACKOFF_RATIO
+          value: "0.8"
+        - name: ZEEBE_LOG_LEVEL
+          value: debug
         - name: ZEEBE_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: camunda/zeebe:0.20.1
+        image: gcr.io/zeebe-io/zeebe:v20-baseline
         imagePullPolicy: Always
         name: broker
         ports:
@@ -244,7 +288,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 484
-          name: broker-config-k7mch55ctb
+          name: broker-config-c89mdfbbh7
         name: configuration
       - configMap:
           defaultMode: 493
