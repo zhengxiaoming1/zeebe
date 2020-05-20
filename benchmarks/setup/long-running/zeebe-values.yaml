@@ -14,6 +14,9 @@ gatewayMetrics: true
 gateway:
   replicas: 1
   logLevel: debug
+  env:
+    - name: ZEEBE_GATEWAY_THREADS_MANAGEMENTTHREADS
+      value: "4"
 
 # Uncomment to add custom YAML configuration
 # This will overwrite anything at the application.yml location
