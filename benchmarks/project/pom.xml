@@ -59,6 +59,17 @@
       <artifactId>log4j-slf4j-impl</artifactId>
       <version>${version.log4j}</version>
     </dependency>
+    <dependency>
+      <groupId>io.prometheus</groupId>
+      <artifactId>simpleclient_httpserver</artifactId>
+      <version>0.9.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.prometheus</groupId>
+      <artifactId>simpleclient</artifactId>
+      <version>0.9.0</version>
+    </dependency>
   </dependencies>
 
   <build>

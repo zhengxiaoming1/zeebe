@@ -21,6 +21,7 @@ public class AppCfg {
   private StarterCfg starter;
   private WorkerCfg worker;
   private TTStarterCfg ttStarter;
+  private int monitoringPort;
 
   public TTStarterCfg getTtStarter() {
     return ttStarter;
@@ -52,5 +53,13 @@ public class AppCfg {
 
   public void setWorker(WorkerCfg worker) {
     this.worker = worker;
+  }
+
+  public int getMonitoringPort() {
+    return this.monitoringPort;
+  }
+
+  public void setMonitoringPort(final int monitoringPort) {
+    this.monitoringPort = monitoringPort;
   }
 }

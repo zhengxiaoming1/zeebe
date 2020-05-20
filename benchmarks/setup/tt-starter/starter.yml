@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: starter
-        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3
+        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3-v4-timeout-metrics
         imagePullPolicy: Always
         env:
           - name: JAVA_OPTIONS

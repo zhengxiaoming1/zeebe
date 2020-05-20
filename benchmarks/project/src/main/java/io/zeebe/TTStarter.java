@@ -15,6 +15,7 @@
  */
 package io.zeebe;
 
+import io.prometheus.client.Counter;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.ZeebeFuture;
 import io.zeebe.client.api.response.WorkflowInstanceEvent;
@@ -47,6 +48,28 @@ public class TTStarter extends App {
   private String processId;
   private int numTasks;
   private ScheduledExecutorService timeoutExecutor;
+
+  private io.prometheus.client.Counter totalWorkflowsCompleted =
+      Counter.build()
+          .namespace("ttstarter")
+          .name("workflows_completed")
+          .help("Number of workflows completed")
+          .register();
+
+  private io.prometheus.client.Counter totalWorkflowsStarted =
+      Counter.build()
+          .namespace("ttstarter")
+          .name("workflows_started")
+          .help("Number of workflows started")
+          .register();
+
+  private io.prometheus.client.Counter totalWorkflowsFailed =
+      Counter.build()
+          .namespace("ttstarter")
+          .name("workflows_failed")
+          .help("Number of workflows failed")
+          .labelNames("reason")
+          .register();
 
   public TTStarter(final AppCfg appCfg) {
     this.appCfg = appCfg;
@@ -109,9 +132,15 @@ public class TTStarter extends App {
         w -> {
           if (runningWorkflows.remove(w) != null) {
             LOG.info("Workflow instance {} timed out", w);
+            totalWorkflowsFailed.labels("timeout").inc();
+            cancelInstance(w);
             createInstance();
           }
         });
+  }
+
+  private void cancelInstance(final Long w) {
+    client.newCancelInstanceCommand(w).send();
   }
 
   private void startResponseWorker(final ZeebeClient client, WorkerCfg workerCfg) {
@@ -134,6 +163,7 @@ public class TTStarter extends App {
                   final Long startTime = runningWorkflows.remove(job.getWorkflowInstanceKey());
                   if (startTime != null) {
                     LOG.info("Completed last job for workflow {}", job.getWorkflowInstanceKey());
+                    totalWorkflowsCompleted.inc();
                     createInstance();
                   } else {
                     LOG.info(
@@ -152,6 +182,7 @@ public class TTStarter extends App {
     } catch (InterruptedException e) {
       e.printStackTrace();
     } catch (ExecutionException e) {
+      totalWorkflowsFailed.labels("error").inc();
       LOG.info("Failed to create workflow instance, creating a new one", e);
       createInstance();
     }
@@ -241,6 +272,7 @@ public class TTStarter extends App {
             requestFutures.put(
                 client.newCreateInstanceCommand().bpmnProcessId(processId).latestVersion().send());
             responseCheckExecutor.submit(this::checkResponse);
+            totalWorkflowsStarted.inc();
           } catch (Exception e) {
             LOG.error("Error on creating new workflow instance", e);
           }
