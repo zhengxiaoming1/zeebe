@@ -117,7 +117,7 @@ spec:
       - env:
         - name: JAVA_OPTIONS
           value: -Dapp.brokerUrl=broker:26500 -Dapp.ttstarter.threads=2 -Dapp.worker.jobType=benchmark-task-
-        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3
+        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3-v4-timeout-metrics
         imagePullPolicy: Always
         name: starter
         resources:
