@@ -17,3 +17,15 @@ managementThreads = 1
 
 [monitoring]
 enabled = true
+
+[backpressure]
+enabled = true
+algorithm = "aimd"
+useWindowed = false
+
+[backpressure.aimd]
+initialLimit = 10
+maxLimit = 100
+requestTimeout = "300ms"
+backoffRatio = 0.8
+

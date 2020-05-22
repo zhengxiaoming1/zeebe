@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Hard-code deploy everything into the tt namespace
-namespace: tt-test-bp
+namespace: tt-test-bp-aimd
 
 bases:
   - broker
