@@ -27,7 +27,6 @@ import io.atomix.raft.protocol.ConfigureResponse;
 import io.atomix.raft.protocol.InstallRequest;
 import io.atomix.raft.protocol.InstallResponse;
 import io.atomix.raft.protocol.RaftRequest;
-import io.atomix.raft.storage.snapshot.Snapshot;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -277,23 +276,44 @@ final class LeaderAppender extends AbstractAppender {
     else if (member.getMember().getType() == RaftMember.Type.ACTIVE
         || member.getMember().getType() == RaftMember.Type.PROMOTABLE
         || member.getMember().getType() == RaftMember.Type.PASSIVE) {
-      final Snapshot snapshot = raft.getSnapshotStore().getCurrentSnapshot();
-      if (snapshot != null
-          && member.getSnapshotIndex() < snapshot.index()
-          && snapshot.index() >= member.getLogReader().getCurrentIndex()) {
-        if (!member.canInstall()) {
-          return;
-        }
-
-        log.debug("Replicating snapshot {} to {}", snapshot.index(), member.getMember().memberId());
-        sendInstallRequest(member, buildInstallRequest(member, snapshot));
-      } else if (member.canAppend()) {
-        sendAppendRequest(member, buildAppendRequest(member, -1));
-      }
+      replicateSnapshot(member);
     }
     // If no AppendRequest is already being sent, send an AppendRequest.
     else if (member.canAppend()) {
       sendAppendRequest(member, buildAppendRequest(member, -1));
+    }
+  }
+
+  private void replicateSnapshot(final RaftMemberContext member) {
+    final var optSnapshot = raft.getPersistedSnapshotStore().getLatestSnapshot();
+
+    final var canAppend = member.canAppend();
+    if (optSnapshot.isEmpty()) {
+      if (canAppend) {
+        sendAppendRequest(member, buildAppendRequest(member, -1));
+      }
+      return;
+    }
+
+    final var snapshot = optSnapshot.get();
+    if (member.getSnapshotIndex() >= snapshot.getIndex()) {
+      if (canAppend) {
+        sendAppendRequest(member, buildAppendRequest(member, -1));
+      }
+      return;
+    }
+
+    if (snapshot.getIndex() < member.getLogReader().getCurrentIndex()) {
+      if (canAppend) {
+        sendAppendRequest(member, buildAppendRequest(member, -1));
+      }
+      return;
+    }
+
+    if (member.canInstall()) {
+      log.debug(
+          "Replicating snapshot {} to {}", snapshot.getIndex(), member.getMember().memberId());
+      sendInstallRequest(member, buildInstallRequest(member, snapshot));
     }
   }
 
