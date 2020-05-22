@@ -42,7 +42,7 @@ data:
     algorithm = "fixed"
 
     [backpressure.fixedLimit]
-    limit = 40
+    limit = 20
 kind: ConfigMap
 metadata:
   labels:
