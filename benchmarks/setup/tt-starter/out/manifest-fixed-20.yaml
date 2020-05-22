@@ -1,0 +1,332 @@
+apiVersion: v1
+data:
+  log4j2.xml: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Configuration status=\"WARN\">\n\n
+    \ <Properties>\n    <Property name=\"log.path\">${sys:app.home}/logs</Property>\n
+    \   <Property name=\"log.pattern\">%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{actor-name}]
+    [%t] %-5level %logger{36} - %msg%n</Property>\n  </Properties>\n\n  <Appenders>\n
+    \   <RollingRandomAccessFile name=\"RollingFile\" fileName=\"${log.path}/zeebe.log\"\n
+    \     filePattern=\"${log.path}/zeebe-%d{yyyy-MM-dd}-%i.log.gz\">\n      <PatternLayout>\n
+    \       <Pattern>${log.pattern}</Pattern>\n      </PatternLayout>\n      <Policies>\n
+    \       <TimeBasedTriggeringPolicy/>\n        <SizeBasedTriggeringPolicy size=\"250
+    MB\"/>\n      </Policies>\n    </RollingRandomAccessFile>\n\n    <Console name=\"Console\"
+    target=\"SYSTEM_OUT\">\n      <JSONLayout compact=\"${env:ZEEBE_JSON_LOG_COMPACT:-true}\"
+    eventEol=\"true\" \n                  properties=\"true\" includeStacktrace=\"true\"
+    stacktraceAsString=\"false\" />\n    </Console>\n  </Appenders>\n\n  <Loggers>\n
+    \   <Logger name=\"io.zeebe\" level=\"${env:ZEEBE_LOG_LEVEL:-debug}\"/>\n    <Logger
+    name=\"io.atomix\" level=\"${env:ATOMIX_LOG_LEVEL:-warn}\"/>\n\n    <Root level=\"info\">\n
+    \     <AppenderRef ref=\"RollingFile\" />\n      <AppenderRef ref=\"Console\"
+    />\n    </Root>\n  </Loggers>\n</Configuration>"
+  zeebe.cfg.toml: |
+    [cluster]
+    partitionsCount = 25
+    replicationFactor = 1
+
+    [threads]
+    cpuThreadCount = 6
+    ioThreadCount = 6
+
+    [gateway]
+    enable = true
+
+    [gateway.monitoring]
+    enabled = true
+
+    [gateway.threads]
+    managementThreads = 1
+
+    [monitoring]
+    enabled = true
+
+    [backpressure]
+    enabled = true
+    algorithm = "fixed"
+
+    [backpressure.fixedLimit]
+    limit = 40
+kind: ConfigMap
+metadata:
+  labels:
+    app: tecnotree
+  name: broker-config-2g756d8bch
+  namespace: tt-test-bp-fixed
+---
+apiVersion: v1
+data:
+  init.sh: |
+    #!/usr/bin/env bash
+    set -eux -o pipefail
+
+    export ZEEBE_HOST=$(hostname -f)
+    export ZEEBE_NODE_ID=${ZEEBE_NODE_NAME##*-}
+
+    # As the number of replicas or the DNS is not obtainable from the downward API yet,
+    # defined them here based on conventions
+    replicaHost=${ZEEBE_NODE_NAME%-*}
+    export ZEEBE_CONTACT_POINTS=$(for ((i=0; i<${ZEEBE_CLUSTER_SIZE}; i++)); do echo -n "${replicaHost}-$i.$(hostname -d):26502,"; done)
+
+    exec tini -- /usr/local/bin/startup.sh
+kind: ConfigMap
+metadata:
+  labels:
+    app: tecnotree
+  name: broker-scripts-6t65dh7h9t
+  namespace: tt-test-bp-fixed
+---
+apiVersion: v1
+data:
+  JAVA_TOOL_OPTIONS: -XX:+PrintFlagsFinal -XX:MaxRAMPercentage=25.0 -XX:+HeapDumpOnOutOfMemoryError
+    -XX:HeapDumpPath=/usr/local/zeebe/data -XX:ErrorFile=/usr/local/zeebe/data/zeebe_error%p.log
+kind: ConfigMap
+metadata:
+  labels:
+    app: tecnotree
+  name: java-tool-options-bt74g5gdtb
+  namespace: tt-test-bp-fixed
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: tecnotree
+  name: broker
+  namespace: tt-test-bp-fixed
+spec:
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 26500
+  - name: monitoring
+    port: 9600
+  - name: cluster
+    port: 26502
+  publishNotReadyAddresses: true
+  selector:
+    app: tecnotree
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tecnotree
+  name: starter
+  namespace: tt-test-bp-fixed
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: tecnotree
+  template:
+    metadata:
+      labels:
+        app: tecnotree
+    spec:
+      containers:
+      - env:
+        - name: JAVA_OPTIONS
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.ttstarter.threads=2 -Dapp.worker.jobType=benchmark-task-
+        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3-v4-timeout-metrics
+        imagePullPolicy: Always
+        name: starter
+        resources:
+          limits:
+            cpu: 2
+            memory: 512Mi
+          requests:
+            cpu: 1
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tecnotree
+  name: worker-1
+  namespace: tt-test-bp-fixed
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: tecnotree
+  template:
+    metadata:
+      labels:
+        app: tecnotree
+    spec:
+      containers:
+      - env:
+        - name: JAVA_OPTIONS
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.worker.capacity=16 -Dapp.worker.threads=16
+            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType=benchmark-task-1
+        image: gcr.io/zeebe-io/worker:zeebe
+        imagePullPolicy: Always
+        name: starter
+        resources:
+          limits:
+            cpu: 8
+            memory: 512Mi
+          requests:
+            cpu: 3
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tecnotree
+  name: worker-2
+  namespace: tt-test-bp-fixed
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: tecnotree
+  template:
+    metadata:
+      labels:
+        app: tecnotree
+    spec:
+      containers:
+      - env:
+        - name: JAVA_OPTIONS
+          value: -Dapp.brokerUrl=broker:26500 -Dapp.worker.capacity=16 -Dapp.worker.threads=16
+            -Dapp.worker.completionDelay=100ms -Dapp.worker.pollingDelay=100ms -Dapp.worker.jobType=benchmark-task-2
+        image: gcr.io/zeebe-io/worker:zeebe
+        imagePullPolicy: Always
+        name: starter
+        resources:
+          limits:
+            cpu: 8
+            memory: 512Mi
+          requests:
+            cpu: 3
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: tecnotree
+  name: broker
+  namespace: tt-test-bp-fixed
+spec:
+  podManagementPolicy: Parallel
+  replicas: 5
+  selector:
+    matchLabels:
+      app: tecnotree
+  serviceName: broker
+  template:
+    metadata:
+      labels:
+        app: tecnotree
+    spec:
+      containers:
+      - args:
+        - -c
+        - exec tini -- /usr/local/bin/init.sh
+        command:
+        - /bin/sh
+        env:
+        - name: ZEEBE_CLUSTER_SIZE
+          value: "5"
+        - name: ZEEBE_BROKER_EXECUTIONMETRICSEXPORTERENABLED
+          value: "true"
+        - name: ZEEBE_GATEWAY_MONITORING_ENABLED
+          value: "true"
+        - name: ZEEBE_BROKER_CLUSTER_GOSSIPBROADCASTUPDATES
+          value: "true"
+        - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
+          value: 6s
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_ENABLED
+          value: "true"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_ALGORITHM
+          value: aimd
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_REQUEST_TIMEOUT
+          value: 2s
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MAX_LIMIT
+          value: "200"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_MIN_LIMIT
+          value: "1"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_INITIAL_LIMIT
+          value: "100"
+        - name: ZEEBE_GATEWAY_BACKPRESSURE_AIMD_BACKOFF_RATIO
+          value: "0.8"
+        - name: ZEEBE_LOG_LEVEL
+          value: debug
+        - name: ZEEBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: gcr.io/zeebe-io/zeebe:v0.20.3-SNAPSHOT
+        imagePullPolicy: Always
+        name: broker
+        ports:
+        - containerPort: 26500
+          name: gateway
+        - containerPort: 26501
+          name: command
+        - containerPort: 26502
+          name: cluster
+        - containerPort: 9600
+          name: monitoring
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: monitoring
+          initialDelaySeconds: 20
+          periodSeconds: 5
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - SYS_ADMIN
+        volumeMounts:
+        - mountPath: /usr/local/zeebe/data
+          name: data
+        - mountPath: /usr/local/zeebe/conf/zeebe.cfg.toml
+          name: configuration
+          subPath: zeebe.cfg.toml
+        - mountPath: /usr/local/zeebe/conf/log4j2.xml
+          name: configuration
+          subPath: log4j2.xml
+        - mountPath: /usr/local/bin/init.sh
+          name: scripts
+          subPath: init.sh
+      volumes:
+      - configMap:
+          defaultMode: 484
+          name: broker-config-2g756d8bch
+        name: configuration
+      - configMap:
+          defaultMode: 493
+          name: broker-scripts-6t65dh7h9t
+        name: scripts
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        app: tecnotree
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 256Gi
+      storageClassName: ssd
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: tecnotree
+    release: metrics
+  name: prometheus-monitor
+  namespace: tt-test-bp-fixed
+spec:
+  endpoints:
+  - honorLabels: true
+    interval: 10s
+    port: monitoring
+  selector:
+    matchLabels:
+      app: tecnotree
