@@ -17,24 +17,9 @@
 
 package io.atomix.raft.snapshot;
 
-import java.nio.ByteBuffer;
+import io.atomix.raft.snapshot.impl.InternalChunk;
 
 public interface SnapshotChunk {
-
-  /**
-   * Returns the snapshot chunk identifier; the identifier is implementation dependent and its
-   * semantics are dictated by its producer/consumer
-   *
-   * @return the snapshot chunk ID
-   */
-  ByteBuffer id();
-
-  /**
-   * Returns the snapshot chunk data.
-   *
-   * @return the snapshot chunk data
-   */
-  ByteBuffer data();
 
   /** @return a unique snapshot identifier * */
   String getSnapshotId();
@@ -53,4 +38,24 @@ public interface SnapshotChunk {
 
   /** @return the checksum of the entire snapshot */
   long getSnapshotChecksum();
+
+  static Builder builder() {
+    return new InternalChunk();
+  }
+
+  interface Builder {
+    Builder withSnapshotId(String snapshotId);
+
+    Builder withTotalCount(int totalCount);
+
+    Builder withChunkName(String chunkName);
+
+    Builder withChecksum(long checksum);
+
+    Builder withContent(byte[] content);
+
+    Builder withSnapshotChecksum(long snapshotChecksum);
+
+    SnapshotChunk build();
+  }
 }

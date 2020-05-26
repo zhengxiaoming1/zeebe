@@ -17,13 +17,30 @@
 
 package io.atomix.raft.snapshot;
 
-public interface SnapshotStore {
+import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.util.CloseableSilently;
+import java.io.IOException;
+import java.util.Optional;
 
-  TransientSnapshot takeTransientSnapshot();
+public interface SnapshotStore extends CloseableSilently {
 
-  Snapshot getLatestSnapshot();
+  TransientSnapshot takeTransientSnapshot(
+      final long index, final long term, final WallClockTimestamp timestamp);
+
+  Optional<Snapshot> getLatestSnapshot();
+
+  void purgePendingSnapshots() throws IOException;
 
   void addSnapshotListener(SnapshotListener listener);
 
   void removeSnapshotListener(SnapshotListener listener);
+
+  /**
+   * Deletes a {@link SnapshotStore} from disk.
+   *
+   * <p>The snapshot store will be deleted by simply reading {@code snapshot} file names from disk
+   * and deleting snapshot files directly. Deleting the snapshot store does not involve reading any
+   * snapshot files into memory.
+   */
+  void delete();
 }

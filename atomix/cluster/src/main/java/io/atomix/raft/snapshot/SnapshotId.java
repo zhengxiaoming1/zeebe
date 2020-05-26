@@ -5,15 +5,17 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.atomix.raft.impl.zeebe.snapshot;
+package io.atomix.raft.snapshot;
 
 import io.atomix.utils.time.WallClockTimestamp;
 import java.util.Comparator;
 
-/** A {@link }'s ID is simply a combination of its index and its position. */
-public interface DbSnapshotId extends Comparable<DbSnapshotId> {
+/** A {@link Snapshot}'s ID is simply a combination of its index and its position. */
+public interface SnapshotId extends Comparable<SnapshotId> {
 
   long getIndex();
+
+  long getTerm();
 
   WallClockTimestamp getTimestamp();
 
@@ -27,9 +29,10 @@ public interface DbSnapshotId extends Comparable<DbSnapshotId> {
    *     greater
    */
   @Override
-  default int compareTo(final DbSnapshotId other) {
-    return Comparator.comparingLong(DbSnapshotId::getIndex)
-        .thenComparing(DbSnapshotId::getTimestamp)
+  default int compareTo(final SnapshotId other) {
+    return Comparator.comparingLong(SnapshotId::getTerm)
+        .thenComparing(SnapshotId::getIndex)
+        .thenComparing(SnapshotId::getTimestamp)
         .compare(this, other);
   }
 }

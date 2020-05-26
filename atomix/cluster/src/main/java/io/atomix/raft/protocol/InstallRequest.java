@@ -59,6 +59,12 @@ public class InstallRequest extends AbstractRaftRequest {
   private final boolean initial;
   // true if this is the last chunk
   private final boolean complete;
+  // the checksum of the current chunk
+  private final long chunkChecksum;
+  // the checksum of the complete snapshot
+  private final long snapshotChecksum;
+  // the total count of chunks in the snapshot
+  private final int totalChunkCount;
 
   public InstallRequest(
       final long currentTerm,
@@ -68,6 +74,9 @@ public class InstallRequest extends AbstractRaftRequest {
       final long timestamp,
       final int version,
       final ByteBuffer chunkId,
+      final long chunkChecksum,
+      final long snapshotChecksum,
+      final int totalChunkCount,
       final ByteBuffer nextChunkId,
       final ByteBuffer data,
       final boolean initial,
@@ -83,6 +92,9 @@ public class InstallRequest extends AbstractRaftRequest {
     this.initial = initial;
     this.complete = complete;
     this.term = term;
+    this.chunkChecksum = chunkChecksum;
+    this.snapshotChecksum = snapshotChecksum;
+    this.totalChunkCount = totalChunkCount;
   }
 
   /**
@@ -148,6 +160,18 @@ public class InstallRequest extends AbstractRaftRequest {
     return chunkId;
   }
 
+  public long chunkChecksum() {
+    return chunkChecksum;
+  }
+
+  public long snapshotChecksum() {
+    return snapshotChecksum;
+  }
+
+  public int totalChunkCount() {
+    return totalChunkCount;
+  }
+
   /**
    * Returns the ID of the next expected chunk; may be null
    *
@@ -181,35 +205,47 @@ public class InstallRequest extends AbstractRaftRequest {
   }
 
   @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final InstallRequest that = (InstallRequest) o;
+    return currentTerm == that.currentTerm
+        && index == that.index
+        && term == that.term
+        && timestamp == that.timestamp
+        && version == that.version
+        && initial == that.initial
+        && complete == that.complete
+        && chunkChecksum == that.chunkChecksum
+        && snapshotChecksum == that.snapshotChecksum
+        && totalChunkCount == that.totalChunkCount
+        && Objects.equals(leader, that.leader)
+        && Objects.equals(chunkId, that.chunkId)
+        && Objects.equals(nextChunkId, that.nextChunkId)
+        && Objects.equals(data, that.data);
+  }
+
+  @Override
   public int hashCode() {
     return Objects.hash(
-        getClass(),
         currentTerm,
         leader,
         index,
         term,
+        timestamp,
+        version,
         chunkId,
         nextChunkId,
-        complete,
+        data,
         initial,
-        data);
-  }
-
-  @Override
-  public boolean equals(final Object object) {
-    if (object instanceof InstallRequest) {
-      final InstallRequest request = (InstallRequest) object;
-      return request.currentTerm == currentTerm
-          && request.leader == leader
-          && request.index == index
-          && request.chunkId.equals(chunkId)
-          && request.complete == complete
-          && request.initial == initial
-          && request.term == term
-          && request.nextChunkId.equals(nextChunkId)
-          && request.data.equals(data);
-    }
-    return false;
+        complete,
+        chunkChecksum,
+        snapshotChecksum,
+        totalChunkCount);
   }
 
   @Override
@@ -243,6 +279,9 @@ public class InstallRequest extends AbstractRaftRequest {
     private boolean complete;
     private boolean initial;
     private long term;
+    private long chunkChecksum;
+    private long snapshotChecksum;
+    private int totalChunkCount;
 
     /**
      * Sets the request current term.
@@ -368,6 +407,21 @@ public class InstallRequest extends AbstractRaftRequest {
       return this;
     }
 
+    public Builder withChunkChecksum(final long checksum) {
+      this.chunkChecksum = checksum;
+      return this;
+    }
+
+    public Builder withSnapshotChecksum(final long snapshotChecksum) {
+      this.snapshotChecksum = snapshotChecksum;
+      return this;
+    }
+
+    public Builder withTotalChunkCount(final int totalCount) {
+      this.totalChunkCount = totalCount;
+      return this;
+    }
+
     /** @throws IllegalStateException if member is null */
     @Override
     public InstallRequest build() {
@@ -380,6 +434,9 @@ public class InstallRequest extends AbstractRaftRequest {
           timestamp,
           version,
           chunkId,
+          chunkChecksum,
+          snapshotChecksum,
+          totalChunkCount,
           nextChunkId,
           data,
           initial,
@@ -395,6 +452,7 @@ public class InstallRequest extends AbstractRaftRequest {
       checkArgument(term > 0, "snapshotTerm must be positive");
       checkNotNull(chunkId, "chunkId cannot be null");
       checkNotNull(data, "data cannot be null");
+      checkArgument(chunkChecksum > 0, "checksum must be positive");
     }
   }
 }

@@ -9,8 +9,8 @@ package io.zeebe.broker.system.partitions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotChunkReader;
 import io.atomix.raft.storage.snapshot.SnapshotChunk;
+import io.zeebe.broker.snapshot.impl.DirBasedSnapshotChunkReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -24,7 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public final class DbSnapshotChunkReaderTest {
+public final class DirBasedSnapshotChunkReaderTest {
   @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
@@ -75,7 +75,7 @@ public final class DbSnapshotChunkReaderTest {
   }
 
   private ByteBuffer asBuffer(final CharSequence chunk) {
-    return ByteBuffer.wrap(chunk.toString().getBytes(DbSnapshotChunkReader.ID_CHARSET));
+    return ByteBuffer.wrap(chunk.toString().getBytes(DirBasedSnapshotChunkReader.ID_CHARSET));
   }
 
   private NavigableSet<CharSequence> chunksOf(final CharSequence... chunks) {
@@ -84,7 +84,7 @@ public final class DbSnapshotChunkReaderTest {
     return set;
   }
 
-  private DbSnapshotChunkReader newReader(final NavigableSet<CharSequence> chunks) {
+  private DirBasedSnapshotChunkReader newReader(final NavigableSet<CharSequence> chunks) {
     final var directory = temporaryFolder.getRoot().toPath();
     for (final var chunk : chunks) {
       final var path = directory.resolve(chunk.toString());
@@ -95,6 +95,6 @@ public final class DbSnapshotChunkReaderTest {
       }
     }
 
-    return new DbSnapshotChunkReader(directory, chunks);
+    return new DirBasedSnapshotChunkReader(directory, chunks);
   }
 }

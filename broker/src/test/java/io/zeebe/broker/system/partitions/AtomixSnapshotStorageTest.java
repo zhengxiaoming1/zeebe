@@ -14,13 +14,13 @@ import static org.mockito.Mockito.verify;
 
 import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
 import io.atomix.raft.impl.zeebe.snapshot.AtomixSnapshotStorage;
-import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotStore;
 import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotDeletionListener;
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
 import io.atomix.raft.storage.snapshot.SnapshotStore;
 import io.atomix.storage.journal.JournalReader.Mode;
+import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
 import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
 import io.zeebe.logstreams.util.AtomixLogStorageRule;
 import java.io.IOException;
@@ -59,7 +59,7 @@ public final class AtomixSnapshotStorageTest {
             logStorageRule.getIndexMapping(),
             logStorageRule.getRaftLog().openReader(-1, Mode.COMMITS));
     store =
-        new DbSnapshotStore(
+        new DirBasedSnapshotStore(
             snapshotsDirectory, raftPendingDirectory, new ConcurrentSkipListMap<>());
   }
 

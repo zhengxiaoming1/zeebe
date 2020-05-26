@@ -1,14 +1,23 @@
 /*
- * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
- * one or more contributor license agreements. See the NOTICE file distributed
- * with this work for additional information regarding copyright ownership.
- * Licensed under the Zeebe Community License 1.0. You may not use this file
- * except in compliance with the Zeebe Community License 1.0.
+ * Copyright © 2020  camunda services GmbH (info@camunda.com)
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
  */
-package io.atomix.raft.impl.zeebe.snapshot;
+package io.zeebe.broker.snapshot.impl;
 
-import io.atomix.raft.storage.snapshot.Snapshot;
-import io.atomix.raft.storage.snapshot.SnapshotChunkReader;
+import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.SnapshotChunkReader;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
 import io.zeebe.util.ZbLogger;
@@ -21,20 +30,20 @@ import java.util.Objects;
 import java.util.TreeSet;
 import org.slf4j.Logger;
 
-public final class DbSnapshot implements Snapshot {
+public final class DirBasedSnapshot implements Snapshot {
   // version currently hardcoded, could be used for backwards compatibility
   private static final int VERSION = 1;
-  private static final Logger LOGGER = new ZbLogger(DbSnapshot.class);
+  private static final Logger LOGGER = new ZbLogger(DirBasedSnapshot.class);
 
   private final Path directory;
-  private final DbSnapshotMetadata metadata;
+  private final DirBasedSnapshotMetadata metadata;
 
-  DbSnapshot(final Path directory, final DbSnapshotMetadata metadata) {
+  DirBasedSnapshot(final Path directory, final DirBasedSnapshotMetadata metadata) {
     this.directory = directory;
     this.metadata = metadata;
   }
 
-  public DbSnapshotMetadata getMetadata() {
+  public DirBasedSnapshotMetadata getMetadata() {
     return metadata;
   }
 
@@ -65,7 +74,7 @@ public final class DbSnapshot implements Snapshot {
   @Override
   public SnapshotChunkReader newChunkReader() {
     try {
-      return new DbSnapshotChunkReader(directory, collectChunks(directory));
+      return new DirBasedSnapshotChunkReader(directory, collectChunks(directory));
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -96,8 +105,8 @@ public final class DbSnapshot implements Snapshot {
 
   @Override
   public int compareTo(final Snapshot other) {
-    if (other instanceof DbSnapshot) {
-      return getMetadata().compareTo(((DbSnapshot) other).getMetadata());
+    if (other instanceof DirBasedSnapshot) {
+      return getMetadata().compareTo(((DirBasedSnapshot) other).getMetadata());
     }
 
     return Snapshot.super.compareTo(other);
@@ -118,7 +127,7 @@ public final class DbSnapshot implements Snapshot {
       return false;
     }
 
-    final DbSnapshot that = (DbSnapshot) o;
+    final DirBasedSnapshot that = (DirBasedSnapshot) o;
     return getDirectory().equals(that.getDirectory()) && getMetadata().equals(that.getMetadata());
   }
 
@@ -133,5 +142,10 @@ public final class DbSnapshot implements Snapshot {
       stream.map(directory::relativize).map(Path::toString).forEach(set::add);
     }
     return set;
+  }
+
+  @Override
+  public long getCompactionBound() {
+    throw new UnsupportedOperationException("not yet implemented");
   }
 }

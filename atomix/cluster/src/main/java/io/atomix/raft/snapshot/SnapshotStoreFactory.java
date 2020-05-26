@@ -16,13 +16,10 @@
  */
 package io.atomix.raft.snapshot;
 
-import io.atomix.raft.storage.snapshot.PendingSnapshot;
-import io.atomix.raft.storage.snapshot.Snapshot;
-import io.atomix.raft.storage.snapshot.SnapshotStore;
 import java.nio.file.Path;
 
 /**
- * Creates a snapshot store which should store its {@link Snapshot} and {@link PendingSnapshot}
+ * Creates a snapshot store which should store its {@link Snapshot} and {@link TransientSnapshot}
  * instances in the given directory.
  */
 @FunctionalInterface
@@ -33,7 +30,7 @@ public interface SnapshotStoreFactory {
    *
    * @param directory the root directory where snapshots should be stored
    * @param partitionName the partition name for this store
-   * @return a new {@link io.atomix.raft.storage.snapshot.SnapshotStore}
+   * @return a new {@link SnapshotStore}
    */
   SnapshotStore createSnapshotStore(Path directory, String partitionName);
 }

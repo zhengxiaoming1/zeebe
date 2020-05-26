@@ -10,7 +10,6 @@ package io.zeebe.broker.logstreams;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.atomix.raft.impl.zeebe.snapshot.AtomixSnapshotStorage;
-import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotStore;
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLogReader;
@@ -18,6 +17,7 @@ import io.atomix.storage.journal.Indexed;
 import io.atomix.storage.journal.JournalReader.Mode;
 import io.atomix.storage.journal.JournalSegmentDescriptor;
 import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
 import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
 import io.zeebe.logstreams.util.AtomixLogStorageRule;
 import io.zeebe.util.sched.testing.ActorSchedulerRule;
@@ -155,7 +155,7 @@ public final class AtomixLogDeletionServiceTest {
           // hardcode max segment size to allow a single entry only
           .withMaxSegmentSize(JournalSegmentDescriptor.BYTES + 8 * Integer.BYTES)
           .withSnapshotStore(
-              new DbSnapshotStore(
+              new DirBasedSnapshotStore(
                   folder.newFolder("runtime").toPath(),
                   folder.newFolder("snapshots").toPath(),
                   new ConcurrentSkipListMap<>()));

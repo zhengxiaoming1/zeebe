@@ -13,13 +13,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.atomix.raft.impl.zeebe.snapshot.DbSnapshot;
 import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotId;
-import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotStore;
 import io.atomix.raft.storage.snapshot.Snapshot;
 import io.atomix.raft.storage.snapshot.SnapshotListener;
 import io.atomix.raft.storage.snapshot.SnapshotStore;
 import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.broker.snapshot.impl.DirBasedSnapshot;
+import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -34,12 +34,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public final class DbSnapshotStoreTest {
+public final class DirBasedSnapshotStoreTest {
   @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private Path snapshotsDirectory;
   private Path pendingDirectory;
-  private DbSnapshotStore store;
+  private DirBasedSnapshotStore store;
 
   @Before
   public void setUp() throws Exception {
@@ -136,9 +136,9 @@ public final class DbSnapshotStoreTest {
     assertThat((Collection<Snapshot>) store.getSnapshots()).containsOnly(snapshot);
   }
 
-  private DbSnapshotStore newStore(
-      final ConcurrentNavigableMap<DbSnapshotId, DbSnapshot> snapshots) {
-    store = new DbSnapshotStore(snapshotsDirectory, pendingDirectory, snapshots);
+  private DirBasedSnapshotStore newStore(
+      final ConcurrentNavigableMap<DbSnapshotId, DirBasedSnapshot> snapshots) {
+    store = new DirBasedSnapshotStore(snapshotsDirectory, pendingDirectory, snapshots);
     return store;
   }
 }

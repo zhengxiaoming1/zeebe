@@ -31,14 +31,15 @@ import io.atomix.raft.protocol.InstallRequest;
 import io.atomix.raft.protocol.InstallResponse;
 import io.atomix.raft.protocol.RaftRequest;
 import io.atomix.raft.protocol.RaftResponse;
+import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.SnapshotChunk;
+import io.atomix.raft.snapshot.SnapshotChunkReader;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
-import io.atomix.raft.storage.snapshot.Snapshot;
-import io.atomix.raft.storage.snapshot.SnapshotChunk;
-import io.atomix.raft.storage.snapshot.SnapshotChunkReader;
 import io.atomix.storage.journal.Indexed;
 import io.atomix.utils.logging.ContextualLoggerFactory;
 import io.atomix.utils.logging.LoggerContext;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -114,8 +115,9 @@ abstract class AbstractAppender implements AutoCloseable {
       prevIndex = prevEntry.index();
       prevTerm = prevEntry.entry().term();
     } else {
-      final Snapshot currentSnapshot = raft.getSnapshotStore().getCurrentSnapshot();
-      if (currentSnapshot != null) {
+      final var optCurrentSnapshot = raft.getSnapshotStore().getLatestSnapshot();
+      if (optCurrentSnapshot.isPresent()) {
+        final var currentSnapshot = optCurrentSnapshot.get();
         prevIndex = currentSnapshot.index();
         prevTerm = currentSnapshot.term();
       }
@@ -474,8 +476,11 @@ abstract class AbstractAppender implements AutoCloseable {
                 .withTerm(snapshot.term())
                 .withTimestamp(snapshot.timestamp().unixTimestamp())
                 .withVersion(snapshot.version())
-                .withData(chunk.data())
-                .withChunkId(chunk.id())
+                .withChunkChecksum(chunk.getChecksum())
+                .withSnapshotChecksum(chunk.getSnapshotChecksum())
+                .withTotalChunkCount(chunk.getTotalCount())
+                .withData(ByteBuffer.wrap(chunk.getContent()))
+                .withChunkId(ByteBuffer.wrap(chunk.getChunkName().getBytes()))
                 .withInitial(member.getNextSnapshotChunk() == null)
                 .withComplete(!reader.hasNext())
                 .withNextChunkId(reader.nextId())

@@ -35,13 +35,13 @@ import io.atomix.raft.protocol.ReconfigureRequest;
 import io.atomix.raft.protocol.ReconfigureResponse;
 import io.atomix.raft.protocol.VoteRequest;
 import io.atomix.raft.protocol.VoteResponse;
+import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.SnapshotChunk;
+import io.atomix.raft.snapshot.SnapshotListener;
+import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.RaftLogWriter;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
-import io.atomix.raft.storage.snapshot.PendingSnapshot;
-import io.atomix.raft.storage.snapshot.Snapshot;
-import io.atomix.raft.storage.snapshot.SnapshotListener;
-import io.atomix.raft.storage.snapshot.SnapshotStore;
 import io.atomix.storage.StorageException;
 import io.atomix.storage.journal.Indexed;
 import io.atomix.utils.concurrent.ThreadContext;
@@ -55,7 +55,7 @@ public class PassiveRole extends InactiveRole {
   private final SnapshotReplicationMetrics snapshotReplicationMetrics;
 
   private long pendingSnapshotStartTimestamp;
-  private PendingSnapshot pendingSnapshot;
+  private TransientSnapshot pendingSnapshot;
 
   public PassiveRole(final RaftContext context) {
     super(context);
@@ -100,7 +100,7 @@ public class PassiveRole extends InactiveRole {
   private void addSnapshotListener() {
     final var snapshotListener = createSnapshotListener();
     if (snapshotListener != null) {
-      raft.getSnapshotStore().addListener(snapshotListener);
+      raft.getSnapshotStore().addSnapshotListener(snapshotListener);
     }
   }
 
@@ -151,12 +151,14 @@ public class PassiveRole extends InactiveRole {
     // If the snapshot already exists locally, do not overwrite it with a replicated snapshot.
     // Simply reply to the
     // request successfully.
-    final Snapshot existingSnapshot = raft.getSnapshotStore().getSnapshot(request.index());
-    if (existingSnapshot != null) {
-      abortPendingSnapshots();
+    final var optLatestSnapshot = raft.getSnapshotStore().getLatestSnapshot();
+    if (optLatestSnapshot.isPresent()) {
+      if (optLatestSnapshot.get().index() >= request.index()) {
+        abortPendingSnapshots();
 
-      return CompletableFuture.completedFuture(
-          logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).build()));
+        return CompletableFuture.completedFuture(
+            logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).build()));
+      }
     }
 
     if (!request.complete() && request.nextChunkId() == null) {
@@ -186,7 +188,7 @@ public class PassiveRole extends InactiveRole {
 
       pendingSnapshot =
           raft.getSnapshotStore()
-              .newPendingSnapshot(
+              .takeTransientSnapshot(
                   request.index(), request.term(), WallClockTimestamp.from(request.timestamp()));
       pendingSnapshotStartTimestamp = System.currentTimeMillis();
       snapshotReplicationMetrics.incrementCount();
@@ -210,8 +212,17 @@ public class PassiveRole extends InactiveRole {
       }
     }
 
+    final var snapshotChunk =
+        SnapshotChunk.builder()
+            .withChecksum(request.chunkChecksum())
+            .withChunkName(request.chunkId().toString())
+            .withTotalCount(request.totalChunkCount())
+            .withContent(request.data().array())
+            .withSnapshotChecksum(request.snapshotChecksum())
+            .build();
+
     try {
-      pendingSnapshot.write(request.chunkId(), request.data());
+      pendingSnapshot.write(snapshotChunk);
     } catch (final Exception e) {
       log.error("Failed to write pending snapshot chunk {}, rolling back", pendingSnapshot, e);
       abortPendingSnapshots();
@@ -442,8 +453,10 @@ public class PassiveRole extends InactiveRole {
       if (lastEntry != null) {
         return checkPreviousEntry(request, lastEntry.index(), lastEntry.entry().term(), future);
       } else {
-        final Snapshot currentSnapshot = raft.getSnapshotStore().getCurrentSnapshot();
-        if (currentSnapshot != null) {
+        final var optCurrentSnapshot = raft.getSnapshotStore().getLatestSnapshot();
+
+        if (optCurrentSnapshot.isPresent()) {
+          final var currentSnapshot = optCurrentSnapshot.get();
           return checkPreviousEntry(
               request, currentSnapshot.index(), currentSnapshot.term(), future);
         } else {
@@ -725,7 +738,8 @@ public class PassiveRole extends InactiveRole {
                 .withTerm(raft.getTerm())
                 .withSucceeded(succeeded)
                 .withLastLogIndex(lastLogIndex)
-                .withLastSnapshotIndex(raft.getSnapshotStore().getCurrentSnapshotIndex())
+                .withLastSnapshotIndex(
+                    raft.getSnapshotStore().getLatestSnapshot().map(Snapshot::index).orElse(0L))
                 .build()));
     return succeeded;
   }
@@ -743,7 +757,7 @@ public class PassiveRole extends InactiveRole {
     }
 
     @Override
-    public void onNewSnapshot(final Snapshot snapshot, final SnapshotStore store) {
+    public void onNewSnapshot(final Snapshot snapshot) {
       threadContext.execute(
           () -> {
             // this is called after the snapshot is commited
@@ -763,11 +777,6 @@ public class PassiveRole extends InactiveRole {
               logWriter.reset(index + 1);
             }
           });
-    }
-
-    @Override
-    public void onSnapshotDeletion(final Snapshot snapshot, final SnapshotStore store) {
-      // do nothing
     }
   }
 }

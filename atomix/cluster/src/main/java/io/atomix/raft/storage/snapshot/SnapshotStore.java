@@ -122,12 +122,8 @@ public interface SnapshotStore extends AutoCloseable {
    * @param timestamp the snapshot timestamp
    * @param directory the snapshot directory
    */
-  default Snapshot newSnapshot(
-      final long index, final long term, final WallClockTimestamp timestamp, final Path directory) {
-    return newSnapshot(index, term, timestamp);
-  }
-
-  Snapshot newSnapshot(long index, long term, WallClockTimestamp timestamp);
+  Snapshot newSnapshot(
+      final long index, final long term, final WallClockTimestamp timestamp, final Path directory);
 
   /**
    * Removes committed snapshots older than the given snapshot.

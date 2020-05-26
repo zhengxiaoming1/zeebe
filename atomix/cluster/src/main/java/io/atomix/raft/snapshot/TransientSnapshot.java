@@ -48,13 +48,8 @@ public interface TransientSnapshot {
    */
   boolean isExpectedChunk(ByteBuffer chunkId);
 
-  /**
-   * Writes the chunk data {@code chunkData} as identified by {@code chunkId}.
-   *
-   * @param chunkId the new chunk ID
-   * @param chunkData the new chunk data
-   */
-  void write(ByteBuffer chunkId, ByteBuffer chunkData);
+  /** Writes the chunk data {@code chunkData} as identified by {@code chunkId}. */
+  void write(SnapshotChunk chunk);
 
   /**
    * Sets that the next expected chunk ID is the one with the given {@code nextChunkId}.
