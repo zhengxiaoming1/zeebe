@@ -17,13 +17,6 @@
 
 package io.atomix.raft.snapshot;
 
-public interface SnapshotStore {
+import java.util.Iterator;
 
-  TransientSnapshot takeTransientSnapshot();
-
-  Snapshot getLatestSnapshot();
-
-  void addSnapshotListener(SnapshotListener listener);
-
-  void removeSnapshotListener(SnapshotListener listener);
-}
+public interface SnapshotChunkReader extends Iterator<SnapshotChunk> {}

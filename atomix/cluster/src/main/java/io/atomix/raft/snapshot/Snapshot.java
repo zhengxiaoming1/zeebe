@@ -17,13 +17,9 @@
 
 package io.atomix.raft.snapshot;
 
-public interface SnapshotStore {
+public interface Snapshot {
 
-  TransientSnapshot takeTransientSnapshot();
+  SnapshotChunkReader newChunkReader();
 
-  Snapshot getLatestSnapshot();
-
-  void addSnapshotListener(SnapshotListener listener);
-
-  void removeSnapshotListener(SnapshotListener listener);
+  void delete();
 }
