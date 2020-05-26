@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.esotericsoftware.kryo.serializers.FieldSerializer.Optional;
 import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotStoreFactory;
-import io.atomix.raft.storage.snapshot.SnapshotStoreFactory;
+import io.atomix.raft.snapshot.SnapshotStoreFactory;
 import io.atomix.storage.StorageLevel;
 import io.atomix.utils.memory.MemorySize;
 

@@ -17,6 +17,25 @@
 
 package io.atomix.raft.snapshot;
 
+import io.zeebe.util.CloseableSilently;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 
-public interface SnapshotChunkReader extends Iterator<SnapshotChunk> {}
+public interface SnapshotChunkReader extends Iterator<SnapshotChunk>, CloseableSilently {
+
+  /**
+   * Skips all chunks up to the one with the given ID, inclusively, such that the next chunk would
+   * be the chunk right after it (if any). If no ID is given then should not do anything.
+   *
+   * @param id the chunk ID to seek to; maybe null
+   */
+  void seek(ByteBuffer id);
+
+  /**
+   * Returns the next chunk ID; if {@link #hasNext()} should return false, then this will return
+   * null.
+   *
+   * @return the next chunk ID
+   */
+  ByteBuffer nextId();
+}

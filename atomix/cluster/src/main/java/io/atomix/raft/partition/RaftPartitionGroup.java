@@ -33,7 +33,7 @@ import io.atomix.primitive.partition.PartitionId;
 import io.atomix.primitive.partition.PartitionManagementService;
 import io.atomix.primitive.partition.PartitionMetadata;
 import io.atomix.raft.RaftStateMachineFactory;
-import io.atomix.raft.storage.snapshot.SnapshotStoreFactory;
+import io.atomix.raft.snapshot.SnapshotStoreFactory;
 import io.atomix.storage.StorageLevel;
 import io.atomix.utils.concurrent.BlockingAwareThreadPoolContextFactory;
 import io.atomix.utils.concurrent.Futures;

@@ -17,4 +17,40 @@
 
 package io.atomix.raft.snapshot;
 
-public interface SnapshotChunk {}
+import java.nio.ByteBuffer;
+
+public interface SnapshotChunk {
+
+  /**
+   * Returns the snapshot chunk identifier; the identifier is implementation dependent and its
+   * semantics are dictated by its producer/consumer
+   *
+   * @return the snapshot chunk ID
+   */
+  ByteBuffer id();
+
+  /**
+   * Returns the snapshot chunk data.
+   *
+   * @return the snapshot chunk data
+   */
+  ByteBuffer data();
+
+  /** @return a unique snapshot identifier * */
+  String getSnapshotId();
+
+  /** @return the total count of snapshot chunks, which correspond to the same snapshot */
+  int getTotalCount();
+
+  /** @return the name of the current chunk (e.g. file name) */
+  String getChunkName();
+
+  /** @return the checksum of the content, can be use to verify the integrity of the content */
+  long getChecksum();
+
+  /** @return the content of the current chunk */
+  byte[] getContent();
+
+  /** @return the checksum of the entire snapshot */
+  long getSnapshotChecksum();
+}

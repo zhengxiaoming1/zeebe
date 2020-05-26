@@ -17,9 +17,78 @@
 
 package io.atomix.raft.snapshot;
 
-public interface Snapshot {
+import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.util.CloseableSilently;
+import java.nio.file.Path;
+import java.util.Comparator;
 
+public interface Snapshot extends CloseableSilently, Comparable<Snapshot> {
+
+  /**
+   * Returns the snapshot timestamp.
+   *
+   * <p>The timestamp is the wall clock time at the {@link #index()} at which the snapshot was
+   * taken.
+   *
+   * @return The snapshot timestamp.
+   */
+  WallClockTimestamp timestamp();
+
+  /**
+   * Returns the snapshot format version.
+   *
+   * @return the snapshot format version
+   */
+  int version();
+
+  /**
+   * Returns the snapshot index.
+   *
+   * <p>The snapshot index is the index of the state machine at the point at which the snapshot was
+   * written.
+   *
+   * @return The snapshot index.
+   */
+  long index();
+
+  /**
+   * Returns the snapshot term.
+   *
+   * <p>The snapshot term is the term of the state machine at the point at which the snapshot was
+   * written.
+   *
+   * @return The snapshot term.
+   */
+  long term();
+
+  /**
+   * Returns a new snapshot chunk reader for this snapshot. Chunk readers are meant to be one-time
+   * use and as such don't have to be thread-safe.
+   *
+   * @return a new snapshot chunk reader
+   */
   SnapshotChunkReader newChunkReader();
 
+  /** Deletes the snapshot. */
   void delete();
+
+  /** @return a path to the snapshot location */
+  Path getPath();
+
+  @Override
+  default int compareTo(final Snapshot other) {
+    return Comparator.comparingLong(Snapshot::index)
+        .thenComparingLong(Snapshot::term)
+        .thenComparing(Snapshot::timestamp)
+        .thenComparing(Snapshot::getCompactionBound)
+        .compare(this, other);
+  }
+
+  /**
+   * Returns an implementation specific compaction bound, e.g. a log stream position, a timestamp,
+   * etc., used during compaction
+   *
+   * @return the compaction upper bound
+   */
+  long getCompactionBound();
 }
