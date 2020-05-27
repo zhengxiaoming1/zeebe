@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package io.zeebe.broker.snapshot.impl;
+package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
@@ -70,8 +70,7 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
   public void take(final Predicate<Path> takeSnapshot) {
 
     // todo metrics
-    if (!takeSnapshot.test(getPath()))
-    {
+    if (!takeSnapshot.test(getPath())) {
       // todo(zell): before we did nothing?!
       abort();
     }

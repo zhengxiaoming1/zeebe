@@ -14,12 +14,10 @@
  *  limitations under the License.
  *
  */
-package io.zeebe.broker.snapshot.impl;
+package io.atomix.raft.snapshot.impl;
 
+import io.atomix.raft.snapshot.SbeBufferWriterReader;
 import io.atomix.raft.snapshot.SnapshotChunk;
-import io.zeebe.clustering.management.SnapshotChunkDecoder;
-import io.zeebe.clustering.management.SnapshotChunkEncoder;
-import io.zeebe.engine.util.SbeBufferWriterReader;
 import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;

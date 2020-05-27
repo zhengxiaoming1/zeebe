@@ -1,45 +1,52 @@
-///*
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
+ */
+/// *
 // * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
 // * one or more contributor license agreements. See the NOTICE file distributed
 // * with this work for additional information regarding copyright ownership.
 // * Licensed under the Zeebe Community License 1.0. You may not use this file
 // * except in compliance with the Zeebe Community License 1.0.
 // */
-//package io.zeebe.broker.logstreams;
+// package io.zeebe.broker.logstreams;
 //
-//import static org.assertj.core.api.Assertions.assertThat;
+// import static org.assertj.core.api.Assertions.assertThat;
 //
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
-//import io.atomix.raft.storage.RaftStorage;
-//import io.atomix.raft.storage.log.RaftLogReader;
-//import io.atomix.storage.journal.Indexed;
-//import io.atomix.storage.journal.JournalReader.Mode;
-//import io.atomix.storage.journal.JournalSegmentDescriptor;
-//import io.atomix.utils.time.WallClockTimestamp;
-//import io.zeebe.broker.snapshot.impl.AtomixSnapshotStorage;
-//import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
-//import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
-//import io.zeebe.logstreams.util.AtomixLogStorageRule;
-//import io.zeebe.util.sched.testing.ActorSchedulerRule;
-//import java.io.IOException;
-//import java.io.UncheckedIOException;
-//import java.nio.ByteBuffer;
-//import java.time.Duration;
-//import java.util.ArrayList;
-//import java.util.List;
-//import java.util.Map;
-//import java.util.concurrent.CompletableFuture;
-//import java.util.concurrent.ConcurrentHashMap;
-//import java.util.concurrent.ConcurrentSkipListMap;
-//import java.util.concurrent.TimeUnit;
-//import org.junit.After;
-//import org.junit.Before;
-//import org.junit.Rule;
-//import org.junit.Test;
-//import org.junit.rules.RuleChain;
-//import org.junit.rules.TemporaryFolder;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
+// import io.atomix.raft.storage.RaftStorage;
+// import io.atomix.raft.storage.log.RaftLogReader;
+// import io.atomix.storage.journal.Indexed;
+// import io.atomix.storage.journal.JournalReader.Mode;
+// import io.atomix.storage.journal.JournalSegmentDescriptor;
+// import io.atomix.utils.time.WallClockTimestamp;
+// import io.zeebe.broker.snapshot.impl.AtomixSnapshotStorage;
+// import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
+// import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
+// import io.zeebe.logstreams.util.AtomixLogStorageRule;
+// import io.zeebe.util.sched.testing.ActorSchedulerRule;
+// import java.io.IOException;
+// import java.io.UncheckedIOException;
+// import java.nio.ByteBuffer;
+// import java.time.Duration;
+// import java.util.ArrayList;
+// import java.util.List;
+// import java.util.Map;
+// import java.util.concurrent.CompletableFuture;
+// import java.util.concurrent.ConcurrentHashMap;
+// import java.util.concurrent.ConcurrentSkipListMap;
+// import java.util.concurrent.TimeUnit;
+// import org.junit.After;
+// import org.junit.Before;
+// import org.junit.Rule;
+// import org.junit.Test;
+// import org.junit.rules.RuleChain;
+// import org.junit.rules.TemporaryFolder;
 //
-//public final class AtomixLogDeletionServiceTest {
+// public final class AtomixLogDeletionServiceTest {
 //
 //  private static final ByteBuffer DATA = ByteBuffer.allocate(Integer.BYTES).putInt(0, 1);
 //  private static final int PARTITION_ID = 1;
@@ -97,7 +104,8 @@
 //    compactor.awaitCompaction(2L, Duration.ofSeconds(5));
 //    reader.reset();
 //    final var entries = readAllEntries(reader);
-//    assertThat(entries).isNotEmpty().hasSize(2).extracting(Indexed::index).containsExactly(2L, 3L);
+//    assertThat(entries).isNotEmpty().hasSize(2).extracting(Indexed::index).containsExactly(2L,
+// 3L);
 //  }
 //
 //  @Test
@@ -207,4 +215,4 @@
 //      return compactionResult;
 //    }
 //  }
-//}
+// }

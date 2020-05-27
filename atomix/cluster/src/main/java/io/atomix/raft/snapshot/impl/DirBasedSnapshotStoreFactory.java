@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package io.zeebe.broker.snapshot.impl;
+package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotMetadata;
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
@@ -45,7 +45,7 @@ public final class DirBasedSnapshotStoreFactory implements SnapshotStoreFactory 
     IoUtil.ensureDirectoryExists(snapshotDirectory.toFile(), "Snapshot directory");
     IoUtil.ensureDirectoryExists(pendingDirectory.toFile(), "Pending snapshot directory");
 
-    return new DirBasedSnapshotStore(new SnapshotMetrics(partitionName), snapshotDirectory, pendingDirectory);
+    return new DirBasedSnapshotStore(
+        new SnapshotMetrics(partitionName), snapshotDirectory, pendingDirectory);
   }
-
 }

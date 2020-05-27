@@ -5,7 +5,7 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.engine.util;
+package io.atomix.raft.snapshot;
 
 import io.zeebe.protocol.record.MessageHeaderDecoder;
 import io.zeebe.protocol.record.MessageHeaderEncoder;

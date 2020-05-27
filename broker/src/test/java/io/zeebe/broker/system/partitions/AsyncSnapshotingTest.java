@@ -18,10 +18,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
-import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
 import io.zeebe.db.impl.DefaultColumnFamily;
 import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
@@ -65,13 +65,13 @@ public final class AsyncSnapshotingTest {
   private SnapshotStore store;
   private final AtomicReference<Indexed> indexedAtomicReference = new AtomicReference<>();
 
-
   @Before
   public void setup() throws IOException {
     final var rootDirectory = tempFolderRule.getRoot().toPath();
     store = new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
 
-    indexedAtomicReference.set(new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
+    indexedAtomicReference.set(
+        new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     snapshotController =
         new StateSnapshotController(
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
@@ -80,13 +80,13 @@ public final class AsyncSnapshotingTest {
             new NoneSnapshotReplication(),
             l -> Optional.ofNullable(indexedAtomicReference.get()),
             db -> -1);
-//
-//
-//    final var storage = new TestSnapshotStorage(tempFolderRule.getRoot().toPath());
-//
-//    snapshotController =
-//        new StateSnapshotController(
-//            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class), storage);
+    //
+    //
+    //    final var storage = new TestSnapshotStorage(tempFolderRule.getRoot().toPath());
+    //
+    //    snapshotController =
+    //        new StateSnapshotController(
+    //            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class), storage);
     snapshotController.openDb();
     autoCloseableRule.manage(snapshotController);
     autoCloseableRule.manage(store);
@@ -158,24 +158,24 @@ public final class AsyncSnapshotingTest {
     assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(1);
   }
 
-//  @Test
-//  public void shouldNotStopTakingSnapshotsAfterFailingReplication() {
-//    // given
-//    final RuntimeException expectedException = new RuntimeException("expected");
-//    doThrow(expectedException).when(snapshotController).replicateLatestSnapshot(any());
-//
-//    clock.addTime(Duration.ofMinutes(1));
-//    setCommitPosition(99L);
-//    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 1);
-//
-//    // when
-//    clock.addTime(Duration.ofMinutes(1));
-//    setCommitPosition(100L);
-//
-//    // then
-//    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 2);
-//    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(2);
-//  }
+  //  @Test
+  //  public void shouldNotStopTakingSnapshotsAfterFailingReplication() {
+  //    // given
+  //    final RuntimeException expectedException = new RuntimeException("expected");
+  //    doThrow(expectedException).when(snapshotController).replicateLatestSnapshot(any());
+  //
+  //    clock.addTime(Duration.ofMinutes(1));
+  //    setCommitPosition(99L);
+  //    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 1);
+  //
+  //    // when
+  //    clock.addTime(Duration.ofMinutes(1));
+  //    setCommitPosition(100L);
+  //
+  //    // then
+  //    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 2);
+  //    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(2);
+  //  }
 
   @Test
   public void shouldTakeSnapshotsOneByOne() {

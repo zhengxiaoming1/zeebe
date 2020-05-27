@@ -17,10 +17,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
-import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
@@ -203,7 +203,8 @@ public final class TestStreams {
       throw new UncheckedIOException(e);
     }
 
-    return new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, stream.getLogName());
+    return new DirBasedSnapshotStoreFactory()
+        .createSnapshotStore(rootDirectory, stream.getLogName());
   }
 
   public StreamProcessor startStreamProcessor(
@@ -222,7 +223,8 @@ public final class TestStreams {
       final Duration snapshotInterval) {
     final SnapshotStore store = createSnapshotStore(stream);
 
-    final StateSnapshotController currentSnapshotController = createSnapshotController(stream, store);
+    final StateSnapshotController currentSnapshotController =
+        createSnapshotController(stream, store);
 
     final String logName = stream.getLogName();
 
@@ -263,18 +265,21 @@ public final class TestStreams {
     return streamProcessor;
   }
 
-  public StateSnapshotController createSnapshotController(final SynchronousLogStream stream, final SnapshotStore store) {
+  public StateSnapshotController createSnapshotController(
+      final SynchronousLogStream stream, final SnapshotStore store) {
     final Path rootDirectory =
         dataDirectory.getRoot().toPath().resolve(stream.getLogName()).resolve("state");
     final var indexedAtomicReference = new AtomicReference<Indexed>();
-    indexedAtomicReference.set(new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
-    return spy(new StateSnapshotController(
-        ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
-        store,
-        rootDirectory.resolve("runtime"),
-        new NoneSnapshotReplication(),
-        l -> Optional.ofNullable(indexedAtomicReference.get()),
-        db -> -1));
+    indexedAtomicReference.set(
+        new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
+    return spy(
+        new StateSnapshotController(
+            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
+            store,
+            rootDirectory.resolve("runtime"),
+            new NoneSnapshotReplication(),
+            l -> Optional.ofNullable(indexedAtomicReference.get()),
+            db -> -1));
   }
 
   public StateSnapshotController getStateSnapshotController(final String stream) {

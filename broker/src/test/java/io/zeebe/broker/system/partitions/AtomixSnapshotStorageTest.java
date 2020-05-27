@@ -1,48 +1,56 @@
-///*
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
+ */
+/// *
 // * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
 // * one or more contributor license agreements. See the NOTICE file distributed
 // * with this work for additional information regarding copyright ownership.
 // * Licensed under the Zeebe Community License 1.0. You may not use this file
 // * except in compliance with the Zeebe Community License 1.0.
 // */
-//package io.zeebe.broker.system.partitions;
+// package io.zeebe.broker.system.partitions;
 //
-//import static org.assertj.core.api.Assertions.assertThat;
-//import static org.mockito.ArgumentMatchers.eq;
-//import static org.mockito.Mockito.mock;
-//import static org.mockito.Mockito.verify;
+// import static org.assertj.core.api.Assertions.assertThat;
+// import static org.mockito.ArgumentMatchers.eq;
+// import static org.mockito.Mockito.mock;
+// import static org.mockito.Mockito.verify;
 //
-//import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
-//import io.atomix.raft.snapshot.Snapshot;
-//import io.atomix.raft.snapshot.SnapshotDeletionListener;
-//import io.atomix.raft.snapshot.SnapshotMetrics;
-//import io.atomix.raft.snapshot.SnapshotStorage;
-//import io.atomix.raft.storage.snapshot.SnapshotStore;
-//import io.atomix.storage.journal.JournalReader.Mode;
-//import io.zeebe.broker.snapshot.impl.AtomixSnapshotStorage;
-//import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
-//import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
-//import io.zeebe.logstreams.util.AtomixLogStorageRule;
-//import java.io.IOException;
-//import java.nio.ByteBuffer;
-//import java.nio.file.Files;
-//import java.nio.file.Path;
-//import java.util.List;
-//import java.util.Optional;
-//import java.util.concurrent.ConcurrentSkipListMap;
-//import org.agrona.IoUtil;
-//import org.junit.After;
-//import org.junit.Before;
-//import org.junit.Rule;
-//import org.junit.Test;
-//import org.junit.rules.RuleChain;
-//import org.junit.rules.TemporaryFolder;
+// import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
+// import io.atomix.raft.snapshot.Snapshot;
+// import io.atomix.raft.snapshot.SnapshotDeletionListener;
+// import io.atomix.raft.snapshot.SnapshotMetrics;
+// import io.atomix.raft.snapshot.SnapshotStorage;
+// import io.atomix.raft.storage.snapshot.SnapshotStore;
+// import io.atomix.storage.journal.JournalReader.Mode;
+// import io.zeebe.broker.snapshot.impl.AtomixSnapshotStorage;
+// import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
+// import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
+// import io.zeebe.logstreams.util.AtomixLogStorageRule;
+// import java.io.IOException;
+// import java.nio.ByteBuffer;
+// import java.nio.file.Files;
+// import java.nio.file.Path;
+// import java.util.List;
+// import java.util.Optional;
+// import java.util.concurrent.ConcurrentSkipListMap;
+// import org.agrona.IoUtil;
+// import org.junit.After;
+// import org.junit.Before;
+// import org.junit.Rule;
+// import org.junit.Test;
+// import org.junit.rules.RuleChain;
+// import org.junit.rules.TemporaryFolder;
 //
-//public final class AtomixSnapshotStorageTest {
+// public final class AtomixSnapshotStorageTest {
 //
 //  private final TemporaryFolder temporaryFolder = new TemporaryFolder();
 //  private final AtomixLogStorageRule logStorageRule = new AtomixLogStorageRule(temporaryFolder);
-//  @Rule public final RuleChain chain = RuleChain.outerRule(temporaryFolder).around(logStorageRule);
+//  @Rule public final RuleChain chain =
+// RuleChain.outerRule(temporaryFolder).around(logStorageRule);
 //
 //  private Path pendingDirectory;
 //  private SnapshotStore store;
@@ -266,4 +274,4 @@
 //            runtimeDirectory, pendingDirectory, store, entrySupplier, new SnapshotMetrics(0));
 //    return snapshotStorage;
 //  }
-//}
+// }

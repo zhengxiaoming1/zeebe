@@ -1,34 +1,41 @@
-///*
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
+ */
+/// *
 // * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
 // * one or more contributor license agreements. See the NOTICE file distributed
 // * with this work for additional information regarding copyright ownership.
 // * Licensed under the Zeebe Community License 1.0. You may not use this file
 // * except in compliance with the Zeebe Community License 1.0.
 // */
-//package io.zeebe.broker.system.partitions.impl;
+// package io.zeebe.broker.system.partitions.impl;
 //
-//import static org.assertj.core.api.Assertions.assertThat;
+// import static org.assertj.core.api.Assertions.assertThat;
 //
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotChunk;
-//import io.atomix.raft.snapshot.SnapshotReplication;
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
-//import io.zeebe.broker.system.TestSnapshotStorage;
-//import io.zeebe.db.impl.DefaultColumnFamily;
-//import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
-//import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
-//import io.zeebe.test.util.AutoCloseableRule;
-//import java.io.IOException;
-//import java.nio.file.Files;
-//import java.nio.file.Path;
-//import java.util.ArrayList;
-//import java.util.List;
-//import java.util.function.Consumer;
-//import java.util.stream.Collectors;
-//import org.junit.Rule;
-//import org.junit.Test;
-//import org.junit.rules.TemporaryFolder;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotChunk;
+// import io.atomix.raft.snapshot.SnapshotReplication;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+// import io.zeebe.broker.system.TestSnapshotStorage;
+// import io.zeebe.db.impl.DefaultColumnFamily;
+// import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
+// import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
+// import io.zeebe.test.util.AutoCloseableRule;
+// import java.io.IOException;
+// import java.nio.file.Files;
+// import java.nio.file.Path;
+// import java.util.ArrayList;
+// import java.util.List;
+// import java.util.function.Consumer;
+// import java.util.stream.Collectors;
+// import org.junit.Rule;
+// import org.junit.Test;
+// import org.junit.rules.TemporaryFolder;
 //
-//public final class FailingSnapshotChunkReplicationTest {
+// public final class FailingSnapshotChunkReplicationTest {
 //
 //  @Rule public final TemporaryFolder tempFolderRule = new TemporaryFolder();
 //  @Rule public final AutoCloseableRule autoCloseableRule = new AutoCloseableRule();
@@ -54,13 +61,15 @@
 //            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
 //            replicatorStorage,
 //            replicator,
-//            new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader), zeebeDb -> Long.MAX_VALUE);
+//            new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader), zeebeDb ->
+// Long.MAX_VALUE);
 //    receiverSnapshotController =
 //        new StateSnapshotController(
 //            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
 //            receiverStorage,
 //            replicator,
-//            new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader), zeebeDb -> Long.MAX_VALUE);
+//            new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader), zeebeDb ->
+// Long.MAX_VALUE);
 //
 //    autoCloseableRule.manage(replicatorSnapshotController);
 //    autoCloseableRule.manage(replicatorStorage);
@@ -129,7 +138,8 @@
 //    final List<SnapshotChunk> pendingChunks = new ArrayList<>(replicator.unsentSnapshots);
 //
 //    final Path pendingSnapshot =
-//        receiverStorage.getPendingDirectoryFor(pendingChunks.get(0).getSnapshotId()).orElseThrow();
+//
+// receiverStorage.getPendingDirectoryFor(pendingChunks.get(0).getSnapshotId()).orElseThrow();
 //    final List<Path> snapshotChunks = Files.list(pendingSnapshot).collect(Collectors.toList());
 //    assertThat(snapshotChunks).hasSize(pendingChunks.get(0).getTotalCount() - 1);
 //    snapshotChunks.forEach(
@@ -268,4 +278,4 @@
 //      return snapshotChunk.getSnapshotChecksum();
 //    }
 //  }
-//}
+// }

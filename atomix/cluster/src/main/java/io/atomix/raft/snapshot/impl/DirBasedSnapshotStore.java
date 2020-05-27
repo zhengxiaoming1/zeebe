@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package io.zeebe.broker.snapshot.impl;
+package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotId;
 import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotMetadata;
@@ -38,7 +38,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.slf4j.Logger;
 
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotImpl;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotImpl;
 
 public final class DirBasedSnapshotStore implements SnapshotStore {
 
@@ -76,7 +76,6 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     currentSnapshot = loadLatestSnapshot(snapshotsDirectory);
   }
 
-
   private Snapshot loadLatestSnapshot(final Path snapshotDirectory) {
     Snapshot latestSnapshot = null;
     try (final var stream = Files.newDirectoryStream(snapshotDirectory)) {
@@ -110,36 +109,36 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     }
     return false;
   }
-// todo(zell) do we really want that?
-//  @Override
-//  public SnapshotMetrics getMetrics() {
-//    return metrics;
-//  }
+  // todo(zell) do we really want that?
+  //  @Override
+  //  public SnapshotMetrics getMetrics() {
+  //    return metrics;
+  //  }
 
-//  @Override
-//  public void onNewSnapshot(
-//      final io.atomix.raft.storage.snapshot.Snapshot snapshot, final SnapshotStore store) {
-//    metrics.incrementSnapshotCount();
-//    observeSnapshotSize(snapshot);
-//
-//    LOGGER.debug("Purging snapshots older than {}", snapshot);
-//    store.purgeSnapshots(snapshot);
-//    purgePendingSnapshots(snapshot.index());
-//
-//    final var optionalConverted = toSnapshot(snapshot.getPath());
-//    if (optionalConverted.isPresent()) {
-//      final var converted = optionalConverted.get();
-//      // TODO #4067(@korthout): rename onSnapshotsDeleted, because it doesn't always delete
-//      deletionListeners.forEach(listener -> listener.onSnapshotsDeleted(converted));
-//    }
-//  }
+  //  @Override
+  //  public void onNewSnapshot(
+  //      final io.atomix.raft.storage.snapshot.Snapshot snapshot, final SnapshotStore store) {
+  //    metrics.incrementSnapshotCount();
+  //    observeSnapshotSize(snapshot);
+  //
+  //    LOGGER.debug("Purging snapshots older than {}", snapshot);
+  //    store.purgeSnapshots(snapshot);
+  //    purgePendingSnapshots(snapshot.index());
+  //
+  //    final var optionalConverted = toSnapshot(snapshot.getPath());
+  //    if (optionalConverted.isPresent()) {
+  //      final var converted = optionalConverted.get();
+  //      // TODO #4067(@korthout): rename onSnapshotsDeleted, because it doesn't always delete
+  //      deletionListeners.forEach(listener -> listener.onSnapshotsDeleted(converted));
+  //    }
+  //  }
 
-//  @Override
-//  public void onSnapshotDeletion(
-//      final io.atomix.raft.storage.snapshot.Snapshot snapshot, final SnapshotStore store) {
-//    metrics.decrementSnapshotCount();
-//    LOGGER.debug("Snapshot {} removed from store {}", snapshot, store);
-//  }
+  //  @Override
+  //  public void onSnapshotDeletion(
+  //      final io.atomix.raft.storage.snapshot.Snapshot snapshot, final SnapshotStore store) {
+  //    metrics.decrementSnapshotCount();
+  //    LOGGER.debug("Snapshot {} removed from store {}", snapshot, store);
+  //  }
 
   @Override
   public TransientSnapshot takeTransientSnapshot(
@@ -190,7 +189,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     // to not update the metrics, as they will simply disappear as time moves on. Once we have a
     // single store/replication mechanism, we can consider updating the metrics here
     currentSnapshot = null;
-//    snapshotMetrics.decrementSnapshotCount();
+    //    snapshotMetrics.decrementSnapshotCount();
 
     try {
       FileUtil.deleteFolder(snapshotsDirectory);
@@ -204,52 +203,53 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
       throw new UncheckedIOException(e);
     }
   }
-//
-//  private Optional<io.atomix.raft.impl.zeebe.snapshot.Snapshot> createNewCommittedSnapshot(
-//      final Path snapshotPath, final DbSnapshotMetadata metadata) {
-//    try (final var created =
-//        store.newSnapshot(
-//            metadata.getIndex(), metadata.getTerm(), metadata.getTimestamp(), snapshotPath)) {
-//      return Optional.of(new SnapshotImpl(metadata.getIndex(), created.getPath()));
-//    } catch (final UncheckedIOException e) {
-//      LOGGER.error("Failed to commit pending snapshot {} located at {}", metadata, snapshotPath, e);
-//      return Optional.empty();
-//    }
-//  }
-
-//  private Path getPendingDirectoryFor(final DbSnapshotMetadata metadata) {
-//    return pendingDirectory.resolve(metadata.getFileName());
-//  }
-//
-//  private Path getPendingDirectoryFor(final Indexed<? extends RaftLogEntry> entry) {
-//    final var metadata =
-//        new DbSnapshotMetadata(
-//            entry.index(),
-//            entry.entry().term(),
-//            WallClockTimestamp.from(System.currentTimeMillis()));
-//    return getPendingDirectoryFor(metadata);
-//  }
   //
-    @Override
-    public long getCurrentSnapshotIndex() {
-      return getLatestSnapshot().map(Snapshot::index).orElse(0L);
-    }
+  //  private Optional<io.atomix.raft.impl.zeebe.snapshot.Snapshot> createNewCommittedSnapshot(
+  //      final Path snapshotPath, final DbSnapshotMetadata metadata) {
+  //    try (final var created =
+  //        store.newSnapshot(
+  //            metadata.getIndex(), metadata.getTerm(), metadata.getTimestamp(), snapshotPath)) {
+  //      return Optional.of(new SnapshotImpl(metadata.getIndex(), created.getPath()));
+  //    } catch (final UncheckedIOException e) {
+  //      LOGGER.error("Failed to commit pending snapshot {} located at {}", metadata, snapshotPath,
+  // e);
+  //      return Optional.empty();
+  //    }
+  //  }
+
+  //  private Path getPendingDirectoryFor(final DbSnapshotMetadata metadata) {
+  //    return pendingDirectory.resolve(metadata.getFileName());
+  //  }
+  //
+  //  private Path getPendingDirectoryFor(final Indexed<? extends RaftLogEntry> entry) {
+  //    final var metadata =
+  //        new DbSnapshotMetadata(
+  //            entry.index(),
+  //            entry.entry().term(),
+  //            WallClockTimestamp.from(System.currentTimeMillis()));
+  //    return getPendingDirectoryFor(metadata);
+  //  }
+  //
+  @Override
+  public long getCurrentSnapshotIndex() {
+    return getLatestSnapshot().map(Snapshot::index).orElse(0L);
+  }
   //
   //  @Override
   //  public Snapshot getCurrentSnapshot() {
   //    return getLatestSnapshot().orElse(null);
   //  }
-//
-//  private Optional<io.atomix.raft.impl.zeebe.snapshot.Snapshot> toSnapshot(final Path path) {
-//    return DbSnapshotMetadata.ofPath(path)
-//        .map(metadata -> new SnapshotImpl(metadata.getIndex(), path));
-//  }
-//
-//  private io.atomix.raft.impl.zeebe.snapshot.Snapshot getSnapshot(
-//      final Indexed<? extends RaftLogEntry> indexed) {
-//    final var pending = getPendingDirectoryFor(indexed);
-//    return new SnapshotImpl(indexed.index(), pending);
-//  }
+  //
+  //  private Optional<io.atomix.raft.impl.zeebe.snapshot.Snapshot> toSnapshot(final Path path) {
+  //    return DbSnapshotMetadata.ofPath(path)
+  //        .map(metadata -> new SnapshotImpl(metadata.getIndex(), path));
+  //  }
+  //
+  //  private io.atomix.raft.impl.zeebe.snapshot.Snapshot getSnapshot(
+  //      final Indexed<? extends RaftLogEntry> indexed) {
+  //    final var pending = getPendingDirectoryFor(indexed);
+  //    return new SnapshotImpl(indexed.index(), pending);
+  //  }
 
   private void observeSnapshotSize(final Snapshot snapshot) {
     try (final var contents = Files.newDirectoryStream(snapshot.getPath())) {
@@ -301,9 +301,9 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   }
   //
   //  @Override
-    public Path getPath() {
-      return snapshotsDirectory;
-    }
+  public Path getPath() {
+    return snapshotsDirectory;
+  }
   //
   //  @Override
   //  public Collection<? extends Snapshot> getSnapshots() {
@@ -341,7 +341,6 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
 
     final var metadata = new DirBasedSnapshotMetadata(index, term, timestamp);
 
-
     if (currentSnapshot != null && currentSnapshot.id().compareTo(metadata) >= 0) {
       LOGGER.debug("Snapshot is older then {} already exists", currentSnapshot);
       return currentSnapshot;
@@ -378,39 +377,39 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     LOGGER.debug("Created new snapshot {}", currentSnapshot);
     return currentSnapshot;
   }
-//
-//  private DirBasedSnapshot put(final DirBasedSnapshot snapshot) {
-//    // caveat: if the metadata is the same but the location is different, this will do nothing
-//    final var previous = snapshots.put(snapshot.getMetadata(), snapshot);
-//    if (previous == null) {
-//      listeners.forEach(listener -> listener.onNewSnapshot(snapshot));
-//    }
-//
-//    LOGGER.debug("Committed new snapshot {}", snapshot);
-//    return snapshot;
-//  }
-//
-//  private DirBasedSnapshot put(final Path directory, final DirBasedSnapshotMetadata metadata) {
-//    if (snapshots.containsKey(metadata)) {
-//      LOGGER.debug("Snapshot {} already exists", metadata);
-//      return snapshots.get(metadata);
-//    }
-//
-//    final var destination = buildSnapshotDirectory(metadata);
-//    try {
-//      tryAtomicDirectoryMove(directory, destination);
-//    } catch (final FileAlreadyExistsException e) {
-//      LOGGER.debug(
-//          "Expected to move snapshot from {} to {}, but it already exists",
-//          directory,
-//          destination,
-//          e);
-//    } catch (final IOException e) {
-//      throw new UncheckedIOException(e);
-//    }
-//
-//    return put(new DirBasedSnapshot(destination, metadata));
-//  }
+  //
+  //  private DirBasedSnapshot put(final DirBasedSnapshot snapshot) {
+  //    // caveat: if the metadata is the same but the location is different, this will do nothing
+  //    final var previous = snapshots.put(snapshot.getMetadata(), snapshot);
+  //    if (previous == null) {
+  //      listeners.forEach(listener -> listener.onNewSnapshot(snapshot));
+  //    }
+  //
+  //    LOGGER.debug("Committed new snapshot {}", snapshot);
+  //    return snapshot;
+  //  }
+  //
+  //  private DirBasedSnapshot put(final Path directory, final DirBasedSnapshotMetadata metadata) {
+  //    if (snapshots.containsKey(metadata)) {
+  //      LOGGER.debug("Snapshot {} already exists", metadata);
+  //      return snapshots.get(metadata);
+  //    }
+  //
+  //    final var destination = buildSnapshotDirectory(metadata);
+  //    try {
+  //      tryAtomicDirectoryMove(directory, destination);
+  //    } catch (final FileAlreadyExistsException e) {
+  //      LOGGER.debug(
+  //          "Expected to move snapshot from {} to {}, but it already exists",
+  //          directory,
+  //          destination,
+  //          e);
+  //    } catch (final IOException e) {
+  //      throw new UncheckedIOException(e);
+  //    }
+  //
+  //    return put(new DirBasedSnapshot(destination, metadata));
+  //  }
 
   private void purgePendingSnapshot(final Path pendingSnapshot) {
     try {
@@ -434,9 +433,9 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   private void remove(final DirBasedSnapshot snapshot) {
     LOGGER.debug("Deleting snapshot {}", snapshot);
     snapshot.delete();
-//      snapshots.remove(snapshot.getMetadata());
-//      listeners.forEach(l -> l.onSnapshotDeletion(snapshot, this));
-//      LOGGER.trace("Snapshots count: {}", snapshots.size());
+    //      snapshots.remove(snapshot.getMetadata());
+    //      listeners.forEach(l -> l.onSnapshotDeletion(snapshot, this));
+    //      LOGGER.trace("Snapshots count: {}", snapshots.size());
   }
 
   private Path buildPendingSnapshotDirectory(

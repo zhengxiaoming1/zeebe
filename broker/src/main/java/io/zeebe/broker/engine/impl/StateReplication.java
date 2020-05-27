@@ -11,7 +11,7 @@ import static io.zeebe.util.sched.Actor.buildActorName;
 
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.SnapshotReplication;
-import io.zeebe.broker.snapshot.impl.SnapshotChunkImpl;
+import io.atomix.raft.snapshot.impl.SnapshotChunkImpl;
 import io.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.zeebe.engine.Loggers;
 import java.nio.ByteBuffer;

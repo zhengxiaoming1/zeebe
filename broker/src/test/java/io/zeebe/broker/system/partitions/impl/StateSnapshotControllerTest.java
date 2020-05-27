@@ -13,10 +13,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
-import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.zeebe.db.impl.DefaultColumnFamily;
 import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
 import io.zeebe.logstreams.util.RocksDBWrapper;
@@ -50,7 +50,8 @@ public final class StateSnapshotControllerTest {
     final var rootDirectory = tempFolderRule.newFolder("state").toPath();
     store = new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
 
-    indexedAtomicReference.set(new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
+    indexedAtomicReference.set(
+        new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     snapshotController =
         new StateSnapshotController(
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),

@@ -1,34 +1,41 @@
-///*
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
+ */
+/// *
 // * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
 // * one or more contributor license agreements. See the NOTICE file distributed
 // * with this work for additional information regarding copyright ownership.
 // * Licensed under the Zeebe Community License 1.0. You may not use this file
 // * except in compliance with the Zeebe Community License 1.0.
 // */
-//package io.zeebe.broker.system.partitions.impl;
+// package io.zeebe.broker.system.partitions.impl;
 //
-//import static org.assertj.core.api.Assertions.assertThat;
+// import static org.assertj.core.api.Assertions.assertThat;
 //
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotChunk;
-//import io.atomix.raft.snapshot.SnapshotReplication;
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
-//import io.zeebe.db.impl.DefaultColumnFamily;
-//import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
-//import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
-//import io.zeebe.logstreams.util.RocksDBWrapper;
-//import io.zeebe.broker.system.TestSnapshotStorage;
-//import io.zeebe.test.util.AutoCloseableRule;
-//import java.io.IOException;
-//import java.util.ArrayList;
-//import java.util.List;
-//import java.util.function.Consumer;
-//import java.util.zip.CRC32;
-//import org.junit.Before;
-//import org.junit.Rule;
-//import org.junit.Test;
-//import org.junit.rules.TemporaryFolder;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotChunk;
+// import io.atomix.raft.snapshot.SnapshotReplication;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+// import io.zeebe.db.impl.DefaultColumnFamily;
+// import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
+// import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
+// import io.zeebe.logstreams.util.RocksDBWrapper;
+// import io.zeebe.broker.system.TestSnapshotStorage;
+// import io.zeebe.test.util.AutoCloseableRule;
+// import java.io.IOException;
+// import java.util.ArrayList;
+// import java.util.List;
+// import java.util.function.Consumer;
+// import java.util.zip.CRC32;
+// import org.junit.Before;
+// import org.junit.Rule;
+// import org.junit.Test;
+// import org.junit.rules.TemporaryFolder;
 //
-//public final class ReplicateSnapshotControllerTest {
+// public final class ReplicateSnapshotControllerTest {
 //
 //  private static final int VALUE = 0xCAFE;
 //  private static final String KEY = "test";
@@ -92,7 +99,8 @@
 //    final int chunkTotalCount = firstChunk.getTotalCount();
 //    assertThat(totalCount).isEqualTo(chunkTotalCount);
 //
-//    assertThat(replicatedChunks).extracting(SnapshotChunk::getTotalCount).containsOnly(totalCount);
+//
+// assertThat(replicatedChunks).extracting(SnapshotChunk::getTotalCount).containsOnly(totalCount);
 //
 //    assertThat(replicatedChunks)
 //        .extracting(SnapshotChunk::getSnapshotId)
@@ -196,4 +204,4 @@
 //    @Override
 //    public void close() {}
 //  }
-//}
+// }

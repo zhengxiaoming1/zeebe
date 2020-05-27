@@ -190,10 +190,10 @@ public final class AsyncSnapshotDirector extends Actor {
                     lastWrittenEventPosition);
                 try {
                   pendingSnapshot.commit();
-//                  snapshotController.commitSnapshot(pendingSnapshot);
+                  //                  snapshotController.commitSnapshot(pendingSnapshot);
 
                   // todo(zell) should be done via listener
-//                  snapshotController.replicateLatestSnapshot(actor::submit);
+                  //                  snapshotController.replicateLatestSnapshot(actor::submit);
 
                 } catch (final Exception ex) {
                   LOG.error(ERROR_MSG_MOVE_SNAPSHOT, ex);

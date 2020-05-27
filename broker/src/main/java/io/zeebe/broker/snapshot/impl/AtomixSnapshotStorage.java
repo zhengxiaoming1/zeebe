@@ -1,36 +1,43 @@
-///*
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
+ */
+/// *
 // * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
 // * one or more contributor license agreements. See the NOTICE file distributed
 // * with this work for additional information regarding copyright ownership.
 // * Licensed under the Zeebe Community License 1.0. You may not use this file
 // * except in compliance with the Zeebe Community License 1.0.
 // */
-//package io.zeebe.broker.snapshot.impl;
+// package io.zeebe.broker.snapshot.impl;
 //
-//import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
-//import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotMetadata;
-//import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotDeletionListener;
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotImpl;
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
-//import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
-//import io.atomix.raft.snapshot.SnapshotListener;
-//import io.atomix.raft.snapshot.SnapshotStore;
-//import io.atomix.raft.storage.log.entry.RaftLogEntry;
-//import io.atomix.storage.journal.Indexed;
-//import io.atomix.utils.time.WallClockTimestamp;
-//import io.zeebe.util.FileUtil;
-//import io.zeebe.util.ZbLogger;
-//import java.io.IOException;
-//import java.io.UncheckedIOException;
-//import java.nio.file.Files;
-//import java.nio.file.Path;
-//import java.util.Optional;
-//import java.util.Set;
-//import java.util.concurrent.CopyOnWriteArraySet;
-//import org.slf4j.Logger;
+// import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
+// import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotMetadata;
+// import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotDeletionListener;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotImpl;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
+// import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+// import io.atomix.raft.snapshot.SnapshotListener;
+// import io.atomix.raft.snapshot.SnapshotStore;
+// import io.atomix.raft.storage.log.entry.RaftLogEntry;
+// import io.atomix.storage.journal.Indexed;
+// import io.atomix.utils.time.WallClockTimestamp;
+// import io.zeebe.util.FileUtil;
+// import io.zeebe.util.ZbLogger;
+// import java.io.IOException;
+// import java.io.UncheckedIOException;
+// import java.nio.file.Files;
+// import java.nio.file.Path;
+// import java.util.Optional;
+// import java.util.Set;
+// import java.util.concurrent.CopyOnWriteArraySet;
+// import org.slf4j.Logger;
 //
-//public final class AtomixSnapshotStorage implements SnapshotStorage, SnapshotListener {
+// public final class AtomixSnapshotStorage implements SnapshotStorage, SnapshotListener {
 //
 //  private static final Logger LOGGER = new ZbLogger(AtomixSnapshotStorage.class);
 //
@@ -158,7 +165,8 @@
 //            metadata.getIndex(), metadata.getTerm(), metadata.getTimestamp(), snapshotPath)) {
 //      return Optional.of(new SnapshotImpl(metadata.getIndex(), created.getPath()));
 //    } catch (final UncheckedIOException e) {
-//      LOGGER.error("Failed to commit pending snapshot {} located at {}", metadata, snapshotPath, e);
+//      LOGGER.error("Failed to commit pending snapshot {} located at {}", metadata, snapshotPath,
+// e);
 //      return Optional.empty();
 //    }
 //  }
@@ -244,4 +252,4 @@
 //      }
 //    }
 //  }
-//}
+// }

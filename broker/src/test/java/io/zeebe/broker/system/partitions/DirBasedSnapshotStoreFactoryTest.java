@@ -9,7 +9,7 @@ package io.zeebe.broker.system.partitions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -33,5 +33,4 @@ public final class DirBasedSnapshotStoreFactoryTest {
     assertThat(root.resolve(DirBasedSnapshotStoreFactory.PENDING_DIRECTORY)).exists().isDirectory();
     assertThat(store.getLatestSnapshot()).isEmpty();
   }
-
 }

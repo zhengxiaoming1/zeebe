@@ -306,7 +306,7 @@ public final class ZeebePartition extends Actor
             (deletionService, errorOnInstallation) -> {
               if (errorOnInstallation == null) {
                 // todo(zell): enable consume replication
-//                snapshotController.consumeReplicatedSnapshots();
+                //                snapshotController.consumeReplicatedSnapshots();
                 installFuture.complete(null);
               } else {
                 LOG.error("Unexpected error on install deletion service.", errorOnInstallation);

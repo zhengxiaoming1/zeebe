@@ -5,7 +5,7 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.snapshot.impl;
+package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.snapshot.SnapshotId;
 import io.atomix.utils.time.WallClockTimestamp;

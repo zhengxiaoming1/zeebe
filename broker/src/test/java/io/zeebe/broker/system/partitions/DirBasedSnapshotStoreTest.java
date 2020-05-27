@@ -17,9 +17,9 @@ import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotListener;
 import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStore;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.utils.time.WallClockTimestamp;
-import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
-import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStoreFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -122,7 +122,8 @@ public final class DirBasedSnapshotStoreTest {
     pendingSnapshots.forEach(p -> IoUtil.ensureDirectoryExists(p.toFile(), ""));
 
     // when
-    final var snapshot = store.newSnapshot(2, 2, WallClockTimestamp.from(2),  pendingDirectory.resolve("2-2-2"));
+    final var snapshot =
+        store.newSnapshot(2, 2, WallClockTimestamp.from(2), pendingDirectory.resolve("2-2-2"));
 
     // then
     pendingSnapshots.forEach(p -> assertThat(p).doesNotExist());
@@ -138,7 +139,8 @@ public final class DirBasedSnapshotStoreTest {
     pendingSnapshots.forEach(p -> IoUtil.ensureDirectoryExists(p.toFile(), ""));
 
     // when
-    final var snapshot = store.newSnapshot(1, 1, WallClockTimestamp.from(1),  pendingDirectory.resolve("1-1-1"));
+    final var snapshot =
+        store.newSnapshot(1, 1, WallClockTimestamp.from(1), pendingDirectory.resolve("1-1-1"));
 
     // then
     assertThat(pendingDirectory.resolve("2-2-2")).exists();
@@ -203,7 +205,8 @@ public final class DirBasedSnapshotStoreTest {
   }
 
   private DirBasedSnapshotStore newStore() {
-    store = new DirBasedSnapshotStore(new SnapshotMetrics("1"), snapshotsDirectory, pendingDirectory);
+    store =
+        new DirBasedSnapshotStore(new SnapshotMetrics("1"), snapshotsDirectory, pendingDirectory);
     return store;
   }
 }

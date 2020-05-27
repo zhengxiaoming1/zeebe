@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package io.zeebe.broker.snapshot.impl;
+package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotChunkReader;
