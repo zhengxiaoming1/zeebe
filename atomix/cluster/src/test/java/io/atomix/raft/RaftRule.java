@@ -30,10 +30,10 @@ import io.atomix.raft.primitive.TestMember;
 import io.atomix.raft.protocol.TestRaftProtocolFactory;
 import io.atomix.raft.protocol.TestRaftServerProtocol;
 import io.atomix.raft.roles.LeaderRole;
-import io.atomix.raft.snapshot.NoopSnapshotStore;
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotListener;
 import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.ZeebeEntry;
@@ -68,6 +68,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import org.agrona.IoUtil;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TemporaryFolder;
@@ -315,10 +316,10 @@ public final class RaftRule extends ExternalResource {
         snapshotStore.takeTransientSnapshot(index, term, new WallClockTimestamp());
     transientSnapshot.take(
         path -> {
-          final var snapshotFile = new File(path.toFile(), "snapshot.file");
+          IoUtil.ensureDirectoryExists(path.toFile(), "snapshot dir should exist");
+          final var snapshotFile = path.resolve("snapshot.file");
           try {
-            Files.write(
-                snapshotFile.toPath(),
+            Files.write(snapshotFile,
                 RandomStringUtils.random(128).getBytes(),
                 StandardOpenOption.CREATE_NEW,
                 StandardOpenOption.WRITE);
@@ -459,7 +460,7 @@ public final class RaftRule extends ExternalResource {
             .withDirectory(memberDirectory)
             .withMaxEntriesPerSegment(10)
             .withMaxSegmentSize(1024 * 10)
-            .withSnapshotStore(new NoopSnapshotStore())
+            .withSnapshotStore(new DirBasedSnapshotStoreFactory().createSnapshotStore(memberDirectory.toPath(), "1"))
             .withNamespace(RaftNamespaces.RAFT_STORAGE);
     return configurator.apply(defaults).build();
   }

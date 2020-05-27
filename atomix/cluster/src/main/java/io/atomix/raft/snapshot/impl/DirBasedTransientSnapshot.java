@@ -62,8 +62,8 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
     this.index = index;
     this.term = term;
     this.timestamp = timestamp;
-    this.directory = directory;
     this.snapshotStore = snapshotStore;
+    this.directory = directory;
   }
 
   @Override
@@ -159,6 +159,7 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
   @Override
   public void abort() {
     try {
+      LOGGER.error("DELETE dir {}", directory);
       FileUtil.deleteFolder(directory);
     } catch (final IOException e) {
       LOGGER.warn("Failed to delete pending snapshot {}", this, e);

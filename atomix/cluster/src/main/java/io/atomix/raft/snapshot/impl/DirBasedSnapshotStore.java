@@ -192,12 +192,14 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     //    snapshotMetrics.decrementSnapshotCount();
 
     try {
+      LOGGER.error("DELETE FOLDER {}", snapshotsDirectory);
       FileUtil.deleteFolder(snapshotsDirectory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
 
     try {
+      LOGGER.error("DELETE FOLDER {}", snapshotsDirectory);
       FileUtil.deleteFolder(pendingDirectory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
@@ -290,6 +292,8 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     final var optionalMetadata = DbSnapshotMetadata.ofPath(pendingSnapshot);
     if (optionalMetadata.isPresent() && optionalMetadata.get().getIndex() < cutoffIndex) {
       try {
+
+        LOGGER.error("Deleted orphaned snapshot {}", pendingSnapshot);
         FileUtil.deleteFolder(pendingSnapshot);
         LOGGER.debug("Deleted orphaned snapshot {}", pendingSnapshot);
       } catch (final IOException e) {
@@ -367,7 +371,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
 
     LOGGER.debug("Purging snapshots older than {}", currentSnapshot);
     if (previousSnapshot != null) {
-      LOGGER.debug("Deleting snapshot {}", previousSnapshot);
+      LOGGER.error("Deleting snapshot {}", previousSnapshot);
       previousSnapshot.delete();
     }
     purgePendingSnapshots(currentSnapshot.index());
@@ -414,7 +418,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   private void purgePendingSnapshot(final Path pendingSnapshot) {
     try {
       FileUtil.deleteFolder(pendingSnapshot);
-      LOGGER.debug("Delete not completed (orphaned) snapshot {}", pendingSnapshot);
+      LOGGER.error("Delete not completed (orphaned) snapshot {}", pendingSnapshot);
     } catch (final IOException e) {
       LOGGER.error("Failed to delete not completed (orphaned) snapshot {}", pendingSnapshot);
     }
@@ -431,7 +435,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
 
   //
   private void remove(final DirBasedSnapshot snapshot) {
-    LOGGER.debug("Deleting snapshot {}", snapshot);
+    LOGGER.error("Deleting snapshot {}", snapshot);
     snapshot.delete();
     //      snapshots.remove(snapshot.getMetadata());
     //      listeners.forEach(l -> l.onSnapshotDeletion(snapshot, this));
