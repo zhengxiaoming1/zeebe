@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Predicate;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
@@ -63,6 +64,17 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
     this.timestamp = timestamp;
     this.directory = directory;
     this.snapshotStore = snapshotStore;
+  }
+
+  @Override
+  public void take(final Predicate<Path> takeSnapshot) {
+
+    // todo metrics
+    if (!takeSnapshot.test(getPath()))
+    {
+      // todo(zell): before we did nothing?!
+      abort();
+    }
   }
 
   @Override

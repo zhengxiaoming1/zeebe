@@ -7,13 +7,11 @@
  */
 package io.zeebe.logstreams.spi;
 
-import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+import io.atomix.raft.snapshot.TransientSnapshot;
 import io.zeebe.db.ZeebeDb;
 import java.io.File;
-import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 public interface SnapshotController extends AutoCloseable {
   /**
@@ -24,27 +22,27 @@ public interface SnapshotController extends AutoCloseable {
    * @return a pending snapshot, or nothing if the operation fails
    * @see SnapshotStorage#getPendingSnapshotFor(long)
    */
-  Optional<Snapshot> takeTempSnapshot(long lowerBoundSnapshotPosition);
-
-  /**
-   * Commits the given temporary snapshot to the underlying storage.
-   *
-   * @param snapshot the snapshot to commit
-   * @throws IOException thrown if moving the snapshot fails
-   */
-  void commitSnapshot(Snapshot snapshot) throws IOException;
-
-  /**
-   * Replicates the latest valid snapshot. The given executor is called for each snapshot chunk in
-   * the latest snapshot. The executor should execute/run the given Runnable in a specific
-   * environment (e.g. ActorThread).
-   *
-   * @param executor executor which executed the given Runnable
-   */
-  void replicateLatestSnapshot(Consumer<Runnable> executor);
-
-  /** Registers to consumes replicated snapshots. */
-  void consumeReplicatedSnapshots();
+  Optional<TransientSnapshot> takeTempSnapshot(long lowerBoundSnapshotPosition);
+//
+//  /**
+//   * Commits the given temporary snapshot to the underlying storage.
+//   *
+//   * @param snapshot the snapshot to commit
+//   * @throws IOException thrown if moving the snapshot fails
+//   */
+//  void commitSnapshot(Snapshot snapshot) throws IOException;
+//
+//  /**
+//   * Replicates the latest valid snapshot. The given executor is called for each snapshot chunk in
+//   * the latest snapshot. The executor should execute/run the given Runnable in a specific
+//   * environment (e.g. ActorThread).
+//   *
+//   * @param executor executor which executed the given Runnable
+//   */
+//  void replicateLatestSnapshot(Consumer<Runnable> executor);
+//
+//  /** Registers to consumes replicated snapshots. */
+//  void consumeReplicatedSnapshots();
 
   /**
    * Recovers the state from the latest snapshot and returns the lower bound snapshot position.

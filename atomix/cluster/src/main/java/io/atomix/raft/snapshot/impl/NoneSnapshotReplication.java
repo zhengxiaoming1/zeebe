@@ -5,8 +5,10 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.atomix.raft.impl.zeebe.snapshot;
+package io.atomix.raft.snapshot.impl;
 
+import io.atomix.raft.snapshot.SnapshotChunk;
+import io.atomix.raft.snapshot.SnapshotReplication;
 import java.util.function.Consumer;
 
 public final class NoneSnapshotReplication implements SnapshotReplication {

@@ -7,122 +7,138 @@
  */
 package io.zeebe.broker.system.partitions.impl;
 
-import io.atomix.raft.impl.zeebe.snapshot.NoneSnapshotReplication;
-import io.atomix.raft.impl.zeebe.snapshot.ReplicationController;
-import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotReplication;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
+import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.SnapshotReplication;
+import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.TransientSnapshot;
+import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
 import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.spi.SnapshotController;
-import io.zeebe.util.ChecksumUtil;
 import io.zeebe.util.FileUtil;
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 
 /** Controls how snapshot/recovery operations are performed */
 public class StateSnapshotController implements SnapshotController {
   private static final Logger LOG = Loggers.SNAPSHOT_LOGGER;
 
-  private final SnapshotStorage storage;
+  private final SnapshotStore store;
   private final ZeebeDbFactory zeebeDbFactory;
   private final ToLongFunction<ZeebeDb> exporterPositionSupplier;
-  private final ReplicationController replicationController;
-  private ZeebeDb db;
+//  private final ReplicationController replicationController;
 
-  public StateSnapshotController(
-      final ZeebeDbFactory rocksDbFactory, final SnapshotStorage storage) {
-    this(rocksDbFactory, storage, new NoneSnapshotReplication(), zeebeDb -> -1);
-  }
+  private final Path runtimeDirectory;
+  private ZeebeDb db;
+  private final AtomixRecordEntrySupplier entrySupplier;
+
+// todo fix test
+//  public StateSnapshotController(
+//      final ZeebeDbFactory rocksDbFactory, final SnapshotStore store) {
+//    this(rocksDbFactory, storage, new NoneSnapshotReplication(),
+//        new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader), zeebeDb -> -1);
+//  }
 
   public StateSnapshotController(
       final ZeebeDbFactory zeebeDbFactory,
-      final SnapshotStorage storage,
+      final SnapshotStore store,
+      final Path runtimeDirectory,
       final SnapshotReplication replication,
+      final AtomixRecordEntrySupplier entrySupplier,
       final ToLongFunction<ZeebeDb> exporterPositionSupplier) {
-    this.storage = storage;
+    this.store = store;
+    this.runtimeDirectory = runtimeDirectory;
     this.zeebeDbFactory = zeebeDbFactory;
-    this.exporterPositionSupplier = exporterPositionSupplier;
-    this.replicationController = new ReplicationController(replication, storage);
+    this.exporterPositionSupplier = exporterPositionSupplier;;
+    this.entrySupplier = entrySupplier;
+    // todo(zell) replication
+//    store.addSnapshotListener(new ReplicationController(replication))
+//    this.replicationController = new ReplicationController(replication, storage);
   }
 
   @Override
-  public Optional<Snapshot> takeTempSnapshot(final long lowerBoundSnapshotPosition) {
+  public Optional<TransientSnapshot> takeTempSnapshot(final long lowerBoundSnapshotPosition) {
     if (!isDbOpened()) {
       return Optional.empty();
     }
 
     final long exportedPosition = exporterPositionSupplier.applyAsLong(openDb());
     final long snapshotPosition = Math.min(exportedPosition, lowerBoundSnapshotPosition);
-    final var optionalSnapshot = storage.getPendingSnapshotFor(snapshotPosition);
-    optionalSnapshot.ifPresent(this::createSnapshot);
-    return optionalSnapshot;
+
+    final var optionalIndexed = entrySupplier.getIndexedEntry(snapshotPosition);
+
+    final Long previousSnapshotIndex =
+        store.getLatestSnapshot().map(Snapshot::getCompactionBound).orElse(-1L);
+
+    final var optTransientSnapshot = optionalIndexed
+        .filter(indexed -> indexed.index() != previousSnapshotIndex)
+        .map(indexed -> store.takeTransientSnapshot(indexed.index(), indexed.entry().term(),
+            WallClockTimestamp.from(System.currentTimeMillis())));
+
+    optTransientSnapshot.ifPresent(this::createSnapshot);
+    return optTransientSnapshot;
   }
+//
+//  @Override
+//  public void replicateLatestSnapshot(final Consumer<Runnable> executor) {
+//    final var optionalLatest = storage.getLatestSnapshot();
+//    if (optionalLatest.isPresent()) {
+//      final var latestSnapshotDirectory = optionalLatest.get().getPath();
+//      LOG.debug("Start replicating latest snapshot {}", latestSnapshotDirectory);
+//
+//      try (final var stream = Files.list(latestSnapshotDirectory)) {
+//        final var paths = stream.sorted().collect(Collectors.toList());
+//        final long combinedChecksum = ChecksumUtil.createCombinedChecksum(paths);
+//
+//        for (final var path : paths) {
+//          executor.accept(
+//              () -> {
+//                LOG.debug("Replicate snapshot chunk {}", path);
+//                replicationController.replicate(
+//                    latestSnapshotDirectory.getFileName().toString(),
+//                    paths.size(),
+//                    path.toFile(),
+//                    combinedChecksum);
+//              });
+//        }
+//      } catch (final IOException e) {
+//        throw new UncheckedIOException(e);
+//      }
+//    }
+//  }
+//
+//  @Override
+//  public void consumeReplicatedSnapshots() {
+//    replicationController.consumeReplicatedSnapshots();
+//  }
 
-  @Override
-  public void commitSnapshot(final Snapshot snapshot) {
-    storage.commitSnapshot(snapshot);
-  }
 
-  @Override
-  public void replicateLatestSnapshot(final Consumer<Runnable> executor) {
-    final var optionalLatest = storage.getLatestSnapshot();
-    if (optionalLatest.isPresent()) {
-      final var latestSnapshotDirectory = optionalLatest.get().getPath();
-      LOG.debug("Start replicating latest snapshot {}", latestSnapshotDirectory);
+  // todo move runtime directory to this class
+  // this is only for zeebe useful
 
-      try (final var stream = Files.list(latestSnapshotDirectory)) {
-        final var paths = stream.sorted().collect(Collectors.toList());
-        final long combinedChecksum = ChecksumUtil.createCombinedChecksum(paths);
 
-        for (final var path : paths) {
-          executor.accept(
-              () -> {
-                LOG.debug("Replicate snapshot chunk {}", path);
-                replicationController.replicate(
-                    latestSnapshotDirectory.getFileName().toString(),
-                    paths.size(),
-                    path.toFile(),
-                    combinedChecksum);
-              });
-        }
-      } catch (final IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    }
-  }
-
-  @Override
-  public void consumeReplicatedSnapshots() {
-    replicationController.consumeReplicatedSnapshots();
+  public Path getRuntimeDirectory() {
+    return runtimeDirectory;
   }
 
   @Override
   public void recover() throws Exception {
-    final var runtimeDirectory = storage.getRuntimeDirectory();
+    final var runtimeDirectory = getRuntimeDirectory();
 
     if (Files.exists(runtimeDirectory)) {
       FileUtil.deleteFolder(runtimeDirectory);
     }
 
-    final var snapshots =
-        storage.getSnapshots().sorted(Comparator.reverseOrder()).collect(Collectors.toList());
-    LOG.debug("Available snapshots: {}", snapshots);
-
-    final var snapshotIterator = snapshots.iterator();
-    boolean recoveredFromSnapshot = false;
-    while (snapshotIterator.hasNext() && !recoveredFromSnapshot) {
-      final var snapshot = snapshotIterator.next();
+    final var optLatestSnapshot = store.getLatestSnapshot();
+    if (optLatestSnapshot.isPresent()) {
+      final var snapshot = optLatestSnapshot.get();
+      LOG.debug("Available snapshot: {}", snapshot);
 
       FileUtil.copySnapshot(runtimeDirectory, snapshot.getPath());
 
@@ -130,23 +146,14 @@ public class StateSnapshotController implements SnapshotController {
         // open database to verify that the snapshot is recoverable
         openDb();
         LOG.debug("Recovered state from snapshot '{}'", snapshot);
-        recoveredFromSnapshot = true;
       } catch (final Exception e) {
         FileUtil.deleteFolder(runtimeDirectory);
 
-        if (snapshotIterator.hasNext()) {
-          LOG.warn(
-              "Failed to open snapshot '{}'. Delete this snapshot and try the previous one.",
-              snapshot,
-              e);
-          FileUtil.deleteFolder(snapshot.getPath());
-        } else {
           LOG.error(
               "Failed to open snapshot '{}'. No snapshots available to recover from. Manual action is required.",
               snapshot,
               e);
           throw new IllegalStateException("Failed to recover from snapshots", e);
-        }
       }
     }
   }
@@ -154,7 +161,7 @@ public class StateSnapshotController implements SnapshotController {
   @Override
   public ZeebeDb openDb() {
     if (db == null) {
-      final var runtimeDirectory = storage.getRuntimeDirectory();
+      final var runtimeDirectory = getRuntimeDirectory();
       db = zeebeDbFactory.createDb(runtimeDirectory.toFile());
       LOG.debug("Opened database from '{}'.", runtimeDirectory);
     }
@@ -164,19 +171,19 @@ public class StateSnapshotController implements SnapshotController {
 
   @Override
   public int getValidSnapshotsCount() {
-    return (int) storage.getSnapshots().count();
+    return store.getLatestSnapshot().isPresent() ? 1 : 0;
   }
 
+// todo(zell): only used for tests.
   @Override
   public File getLastValidSnapshotDirectory() {
-    return storage.getLatestSnapshot().map(Snapshot::getPath).map(Path::toFile).orElse(null);
+    return store.getLatestSnapshot().map(Snapshot::getPath).map(Path::toFile).orElse(null);
   }
 
   @Override
   public void close() throws Exception {
     if (db != null) {
       db.close();
-      final var runtimeDirectory = storage.getRuntimeDirectory();
       LOG.debug("Closed database from '{}'.", runtimeDirectory);
       db = null;
     }
@@ -186,33 +193,44 @@ public class StateSnapshotController implements SnapshotController {
     return db != null;
   }
 
-  private Optional<? extends Snapshot> createCommittedSnapshot(final Snapshot snapshot) {
-    if (!createSnapshot(snapshot)) {
-      return Optional.empty();
-    }
+  private boolean createSnapshot(final TransientSnapshot snapshot) {
+//    final var snapshotDir = snapshot.getPath();
+//    final var start = System.currentTimeMillis();
+//
+//    if (db == null) {
+//      LOG.error("Expected to take a snapshot, but no database was opened");
+//      return false;
+//    }
 
-    return storage.commitSnapshot(snapshot);
-  }
+    snapshot.take(snapshotDir ->
+    {
+      if (db == null) {
+        LOG.error("Expected to take a snapshot, but no database was opened");
+        return false;
+      }
 
-  private boolean createSnapshot(final Snapshot snapshot) {
-    final var snapshotDir = snapshot.getPath();
-    final var start = System.currentTimeMillis();
+      LOG.debug("Taking temporary snapshot into {}.", snapshotDir);
+      try {
+        db.createSnapshot(snapshotDir.toFile());
+      } catch (final Exception e) {
+        LOG.error("Failed to create snapshot of runtime database", e);
+        return false;
+      }
 
-    if (db == null) {
-      LOG.error("Expected to take a snapshot, but no database was opened");
-      return false;
-    }
+      return true;
 
-    LOG.debug("Taking temporary snapshot into {}.", snapshotDir);
-    try {
-      db.createSnapshot(snapshotDir.toFile());
-    } catch (final Exception e) {
-      LOG.error("Failed to create snapshot of runtime database", e);
-      return false;
-    }
+    });
+//
+//    LOG.debug("Taking temporary snapshot into {}.", snapshotDir);
+//    try {
+//      db.createSnapshot(snapshotDir.toFile());
+//    } catch (final Exception e) {
+//      LOG.error("Failed to create snapshot of runtime database", e);
+//      return false;
+//    }
 
-    final var elapsedSeconds = System.currentTimeMillis() - start;
-    storage.getMetrics().observeSnapshotOperation(elapsedSeconds);
+//    final var elapsedSeconds = System.currentTimeMillis() - start;
+//    storage.getMetrics().observeSnapshotOperation(elapsedSeconds);
 
     return true;
   }

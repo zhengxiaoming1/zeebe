@@ -20,8 +20,11 @@ package io.atomix.raft.snapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
+import java.util.function.Predicate;
 
 public interface TransientSnapshot {
+
+  void take(Predicate<Path> takeSnapshot);
 
   /** @return the snapshot's index */
   long index();

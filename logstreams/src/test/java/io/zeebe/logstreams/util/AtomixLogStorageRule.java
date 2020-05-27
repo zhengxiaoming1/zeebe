@@ -10,10 +10,10 @@ package io.zeebe.logstreams.util;
 import static org.mockito.Mockito.spy;
 
 import io.atomix.raft.partition.impl.RaftNamespaces;
+import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLog;
 import io.atomix.raft.storage.log.RaftLogReader;
-import io.atomix.raft.storage.snapshot.SnapshotStore;
 import io.atomix.raft.storage.system.MetaStore;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.raft.zeebe.ZeebeLogAppender;

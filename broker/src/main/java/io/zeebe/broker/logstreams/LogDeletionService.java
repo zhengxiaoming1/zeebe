@@ -7,23 +7,23 @@
  */
 package io.zeebe.broker.logstreams;
 
-import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotDeletionListener;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.SnapshotListener;
+import io.atomix.raft.snapshot.SnapshotStore;
 import io.zeebe.broker.Loggers;
 import io.zeebe.util.sched.Actor;
 
-public final class LogDeletionService extends Actor implements SnapshotDeletionListener {
+public final class LogDeletionService extends Actor implements SnapshotListener {
   private final LogCompactor logCompactor;
-  private final SnapshotStorage snapshotStorage;
   private final String actorName;
+  private final SnapshotStore snapshotStore;
 
   public LogDeletionService(
       final int nodeId,
       final int partitionId,
       final LogCompactor logCompactor,
-      final SnapshotStorage snapshotStorage) {
-    this.snapshotStorage = snapshotStorage;
+      final SnapshotStore snapshotStore) {
+    this.snapshotStore = snapshotStore;
     this.logCompactor = logCompactor;
     actorName = buildActorName(nodeId, "DeletionService-" + partitionId);
   }
@@ -35,19 +35,19 @@ public final class LogDeletionService extends Actor implements SnapshotDeletionL
 
   @Override
   protected void onActorStarting() {
-    snapshotStorage.addDeletionListener(this);
+    snapshotStore.addSnapshotListener(this);
   }
 
   @Override
   protected void onActorClosing() {
-    if (snapshotStorage != null) {
-      snapshotStorage.removeDeletionListener(this);
+    if (snapshotStore != null) {
+      snapshotStore.removeSnapshotListener(this);
     }
   }
 
   @Override
-  public void onSnapshotsDeleted(final Snapshot oldestRemainingSnapshot) {
-    actor.run(() -> delegateDeletion(oldestRemainingSnapshot));
+  public void onNewSnapshot(final Snapshot newSnapshot) {
+    actor.run(() -> delegateDeletion(newSnapshot));
   }
 
   private void delegateDeletion(final Snapshot snapshot) {

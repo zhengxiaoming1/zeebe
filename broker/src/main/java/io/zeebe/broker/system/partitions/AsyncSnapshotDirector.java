@@ -7,7 +7,7 @@
  */
 package io.zeebe.broker.system.partitions;
 
-import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
+import io.atomix.raft.snapshot.TransientSnapshot;
 import io.zeebe.engine.processor.RandomDuration;
 import io.zeebe.engine.processor.StreamProcessor;
 import io.zeebe.logstreams.impl.Loggers;
@@ -44,7 +44,7 @@ public final class AsyncSnapshotDirector extends Actor {
 
   private ActorCondition commitCondition;
   private Long lastWrittenEventPosition;
-  private Snapshot pendingSnapshot;
+  private TransientSnapshot pendingSnapshot;
   private long lowerBoundSnapshotPosition;
   private boolean takingSnapshot;
 
@@ -189,8 +189,11 @@ public final class AsyncSnapshotDirector extends Actor {
                     currentCommitPosition,
                     lastWrittenEventPosition);
                 try {
-                  snapshotController.commitSnapshot(pendingSnapshot);
-                  snapshotController.replicateLatestSnapshot(actor::submit);
+                  pendingSnapshot.commit();
+//                  snapshotController.commitSnapshot(pendingSnapshot);
+
+                  // todo(zell) should be done via listener
+//                  snapshotController.replicateLatestSnapshot(actor::submit);
 
                 } catch (final Exception ex) {
                   LOG.error(ERROR_MSG_MOVE_SNAPSHOT, ex);

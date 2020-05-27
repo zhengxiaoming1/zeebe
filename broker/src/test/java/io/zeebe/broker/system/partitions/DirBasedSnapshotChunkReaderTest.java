@@ -9,7 +9,7 @@ package io.zeebe.broker.system.partitions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.atomix.raft.storage.snapshot.SnapshotChunk;
+import io.atomix.raft.snapshot.SnapshotChunk;
 import io.zeebe.broker.snapshot.impl.DirBasedSnapshotChunkReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -37,7 +37,7 @@ public final class DirBasedSnapshotChunkReaderTest {
 
     // then
     Assertions.assertThat(reader).hasNext();
-    Assertions.assertThat(reader.next().id()).isEqualTo(asBuffer("bar"));
+    Assertions.assertThat(reader.next().getChunkName()).isEqualTo(asBuffer("bar"));
     Assertions.assertThat(reader.nextId()).isEqualTo(asBuffer("foo"));
   }
 
@@ -51,7 +51,7 @@ public final class DirBasedSnapshotChunkReaderTest {
 
     // then
     Assertions.assertThat(reader).hasNext();
-    Assertions.assertThat(reader.next().id()).isEqualTo(asBuffer("foo"));
+    Assertions.assertThat(reader.next().getChunkName()).isEqualTo(asBuffer("foo"));
     Assertions.assertThat(reader.nextId()).isEqualTo(null);
   }
 
@@ -68,8 +68,8 @@ public final class DirBasedSnapshotChunkReaderTest {
 
     // then
     assertThat(chunks)
-        .extracting(SnapshotChunk::id)
-        .containsExactly(asBuffer("a"), asBuffer("b"), asBuffer("c"));
+        .extracting(SnapshotChunk::getChunkName)
+        .containsExactly("a", "b", "c");
     Assertions.assertThat(reader.nextId()).isEqualTo(null);
     Assertions.assertThat(reader.hasNext()).isFalse();
   }

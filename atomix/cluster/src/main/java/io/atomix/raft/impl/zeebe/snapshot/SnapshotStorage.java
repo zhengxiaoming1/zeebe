@@ -7,6 +7,7 @@
  */
 package io.atomix.raft.impl.zeebe.snapshot;
 
+import io.zeebe.util.CloseableSilently;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -16,7 +17,7 @@ import java.util.stream.Stream;
  * related snapshot store) and the logstream abstraction. Should be removed as part of a refactoring
  * to refine/define the Engine/Logstream abstractions.
  */
-public interface SnapshotStorage extends AutoCloseable {
+public interface SnapshotStorage extends CloseableSilently {
 
   /**
    * Returns snapshot for the given position with a temporary directory. This method is
@@ -87,9 +88,6 @@ public interface SnapshotStorage extends AutoCloseable {
    * @return true if there is a committed snapshot with this ID, false otherwise
    */
   boolean exists(String id);
-
-  @Override
-  void close();
 
   /**
    * Registers a listener which is called whenever snapshots are purged.

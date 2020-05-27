@@ -12,7 +12,6 @@ import static org.mockito.Mockito.spy;
 
 import io.zeebe.broker.exporter.repo.ExporterDescriptor;
 import io.zeebe.broker.system.partitions.TestStreams;
-import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
 import io.zeebe.engine.state.DefaultZeebeDbFactory;
@@ -71,9 +70,8 @@ public final class ExporterRule implements TestRule {
   public void startExporterDirector(final List<ExporterDescriptor> exporterDescriptors) {
     final var stream = streams.getLogStream(STREAM_NAME);
 
-    final var snapshotStorage = streams.createSnapshotStorage(stream);
-    final var snapshotController =
-        spy(new StateSnapshotController(zeebeDbFactory, snapshotStorage));
+    final var snapshotStore = streams.createSnapshotStore(stream);
+    final var snapshotController = streams.createSnapshotController(stream, snapshotStore);
     capturedZeebeDb = spy(snapshotController.openDb());
 
     doAnswer(invocationOnMock -> capturedZeebeDb).when(snapshotController).openDb();
@@ -88,7 +86,7 @@ public final class ExporterRule implements TestRule {
 
     director = new ExporterDirector(context);
     director.startAsync(actorSchedulerRule.get()).join();
-    closeables.manage(snapshotStorage);
+    closeables.manage(snapshotStore);
   }
 
   public ControlledActorClock getClock() {

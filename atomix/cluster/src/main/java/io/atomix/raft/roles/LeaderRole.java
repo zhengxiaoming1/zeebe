@@ -42,10 +42,10 @@ import io.atomix.raft.protocol.TransferRequest;
 import io.atomix.raft.protocol.TransferResponse;
 import io.atomix.raft.protocol.VoteRequest;
 import io.atomix.raft.protocol.VoteResponse;
+import io.atomix.raft.snapshot.SnapshotListener;
 import io.atomix.raft.storage.log.entry.ConfigurationEntry;
 import io.atomix.raft.storage.log.entry.InitializeEntry;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
-import io.atomix.raft.storage.snapshot.SnapshotListener;
 import io.atomix.raft.storage.system.Configuration;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.raft.zeebe.ZeebeLogAppender;
@@ -692,7 +692,7 @@ public final class LeaderRole extends ActiveRole implements ZeebeLogAppender {
    * Returns true if the supplied position is higher than the last ZeebeEntry in the log or if no
    * ZeebeEntry was found at all.
    */
-  private boolean isEntryConsistent(long newEntryPosition) {
+  private boolean isEntryConsistent(final long newEntryPosition) {
     Indexed<RaftLogEntry> lastEntry = raft.getLogWriter().getLastEntry();
 
     if (lastEntry == null || lastEntry.type() != ZeebeEntry.class) {

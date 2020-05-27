@@ -18,6 +18,7 @@ package io.zeebe.broker.snapshot.impl;
 
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotChunkReader;
+import io.atomix.raft.snapshot.SnapshotId;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
 import io.zeebe.util.ZbLogger;
@@ -138,7 +139,7 @@ public final class DirBasedSnapshot implements Snapshot {
 
   private NavigableSet<CharSequence> collectChunks(final Path directory) throws IOException {
     final var set = new TreeSet<>(CharSequence::compare);
-    try (final var stream = Files.list(directory)) {
+    try (final var stream = Files.list(directory).sorted()) {
       stream.map(directory::relativize).map(Path::toString).forEach(set::add);
     }
     return set;
@@ -146,6 +147,11 @@ public final class DirBasedSnapshot implements Snapshot {
 
   @Override
   public long getCompactionBound() {
-    throw new UnsupportedOperationException("not yet implemented");
+    return index();
+  }
+
+  @Override
+  public SnapshotId id() {
+    return metadata;
   }
 }

@@ -10,12 +10,10 @@ package io.zeebe.broker.system.partitions;
 import io.atomix.raft.RaftCommitListener;
 import io.atomix.raft.RaftRoleChangeListener;
 import io.atomix.raft.RaftServer.Role;
-import io.atomix.raft.impl.zeebe.snapshot.AtomixSnapshotStorage;
-import io.atomix.raft.impl.zeebe.snapshot.NoneSnapshotReplication;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotReplication;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
 import io.atomix.raft.partition.RaftPartition;
+import io.atomix.raft.snapshot.SnapshotReplication;
+import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
@@ -58,7 +56,6 @@ import io.zeebe.util.sched.ActorScheduler;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +89,7 @@ public final class ZeebePartition extends Actor
   private LogStream logStream;
   private Role raftRole;
   private SnapshotReplication stateReplication;
-  private SnapshotStorage snapshotStorage;
+  private SnapshotStore snapshotStore;
   private StateSnapshotController snapshotController;
   private ZeebeDb zeebeDb;
   private final String actorName;
@@ -308,7 +305,8 @@ public final class ZeebePartition extends Actor
         .onComplete(
             (deletionService, errorOnInstallation) -> {
               if (errorOnInstallation == null) {
-                snapshotController.consumeReplicatedSnapshots();
+                // todo(zell): enable consume replication
+//                snapshotController.consumeReplicatedSnapshots();
                 installFuture.complete(null);
               } else {
                 LOG.error("Unexpected error on install deletion service.", errorOnInstallation);
@@ -406,18 +404,20 @@ public final class ZeebePartition extends Actor
       return CompletableActorFuture.completedExceptionally(e);
     }
 
-    snapshotStorage = createSnapshotStorage(pendingDirectory);
+    snapshotStore = atomixRaftPartition.getServer().getSnapshotStore();
     snapshotController = createSnapshotController();
 
     final LogCompactor logCompactor = new AtomixLogCompactor(atomixRaftPartition.getServer());
     final LogDeletionService deletionService =
-        new LogDeletionService(localBroker.getNodeId(), partitionId, logCompactor, snapshotStorage);
+        new LogDeletionService(localBroker.getNodeId(), partitionId, logCompactor, snapshotStore);
     closeables.add(deletionService);
 
     return scheduler.submitActor(deletionService);
   }
 
   private StateSnapshotController createSnapshotController() {
+    final var runtimeDirectory = atomixRaftPartition.dataDirectory().toPath().resolve("runtime");
+    final var reader = atomixRaftPartition.getServer().openReader(-1, Mode.COMMITS);
     stateReplication =
         shouldReplicateSnapshots()
             ? new StateReplication(messagingService, partitionId, localBroker.getNodeId())
@@ -425,24 +425,11 @@ public final class ZeebePartition extends Actor
 
     return new StateSnapshotController(
         DefaultZeebeDbFactory.DEFAULT_DB_FACTORY,
-        snapshotStorage,
-        stateReplication,
-        StatePositionSupplier::getHighestExportedPosition);
-  }
-
-  // sonar warns that we should use AtomixRecordEntrySupplierImpl in a try-with-resources, which is
-  // not applicable here; it is safe to ignore as we will close the object once we close the storage
-  @SuppressWarnings("squid:S2095")
-  private SnapshotStorage createSnapshotStorage(final Path pendingDirectory) {
-    final var reader = atomixRaftPartition.getServer().openReader(-1, Mode.COMMITS);
-    final var runtimeDirectory = atomixRaftPartition.dataDirectory().toPath().resolve("runtime");
-
-    return new AtomixSnapshotStorage(
+        snapshotStore,
         runtimeDirectory,
-        pendingDirectory,
-        atomixRaftPartition.getServer().getSnapshotStore(),
+        stateReplication,
         new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader),
-        new SnapshotMetrics(partitionId));
+        StatePositionSupplier::getHighestExportedPosition);
   }
 
   private boolean shouldReplicateSnapshots() {
@@ -581,17 +568,17 @@ public final class ZeebePartition extends Actor
   }
 
   private void closeSnapshotStorage() {
-    if (snapshotStorage == null) {
+    if (snapshotStore == null) {
       return;
     }
 
     try {
-      snapshotStorage.close();
+      snapshotStore.close();
     } catch (final Exception e) {
       LOG.error(
           "Unexpected error occurred closing snapshot storage for partition {}", partitionId, e);
     } finally {
-      snapshotStorage = null;
+      snapshotStore = null;
     }
   }
 

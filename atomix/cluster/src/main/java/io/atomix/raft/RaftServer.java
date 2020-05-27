@@ -28,7 +28,6 @@ import io.atomix.raft.impl.DefaultRaftServer;
 import io.atomix.raft.impl.RaftContext;
 import io.atomix.raft.impl.zeebe.ZeebeRaftStateMachine;
 import io.atomix.raft.protocol.RaftServerProtocol;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStore;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLog;
 import io.atomix.storage.StorageLevel;
@@ -191,9 +190,8 @@ public interface RaftServer {
    *
    * <p>The server name is provided to the server via the {@link Builder#withName(String) builder
    * configuration}. The name is used internally to manage the server's on-disk state. {@link
-   * RaftLog Log}, {@link DirBasedSnapshotStore snapshot}, and {@link
-   * io.atomix.raft.storage.system.MetaStore configuration} files stored on disk use the server name
-   * as the prefix.
+   * RaftLog Log}, {@link snapshot}, and {@link io.atomix.raft.storage.system.MetaStore
+   * configuration} files stored on disk use the server name as the prefix.
    *
    * @return The server name.
    */

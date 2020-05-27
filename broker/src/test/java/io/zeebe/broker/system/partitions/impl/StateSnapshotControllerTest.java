@@ -10,19 +10,24 @@ package io.zeebe.broker.system.partitions.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.atomix.raft.impl.zeebe.snapshot.NoneSnapshotReplication;
-import io.atomix.raft.impl.zeebe.snapshot.Snapshot;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
+import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.TransientSnapshot;
+import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
+import io.atomix.raft.zeebe.ZeebeEntry;
+import io.atomix.storage.journal.Indexed;
+import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.zeebe.db.impl.DefaultColumnFamily;
 import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
 import io.zeebe.logstreams.util.RocksDBWrapper;
-import io.zeebe.logstreams.util.TestSnapshotStorage;
 import io.zeebe.test.util.AutoCloseableRule;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.agrona.collections.MutableLong;
 import org.junit.Before;
 import org.junit.Rule;
@@ -35,24 +40,28 @@ public final class StateSnapshotControllerTest {
   @Rule public final AutoCloseableRule autoCloseableRule = new AutoCloseableRule();
 
   private final MutableLong exporterPosition = new MutableLong(Long.MAX_VALUE);
+  private final AtomicReference<Indexed> indexedAtomicReference = new AtomicReference<>();
 
   private StateSnapshotController snapshotController;
-  private SnapshotStorage storage;
+  private SnapshotStore store;
 
   @Before
   public void setup() throws IOException {
     final var rootDirectory = tempFolderRule.newFolder("state").toPath();
-    storage = new TestSnapshotStorage(rootDirectory);
+    store = new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
 
+    indexedAtomicReference.set(new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     snapshotController =
         new StateSnapshotController(
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
-            storage,
+            store,
+            rootDirectory.resolve("runtime"),
             new NoneSnapshotReplication(),
+            l -> Optional.ofNullable(indexedAtomicReference.get()),
             db -> exporterPosition.get());
 
     autoCloseableRule.manage(snapshotController);
-    autoCloseableRule.manage(storage);
+    autoCloseableRule.manage(store);
   }
 
   @Test
@@ -73,9 +82,10 @@ public final class StateSnapshotControllerTest {
 
     // when
     final var tmpSnapshot = snapshotController.takeTempSnapshot(snapshotPosition);
+    final var snapshot = tmpSnapshot.map(TransientSnapshot::commit).orElseThrow();
 
     // then
-    assertThat(tmpSnapshot).map(Snapshot::getCompactionBound).hasValue(exporterPosition.get());
+    assertThat(snapshot).extracting(Snapshot::getCompactionBound).isEqualTo(exporterPosition.get());
   }
 
   @Test
@@ -91,7 +101,7 @@ public final class StateSnapshotControllerTest {
     wrapper.wrap(snapshotController.openDb());
     wrapper.putInt(key, value);
     final var tmpSnapshot = snapshotController.takeTempSnapshot(snapshotPosition);
-    snapshotController.commitSnapshot(tmpSnapshot.orElseThrow());
+    tmpSnapshot.orElseThrow().commit();
     snapshotController.close();
     wrapper.wrap(snapshotController.openDb());
 
@@ -249,7 +259,6 @@ public final class StateSnapshotControllerTest {
   public void shouldGetLastValidSnapshot() {
     // given
     snapshotController.openDb();
-
     assertThat(snapshotController.getLastValidSnapshotDirectory()).isNull();
 
     takeSnapshot(1L);
@@ -265,12 +274,11 @@ public final class StateSnapshotControllerTest {
 
   private File takeSnapshot(final long position) {
     final var snapshot = snapshotController.takeTempSnapshot(position).orElseThrow();
-    snapshotController.commitSnapshot(snapshot);
-    return snapshotController.getLastValidSnapshotDirectory();
+    return snapshot.commit().getPath().toFile();
   }
 
   private void corruptLatestSnapshot() throws IOException {
-    final var snapshot = storage.getLatestSnapshot();
+    final var snapshot = store.getLatestSnapshot();
     final var path = snapshot.orElseThrow().getPath();
 
     try (final var files = Files.list(path)) {

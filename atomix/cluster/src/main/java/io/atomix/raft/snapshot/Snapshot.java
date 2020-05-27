@@ -91,4 +91,6 @@ public interface Snapshot extends CloseableSilently, Comparable<Snapshot> {
    * @return the compaction upper bound
    */
   long getCompactionBound();
+
+  SnapshotId id();
 }

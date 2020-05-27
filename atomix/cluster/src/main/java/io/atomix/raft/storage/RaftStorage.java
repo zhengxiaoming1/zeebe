@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.atomix.raft.snapshot.SnapshotStore;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.raft.storage.log.RaftLog;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.storage.system.MetaStore;
@@ -37,6 +36,7 @@ import io.atomix.utils.serializer.Serializer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -697,10 +697,12 @@ public final class RaftStorage {
      */
     @Override
     public RaftStorage build() {
-      if (snapshotStore == null) {
-        snapshotStore =
-            new DirBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(), prefix);
-      }
+      Objects.requireNonNull(snapshotStore, "snapshotStore must be not null");
+      //      if (snapshotStore == null) {
+      //        snapshotStore =
+      //            new DirBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(),
+      // prefix);
+      //      }
 
       return new RaftStorage(
           prefix,

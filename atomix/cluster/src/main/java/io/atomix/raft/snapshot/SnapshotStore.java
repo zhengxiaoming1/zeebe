@@ -24,6 +24,15 @@ import java.util.Optional;
 
 public interface SnapshotStore extends CloseableSilently {
 
+  /**
+   * Returns true if a snapshot with the given ID exists already, false otherwise.
+   *
+   * @param id the snapshot ID to look for
+   * @return true if there is a committed snapshot with this ID, false otherwise
+   */
+  boolean exists(String id);
+
+  // for replication
   TransientSnapshot takeTransientSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp);
 
@@ -34,6 +43,8 @@ public interface SnapshotStore extends CloseableSilently {
   void addSnapshotListener(SnapshotListener listener);
 
   void removeSnapshotListener(SnapshotListener listener);
+
+  long getCurrentSnapshotIndex();
 
   /**
    * Deletes a {@link SnapshotStore} from disk.

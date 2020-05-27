@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.esotericsoftware.kryo.serializers.FieldSerializer.Optional;
 import io.atomix.raft.snapshot.SnapshotStoreFactory;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.storage.StorageLevel;
 import io.atomix.utils.memory.MemorySize;
 
@@ -32,8 +31,8 @@ public class RaftStorageConfig {
   private static final int DEFAULT_MAX_SEGMENT_SIZE = 1024 * 1024 * 32;
   private static final int DEFAULT_MAX_ENTRY_SIZE = 1024 * 1024;
   private static final boolean DEFAULT_FLUSH_ON_COMMIT = false;
-  private static final SnapshotStoreFactory DEFAULT_SNAPSHOT_STORE_FACTORY =
-      new DirBasedSnapshotStoreFactory();
+  //  private static final SnapshotStoreFactory DEFAULT_SNAPSHOT_STORE_FACTORY =
+  //      new DirBasedSnapshotStoreFactory();
 
   private String directory;
   private StorageLevel level = DEFAULT_STORAGE_LEVEL;
@@ -42,7 +41,7 @@ public class RaftStorageConfig {
   private boolean flushOnCommit = DEFAULT_FLUSH_ON_COMMIT;
 
   @Optional("SnapshotStoreFactory")
-  private SnapshotStoreFactory snapshotStoreFactory = DEFAULT_SNAPSHOT_STORE_FACTORY;
+  private SnapshotStoreFactory snapshotStoreFactory; // = DEFAULT_SNAPSHOT_STORE_FACTORY;
 
   /**
    * Returns the partition data directory.

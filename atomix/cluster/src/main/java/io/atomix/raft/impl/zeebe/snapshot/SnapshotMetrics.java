@@ -7,6 +7,7 @@
  */
 package io.atomix.raft.impl.zeebe.snapshot;
 
+import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 
@@ -14,8 +15,8 @@ public final class SnapshotMetrics {
   private static final String NAMESPACE = "zeebe";
   private static final String PARTITION_LABEL_NAME = "partition";
 
-  private static final Gauge SNAPSHOT_COUNT =
-      Gauge.build()
+  private static final Counter SNAPSHOT_COUNT =
+      Counter.build()
           .namespace(NAMESPACE)
           .labelNames(PARTITION_LABEL_NAME)
           .name("snapshot_count")
@@ -47,22 +48,22 @@ public final class SnapshotMetrics {
   private final String partitionId;
   private final SnapshotReplicationMetrics replication;
 
-  public SnapshotMetrics(final int partitionId) {
-    this.partitionId = String.valueOf(partitionId);
+  public SnapshotMetrics(final String partitionName) {
+    this.partitionId = partitionName;
     this.replication = new SnapshotReplicationMetrics(this.partitionId);
   }
 
   public void incrementSnapshotCount() {
     SNAPSHOT_COUNT.labels(partitionId).inc();
   }
+  //
+  //  public void decrementSnapshotCount() {
+  //    SNAPSHOT_COUNT.labels(partitionId).dec();
+  //  }
 
-  public void decrementSnapshotCount() {
-    SNAPSHOT_COUNT.labels(partitionId).dec();
-  }
-
-  public void setSnapshotCount(final int count) {
-    SNAPSHOT_COUNT.labels(partitionId).set(count);
-  }
+  //  public void setSnapshotCount(final int count) {
+  //    SNAPSHOT_COUNT.labels(partitionId).set(count);
+  //  }
 
   public void observeSnapshotSize(final long sizeInBytes) {
     SNAPSHOT_SIZE.labels(partitionId).set(sizeInBytes);
