@@ -34,6 +34,7 @@ import io.atomix.raft.protocol.RaftResponse;
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.SnapshotChunkReader;
+import io.atomix.raft.snapshot.impl.SnapshotChunkImpl;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.storage.journal.Indexed;
@@ -476,10 +477,7 @@ abstract class AbstractAppender implements AutoCloseable {
                 .withTerm(snapshot.term())
                 .withTimestamp(snapshot.timestamp().unixTimestamp())
                 .withVersion(snapshot.version())
-                .withChunkChecksum(chunk.getChecksum())
-                .withSnapshotChecksum(chunk.getSnapshotChecksum())
-                .withTotalChunkCount(chunk.getTotalCount())
-                .withData(ByteBuffer.wrap(chunk.getContent()))
+                .withData(new SnapshotChunkImpl(chunk).toByteBuffer())
                 .withChunkId(ByteBuffer.wrap(chunk.getChunkName().getBytes()))
                 .withInitial(member.getNextSnapshotChunk() == null)
                 .withComplete(!reader.hasNext())

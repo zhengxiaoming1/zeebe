@@ -16,6 +16,8 @@
  */
 package io.atomix.raft.snapshot.impl;
 
+import static java.nio.file.StandardOpenOption.CREATE_NEW;
+
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.TransientSnapshot;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.function.Predicate;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
@@ -144,7 +147,55 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
   //  }
 
   @Override
-  public void write(final SnapshotChunk chunk) {}
+  public boolean write(final SnapshotChunk snapshotChunk) throws IOException {
+    final String snapshotId = snapshotChunk.getSnapshotId();
+    final String chunkName = snapshotChunk.getChunkName();
+
+    if (snapshotStore.exists(snapshotId)) {
+      LOGGER.debug(
+          "Ignore snapshot snapshotChunk {}, because snapshot {} already exists.", chunkName, snapshotId);
+      return true;
+    }
+
+    final long expectedChecksum = snapshotChunk.getChecksum();
+    final long actualChecksum = SnapshotChunkUtil.createChecksum(snapshotChunk.getContent());
+
+    if (expectedChecksum != actualChecksum) {
+      LOGGER.warn(
+          "Expected to have checksum {} for snapshot snapshotChunk file {} ({}), but calculated {}",
+          expectedChecksum,
+          chunkName,
+          snapshotId,
+          actualChecksum);
+      return false;
+    }
+
+
+//    final var optionalPath = store.getPendingDirectoryFor(snapshotId);
+//    if (optionalPath.isEmpty()) {
+//      logger.warn("Failed to obtain pending snapshot directory for snapshot ID {}", snapshotId);
+//      return false;
+//    }
+
+    final var tmpSnapshotDirectory = directory;
+    FileUtil.ensureDirectoryExists(tmpSnapshotDirectory);
+
+    final var snapshotFile = tmpSnapshotDirectory.resolve(chunkName);
+    if (Files.exists(snapshotFile)) {
+      LOGGER.debug("Received a snapshot snapshotChunk which already exist '{}'.", snapshotFile);
+      return false;
+    }
+
+    LOGGER.debug("Consume snapshot snapshotChunk {} of snapshot {}", chunkName, snapshotId);
+    return writeReceivedSnapshotChunk(snapshotChunk, snapshotFile);
+  }
+
+  private boolean writeReceivedSnapshotChunk(
+      final SnapshotChunk snapshotChunk, final Path snapshotFile) throws IOException {
+    Files.write(snapshotFile, snapshotChunk.getContent(), CREATE_NEW, StandardOpenOption.WRITE);
+    LOGGER.trace("Wrote replicated snapshot chunk to file {}", snapshotFile);
+    return true;
+  }
 
   @Override
   public void setNextExpected(final ByteBuffer nextChunkId) {

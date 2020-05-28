@@ -26,9 +26,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.NavigableSet;
 import java.util.Objects;
-import java.util.TreeSet;
 import org.slf4j.Logger;
 
 public final class DirBasedSnapshot implements Snapshot {
@@ -75,7 +73,7 @@ public final class DirBasedSnapshot implements Snapshot {
   @Override
   public SnapshotChunkReader newChunkReader() {
     try {
-      return new DirBasedSnapshotChunkReader(directory, collectChunks(directory));
+      return new DirBasedSnapshotChunkReader(directory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -137,13 +135,6 @@ public final class DirBasedSnapshot implements Snapshot {
     return "DbSnapshot{" + "directory=" + directory + ", metadata=" + metadata + '}';
   }
 
-  private NavigableSet<CharSequence> collectChunks(final Path directory) throws IOException {
-    final var set = new TreeSet<>(CharSequence::compare);
-    try (final var stream = Files.list(directory).sorted()) {
-      stream.map(directory::relativize).map(Path::toString).forEach(set::add);
-    }
-    return set;
-  }
 
   @Override
   public long getCompactionBound() {

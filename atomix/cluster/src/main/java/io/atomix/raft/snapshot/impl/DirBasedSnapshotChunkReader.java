@@ -19,6 +19,7 @@ package io.atomix.raft.snapshot.impl;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.SnapshotChunkReader;
 import io.zeebe.protocol.Protocol;
+import io.zeebe.util.ChecksumUtil;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -28,6 +29,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -44,13 +47,31 @@ public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
   private final CharSequenceView chunkIdView;
 
   private NavigableSet<CharSequence> chunksView;
+  private final int totalCount;
+  private final long snapshotChecksum;
+  private final String snapshotID;
 
   public DirBasedSnapshotChunkReader(
-      final Path directory, final NavigableSet<CharSequence> chunks) {
+      final Path directory) throws IOException {
     this.directory = directory;
-    this.chunks = chunks;
+    this.chunks = collectChunks(directory);
+    this.totalCount = chunks.size();
     this.chunksView = this.chunks;
     this.chunkIdView = new CharSequenceView();
+
+    try (final var fileStream = Files.list(directory).sorted()) {
+      this.snapshotChecksum = ChecksumUtil.createCombinedChecksum(fileStream.collect(Collectors.toList()));
+    }
+
+    this.snapshotID = directory.getFileName().toString();
+  }
+
+  private NavigableSet<CharSequence> collectChunks(final Path directory) throws IOException {
+    final var set = new TreeSet<>(CharSequence::compare);
+    try (final var stream = Files.list(directory).sorted()) {
+      stream.map(directory::relativize).map(Path::toString).forEach(set::add);
+    }
+    return set;
   }
 
   @Override
@@ -84,20 +105,17 @@ public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
 
   @Override
   public SnapshotChunk next() {
-    final var id = chunksView.pollFirst();
-    if (id == null) {
+    final var chunkName = chunksView.pollFirst();
+    if (chunkName == null) {
       throw new NoSuchElementException();
     }
 
-    final var path = directory.resolve(id.toString());
+
+    final var path = directory.resolve(chunkName.toString());
 
     try {
-      // todo(zell) make the buffer and chunk a field and reuse it
-      final var bytes = Files.readAllBytes(path);
-      final var readBuffer = new UnsafeBuffer(bytes);
-      final var currentChunk = new SnapshotChunkImpl();
-      currentChunk.wrap(readBuffer, 0, bytes.length);
-      return currentChunk;
+      return SnapshotChunkUtil
+          .createSnapshotChunkFromFile(path.toFile(), snapshotID, totalCount, snapshotChecksum);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }

@@ -18,6 +18,7 @@
 package io.atomix.raft.snapshot;
 
 import io.atomix.utils.time.WallClockTimestamp;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.function.Predicate;
@@ -52,7 +53,7 @@ public interface TransientSnapshot {
   boolean isExpectedChunk(ByteBuffer chunkId);
 
   /** Writes the chunk data {@code chunkData} as identified by {@code chunkId}. */
-  void write(SnapshotChunk chunk);
+  boolean write(SnapshotChunk chunk) throws IOException;
 
   /**
    * Sets that the next expected chunk ID is the one with the given {@code nextChunkId}.

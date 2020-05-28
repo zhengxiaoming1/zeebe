@@ -36,9 +36,9 @@ import io.atomix.raft.protocol.ReconfigureResponse;
 import io.atomix.raft.protocol.VoteRequest;
 import io.atomix.raft.protocol.VoteResponse;
 import io.atomix.raft.snapshot.Snapshot;
-import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.SnapshotListener;
 import io.atomix.raft.snapshot.TransientSnapshot;
+import io.atomix.raft.snapshot.impl.SnapshotChunkImpl;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.RaftLogWriter;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
@@ -48,6 +48,7 @@ import io.atomix.utils.concurrent.ThreadContext;
 import io.atomix.utils.time.WallClockTimestamp;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
 /** Passive state. */
@@ -212,17 +213,27 @@ public class PassiveRole extends InactiveRole {
       }
     }
 
-    final var snapshotChunk =
-        SnapshotChunk.builder()
-            .withChecksum(request.chunkChecksum())
-            .withChunkName(request.chunkId().toString())
-            .withTotalCount(request.totalChunkCount())
-            .withContent(request.data().array())
-            .withSnapshotChecksum(request.snapshotChecksum())
-            .build();
+    final var snapshotChunk = new SnapshotChunkImpl();
+    snapshotChunk.wrap(new UnsafeBuffer(request.data()), 0, request.data().capacity());
+
+//
+//    request.data()
+//    final var snapshotChunk =
+//        SnapshotChunk.builder()
+//            .withChecksum(request.chunkChecksum())
+//            .withChunkName(request.chunkId().toString())
+//            .withTotalCount(request.totalChunkCount())
+//            .withContent(request.data().array())
+//            .withSnapshotChecksum(request.snapshotChecksum())
+//            .build();
 
     try {
-      pendingSnapshot.write(snapshotChunk);
+      final var success = pendingSnapshot.write(snapshotChunk);
+
+      if (!success) {
+        // todo(zell) react on exceptional cases like checksum doesnt match, chunk already exist etc.
+      }
+
     } catch (final Exception e) {
       log.error("Failed to write pending snapshot chunk {}, rolling back", pendingSnapshot, e);
       abortPendingSnapshots();
