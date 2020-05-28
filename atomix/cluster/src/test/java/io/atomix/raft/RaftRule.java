@@ -319,7 +319,8 @@ public final class RaftRule extends ExternalResource {
           IoUtil.ensureDirectoryExists(path.toFile(), "snapshot dir should exist");
           final var snapshotFile = path.resolve("snapshot.file");
           try {
-            Files.write(snapshotFile,
+            Files.write(
+                snapshotFile,
                 RandomStringUtils.random(128).getBytes(),
                 StandardOpenOption.CREATE_NEW,
                 StandardOpenOption.WRITE);
@@ -460,7 +461,9 @@ public final class RaftRule extends ExternalResource {
             .withDirectory(memberDirectory)
             .withMaxEntriesPerSegment(10)
             .withMaxSegmentSize(1024 * 10)
-            .withSnapshotStore(new DirBasedSnapshotStoreFactory().createSnapshotStore(memberDirectory.toPath(), "1"))
+            .withSnapshotStore(
+                new DirBasedSnapshotStoreFactory()
+                    .createSnapshotStore(memberDirectory.toPath(), "1"))
             .withNamespace(RaftNamespaces.RAFT_STORAGE);
     return configurator.apply(defaults).build();
   }

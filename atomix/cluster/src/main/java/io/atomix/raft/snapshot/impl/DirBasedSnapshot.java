@@ -135,7 +135,6 @@ public final class DirBasedSnapshot implements Snapshot {
     return "DbSnapshot{" + "directory=" + directory + ", metadata=" + metadata + '}';
   }
 
-
   @Override
   public long getCompactionBound() {
     return index();

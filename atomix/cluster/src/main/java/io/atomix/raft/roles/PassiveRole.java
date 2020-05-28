@@ -216,22 +216,23 @@ public class PassiveRole extends InactiveRole {
     final var snapshotChunk = new SnapshotChunkImpl();
     snapshotChunk.wrap(new UnsafeBuffer(request.data()), 0, request.data().capacity());
 
-//
-//    request.data()
-//    final var snapshotChunk =
-//        SnapshotChunk.builder()
-//            .withChecksum(request.chunkChecksum())
-//            .withChunkName(request.chunkId().toString())
-//            .withTotalCount(request.totalChunkCount())
-//            .withContent(request.data().array())
-//            .withSnapshotChecksum(request.snapshotChecksum())
-//            .build();
+    //
+    //    request.data()
+    //    final var snapshotChunk =
+    //        SnapshotChunk.builder()
+    //            .withChecksum(request.chunkChecksum())
+    //            .withChunkName(request.chunkId().toString())
+    //            .withTotalCount(request.totalChunkCount())
+    //            .withContent(request.data().array())
+    //            .withSnapshotChecksum(request.snapshotChecksum())
+    //            .build();
 
     try {
       final var success = pendingSnapshot.write(snapshotChunk);
 
       if (!success) {
-        // todo(zell) react on exceptional cases like checksum doesnt match, chunk already exist etc.
+        // todo(zell) react on exceptional cases like checksum doesnt match, chunk already exist
+        // etc.
       }
 
     } catch (final Exception e) {

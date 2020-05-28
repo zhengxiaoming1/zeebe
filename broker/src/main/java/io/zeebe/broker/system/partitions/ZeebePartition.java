@@ -11,16 +11,13 @@ import io.atomix.raft.RaftCommitListener;
 import io.atomix.raft.RaftRoleChangeListener;
 import io.atomix.raft.RaftServer.Role;
 import io.atomix.raft.partition.RaftPartition;
-import io.atomix.raft.snapshot.SnapshotReplication;
 import io.atomix.raft.snapshot.SnapshotStore;
-import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.atomix.storage.journal.JournalReader.Mode;
 import io.zeebe.broker.Loggers;
 import io.zeebe.broker.PartitionListener;
-import io.zeebe.broker.engine.impl.StateReplication;
 import io.zeebe.broker.exporter.jar.ExporterJarLoadException;
 import io.zeebe.broker.exporter.repo.ExporterLoadException;
 import io.zeebe.broker.exporter.repo.ExporterRepository;
@@ -33,6 +30,9 @@ import io.zeebe.broker.logstreams.state.StatePositionSupplier;
 import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.broker.system.configuration.DataCfg;
 import io.zeebe.broker.system.monitoring.HealthMetrics;
+import io.zeebe.broker.system.partitions.impl.AsyncSnapshotDirector;
+import io.zeebe.broker.system.partitions.impl.NoneSnapshotReplication;
+import io.zeebe.broker.system.partitions.impl.StateReplication;
 import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
 import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.db.ZeebeDb;
@@ -305,8 +305,7 @@ public final class ZeebePartition extends Actor
         .onComplete(
             (deletionService, errorOnInstallation) -> {
               if (errorOnInstallation == null) {
-                // todo(zell): enable consume replication
-                //                snapshotController.consumeReplicatedSnapshots();
+                snapshotController.consumeReplicatedSnapshots();
                 installFuture.complete(null);
               } else {
                 LOG.error("Unexpected error on install deletion service.", errorOnInstallation);
@@ -424,6 +423,7 @@ public final class ZeebePartition extends Actor
             : new NoneSnapshotReplication();
 
     return new StateSnapshotController(
+        partitionId,
         DefaultZeebeDbFactory.DEFAULT_DB_FACTORY,
         snapshotStore,
         runtimeDirectory,

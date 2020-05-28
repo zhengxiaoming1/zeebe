@@ -36,6 +36,8 @@ public interface SnapshotStore extends CloseableSilently {
   TransientSnapshot takeTransientSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp);
 
+  TransientSnapshot takeTransientSnapshot(String snapshotId);
+
   Optional<Snapshot> getLatestSnapshot();
 
   void purgePendingSnapshots() throws IOException;

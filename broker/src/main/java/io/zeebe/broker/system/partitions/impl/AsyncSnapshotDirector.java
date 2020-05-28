@@ -5,7 +5,7 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.system.partitions;
+package io.zeebe.broker.system.partitions.impl;
 
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.zeebe.engine.processor.RandomDuration;
@@ -190,10 +190,6 @@ public final class AsyncSnapshotDirector extends Actor {
                     lastWrittenEventPosition);
                 try {
                   pendingSnapshot.commit();
-                  //                  snapshotController.commitSnapshot(pendingSnapshot);
-
-                  // todo(zell) should be done via listener
-                  //                  snapshotController.replicateLatestSnapshot(actor::submit);
 
                 } catch (final Exception ex) {
                   LOG.error(ERROR_MSG_MOVE_SNAPSHOT, ex);

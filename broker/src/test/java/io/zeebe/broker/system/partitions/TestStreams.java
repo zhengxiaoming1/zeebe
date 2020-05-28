@@ -18,9 +18,10 @@ import static org.mockito.Mockito.when;
 
 import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
-import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
+import io.zeebe.broker.system.partitions.impl.AsyncSnapshotDirector;
+import io.zeebe.broker.system.partitions.impl.NoneSnapshotReplication;
 import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
@@ -274,6 +275,7 @@ public final class TestStreams {
         new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     return spy(
         new StateSnapshotController(
+            stream.getPartitionId(),
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             store,
             rootDirectory.resolve("runtime"),

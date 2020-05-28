@@ -17,7 +17,7 @@
 // import static org.assertj.core.api.Assertions.assertThat;
 //
 // import io.atomix.raft.impl.zeebe.snapshot.SnapshotChunk;
-// import io.atomix.raft.snapshot.SnapshotReplication;
+// import io.zeebe.broker.system.partitions.SnapshotReplication;
 // import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
 // import io.zeebe.db.impl.DefaultColumnFamily;
 // import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;

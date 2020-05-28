@@ -40,14 +40,11 @@ import org.slf4j.Logger;
 public final class DirBasedTransientSnapshot implements TransientSnapshot {
   private static final Logger LOGGER = new ZbLogger(DirBasedTransientSnapshot.class);
 
-  private final long index;
-  private final long term;
-  private final WallClockTimestamp timestamp;
-
   private final Path directory;
   private final DirBasedSnapshotStore snapshotStore;
 
   private ByteBuffer expectedId;
+  private final DirBasedSnapshotMetadata metadata;
 
   /**
    * @param index the snapshot's index
@@ -62,9 +59,14 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
       final WallClockTimestamp timestamp,
       final Path directory,
       final DirBasedSnapshotStore snapshotStore) {
-    this.index = index;
-    this.term = term;
-    this.timestamp = timestamp;
+    this(new DirBasedSnapshotMetadata(index, term, timestamp), directory, snapshotStore);
+  }
+
+  DirBasedTransientSnapshot(
+      final DirBasedSnapshotMetadata metadata,
+      final Path directory,
+      final DirBasedSnapshotStore snapshotStore) {
+    this.metadata = metadata;
     this.snapshotStore = snapshotStore;
     this.directory = directory;
   }
@@ -81,17 +83,17 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
 
   @Override
   public long index() {
-    return index;
+    return metadata.getIndex();
   }
 
   @Override
   public long term() {
-    return term;
+    return metadata.getTerm();
   }
 
   @Override
   public WallClockTimestamp timestamp() {
-    return timestamp;
+    return metadata.getTimestamp();
   }
 
   @Override
@@ -153,7 +155,9 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
 
     if (snapshotStore.exists(snapshotId)) {
       LOGGER.debug(
-          "Ignore snapshot snapshotChunk {}, because snapshot {} already exists.", chunkName, snapshotId);
+          "Ignore snapshot snapshotChunk {}, because snapshot {} already exists.",
+          chunkName,
+          snapshotId);
       return true;
     }
 
@@ -170,12 +174,12 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
       return false;
     }
 
-
-//    final var optionalPath = store.getPendingDirectoryFor(snapshotId);
-//    if (optionalPath.isEmpty()) {
-//      logger.warn("Failed to obtain pending snapshot directory for snapshot ID {}", snapshotId);
-//      return false;
-//    }
+    //    final var optionalPath = store.getPendingDirectoryFor(snapshotId);
+    //    if (optionalPath.isEmpty()) {
+    //      logger.warn("Failed to obtain pending snapshot directory for snapshot ID {}",
+    // snapshotId);
+    //      return false;
+    //    }
 
     final var tmpSnapshotDirectory = directory;
     FileUtil.ensureDirectoryExists(tmpSnapshotDirectory);
@@ -204,7 +208,7 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
 
   @Override
   public Snapshot commit() {
-    return snapshotStore.newSnapshot(index, term, timestamp, directory);
+    return snapshotStore.newSnapshot(metadata, directory);
   }
 
   @Override
@@ -224,15 +228,15 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
 
   @Override
   public String toString() {
-    return "DbPendingSnapshot{"
-        + "index="
-        + index
-        + ", term="
-        + term
-        + ", timestamp="
-        + timestamp
-        + ", directory="
+    return "DirBasedTransientSnapshot{"
+        + "directory="
         + directory
+        + ", snapshotStore="
+        + snapshotStore
+        + ", expectedId="
+        + expectedId
+        + ", metadata="
+        + metadata
         + '}';
   }
 

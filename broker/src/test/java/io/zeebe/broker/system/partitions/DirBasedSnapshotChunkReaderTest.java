@@ -93,6 +93,10 @@ public final class DirBasedSnapshotChunkReaderTest {
       }
     }
 
-    return new DirBasedSnapshotChunkReader(directory, chunks);
+    try {
+      return new DirBasedSnapshotChunkReader(directory);
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

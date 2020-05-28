@@ -17,8 +17,6 @@
 
 package io.atomix.raft.snapshot;
 
-import io.atomix.raft.snapshot.impl.InternalChunk;
-
 public interface SnapshotChunk {
 
   /** @return a unique snapshot identifier * */
@@ -38,24 +36,4 @@ public interface SnapshotChunk {
 
   /** @return the checksum of the entire snapshot */
   long getSnapshotChecksum();
-
-  static Builder builder() {
-    return new InternalChunk();
-  }
-
-  interface Builder {
-    Builder withSnapshotId(String snapshotId);
-
-    Builder withTotalCount(int totalCount);
-
-    Builder withChunkName(String chunkName);
-
-    Builder withChecksum(long checksum);
-
-    Builder withContent(byte[] content);
-
-    Builder withSnapshotChecksum(long snapshotChecksum);
-
-    SnapshotChunk build();
-  }
 }

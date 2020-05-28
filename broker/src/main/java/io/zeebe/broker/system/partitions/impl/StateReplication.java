@@ -5,14 +5,14 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.engine.impl;
+package io.zeebe.broker.system.partitions.impl;
 
 import static io.zeebe.util.sched.Actor.buildActorName;
 
 import io.atomix.raft.snapshot.SnapshotChunk;
-import io.atomix.raft.snapshot.SnapshotReplication;
 import io.atomix.raft.snapshot.impl.SnapshotChunkImpl;
 import io.zeebe.broker.system.partitions.PartitionMessagingService;
+import io.zeebe.broker.system.partitions.SnapshotReplication;
 import io.zeebe.engine.Loggers;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;

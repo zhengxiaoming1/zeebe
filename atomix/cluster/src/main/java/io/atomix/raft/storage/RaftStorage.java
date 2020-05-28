@@ -236,16 +236,12 @@ public final class RaftStorage {
     }
   }
 
-  /**
-   * Unlocks the storage directory.
-   */
+  /** Unlocks the storage directory. */
   public void unlock() {
     deleteFiles(f -> f.getName().equals(String.format(".%s.lock", prefix)));
   }
 
-  /**
-   * Deletes file in the storage directory that match the given predicate.
-   */
+  /** Deletes file in the storage directory that match the given predicate. */
   private void deleteFiles(final Predicate<File> predicate) {
     directory.mkdirs();
 
@@ -295,9 +291,7 @@ public final class RaftStorage {
     return snapshotStore;
   }
 
-  /**
-   * Deletes a {@link SnapshotStore} from disk.
-   */
+  /** Deletes a {@link SnapshotStore} from disk. */
   public void deleteSnapshotStore() {
     snapshotStore.delete();
   }
@@ -310,8 +304,7 @@ public final class RaftStorage {
    * are present on disk, segments will be loaded and indexes will be rebuilt from disk. If no
    * segments are found, an empty log will be created.
    *
-   * <p>When log files are loaded from disk, the file names are expected to be based on the
-   * provided
+   * <p>When log files are loaded from disk, the file names are expected to be based on the provided
    * log {@code name}.
    *
    * @return The opened log.
@@ -427,8 +420,7 @@ public final class RaftStorage {
     private SnapshotStore snapshotStore;
     private Supplier<JournalIndex> journalIndexFactory;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     /**
      * Sets the storage prefix.
@@ -547,7 +539,7 @@ public final class RaftStorage {
      * @param maxEntriesPerSegment The maximum number of entries allowed per segment.
      * @return The storage builder.
      * @throws IllegalArgumentException If the {@code maxEntriesPerSegment} not greater than the
-     * default max entries per segment
+     *     default max entries per segment
      * @deprecated since 3.0.2
      */
     @Deprecated
@@ -563,8 +555,7 @@ public final class RaftStorage {
     /**
      * Enables dynamic log compaction.
      *
-     * <p>When dynamic compaction is enabled, logs will be compacted only during periods of low
-     * load
+     * <p>When dynamic compaction is enabled, logs will be compacted only during periods of low load
      * on the cluster or when the cluster is running out of disk space.
      *
      * @return the Raft storage builder
@@ -576,8 +567,7 @@ public final class RaftStorage {
     /**
      * Enables dynamic log compaction.
      *
-     * <p>When dynamic compaction is enabled, logs will be compacted only during periods of low
-     * load
+     * <p>When dynamic compaction is enabled, logs will be compacted only during periods of low load
      * on the cluster or when the cluster is running out of disk space.
      *
      * @param dynamicCompaction whether to enable dynamic compaction
@@ -637,7 +627,7 @@ public final class RaftStorage {
      * each time an entry is committed in a given segment.
      *
      * @param flushOnCommit Whether to flush buffers to disk when entries are committed to a
-     * segment.
+     *     segment.
      * @return The storage builder.
      */
     public Builder withFlushOnCommit(final boolean flushOnCommit) {
@@ -648,8 +638,7 @@ public final class RaftStorage {
     /**
      * Enables retaining stale snapshots on disk, returning the builder for method chaining.
      *
-     * <p>As the system state progresses, periodic snapshots of the state machine's state are
-     * taken.
+     * <p>As the system state progresses, periodic snapshots of the state machine's state are taken.
      * Once a new snapshot of the state machine is taken, all preceding snapshots no longer
      * contribute to the state of the system and can therefore be removed from disk. By default,
      * snapshots will not be retained once a new snapshot is stored on disk. Enabling snapshot
@@ -664,8 +653,7 @@ public final class RaftStorage {
     /**
      * Sets whether to retain stale snapshots on disk, returning the builder for method chaining.
      *
-     * <p>As the system state progresses, periodic snapshots of the state machine's state are
-     * taken.
+     * <p>As the system state progresses, periodic snapshots of the state machine's state are taken.
      * Once a new snapshot of the state machine is taken, all preceding snapshots no longer
      * contribute to the state of the system and can therefore be removed from disk. By default,
      * snapshots will not be retained once a new snapshot is stored on disk. Enabling snapshot
@@ -711,8 +699,7 @@ public final class RaftStorage {
     public RaftStorage build() {
       if (snapshotStore == null) {
         snapshotStore =
-            new DirBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(),
-                prefix);
+            new DirBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(), prefix);
       }
 
       return new RaftStorage(

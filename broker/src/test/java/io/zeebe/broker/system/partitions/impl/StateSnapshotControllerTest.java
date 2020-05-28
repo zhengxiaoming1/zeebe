@@ -14,7 +14,6 @@ import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
-import io.atomix.raft.snapshot.impl.NoneSnapshotReplication;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.db.impl.DefaultColumnFamily;
@@ -54,6 +53,7 @@ public final class StateSnapshotControllerTest {
         new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     snapshotController =
         new StateSnapshotController(
+            1,
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             store,
             rootDirectory.resolve("runtime"),

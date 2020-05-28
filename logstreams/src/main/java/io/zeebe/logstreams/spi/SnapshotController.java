@@ -41,9 +41,9 @@ public interface SnapshotController extends AutoCloseable {
   //   * @param executor executor which executed the given Runnable
   //   */
   //  void replicateLatestSnapshot(Consumer<Runnable> executor);
-  //
-  //  /** Registers to consumes replicated snapshots. */
-  //  void consumeReplicatedSnapshots();
+
+  /** Registers to consumes replicated snapshots. */
+  void consumeReplicatedSnapshots();
 
   /**
    * Recovers the state from the latest snapshot and returns the lower bound snapshot position.

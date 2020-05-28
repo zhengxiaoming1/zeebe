@@ -33,7 +33,7 @@ public class RaftStorageConfig {
   private static final int DEFAULT_MAX_ENTRY_SIZE = 1024 * 1024;
   private static final boolean DEFAULT_FLUSH_ON_COMMIT = false;
   private static final SnapshotStoreFactory DEFAULT_SNAPSHOT_STORE_FACTORY =
-        new DirBasedSnapshotStoreFactory();
+      new DirBasedSnapshotStoreFactory();
 
   private String directory;
   private StorageLevel level = DEFAULT_STORAGE_LEVEL;

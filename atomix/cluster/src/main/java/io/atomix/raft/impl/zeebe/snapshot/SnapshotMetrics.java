@@ -46,11 +46,9 @@ public final class SnapshotMetrics {
           .register();
 
   private final String partitionId;
-  private final SnapshotReplicationMetrics replication;
 
   public SnapshotMetrics(final String partitionName) {
     this.partitionId = partitionName;
-    this.replication = new SnapshotReplicationMetrics(this.partitionId);
   }
 
   public void incrementSnapshotCount() {
@@ -75,9 +73,5 @@ public final class SnapshotMetrics {
 
   public void observeSnapshotOperation(final long elapsedMillis) {
     SNAPSHOT_DURATION.labels(partitionId).set(elapsedMillis);
-  }
-
-  public SnapshotReplicationMetrics getReplication() {
-    return replication;
   }
 }

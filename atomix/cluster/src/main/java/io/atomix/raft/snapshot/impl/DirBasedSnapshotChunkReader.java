@@ -51,8 +51,7 @@ public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
   private final long snapshotChecksum;
   private final String snapshotID;
 
-  public DirBasedSnapshotChunkReader(
-      final Path directory) throws IOException {
+  public DirBasedSnapshotChunkReader(final Path directory) throws IOException {
     this.directory = directory;
     this.chunks = collectChunks(directory);
     this.totalCount = chunks.size();
@@ -60,7 +59,8 @@ public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
     this.chunkIdView = new CharSequenceView();
 
     try (final var fileStream = Files.list(directory).sorted()) {
-      this.snapshotChecksum = ChecksumUtil.createCombinedChecksum(fileStream.collect(Collectors.toList()));
+      this.snapshotChecksum =
+          ChecksumUtil.createCombinedChecksum(fileStream.collect(Collectors.toList()));
     }
 
     this.snapshotID = directory.getFileName().toString();
@@ -110,12 +110,11 @@ public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
       throw new NoSuchElementException();
     }
 
-
     final var path = directory.resolve(chunkName.toString());
 
     try {
-      return SnapshotChunkUtil
-          .createSnapshotChunkFromFile(path.toFile(), snapshotID, totalCount, snapshotChecksum);
+      return SnapshotChunkUtil.createSnapshotChunkFromFile(
+          path.toFile(), snapshotID, totalCount, snapshotChecksum);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }

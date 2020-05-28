@@ -9,10 +9,10 @@ package io.zeebe.broker.system.partitions.impl;
 
 import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
 import io.atomix.raft.snapshot.Snapshot;
-import io.atomix.raft.snapshot.SnapshotReplication;
 import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.broker.system.partitions.SnapshotReplication;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
 import io.zeebe.logstreams.impl.Loggers;
@@ -27,25 +27,20 @@ import org.slf4j.Logger;
 
 /** Controls how snapshot/recovery operations are performed */
 public class StateSnapshotController implements SnapshotController {
+
   private static final Logger LOG = Loggers.SNAPSHOT_LOGGER;
 
   private final SnapshotStore store;
   private final ZeebeDbFactory zeebeDbFactory;
   private final ToLongFunction<ZeebeDb> exporterPositionSupplier;
-  //  private final ReplicationController replicationController;
 
   private final Path runtimeDirectory;
   private ZeebeDb db;
   private final AtomixRecordEntrySupplier entrySupplier;
-
-  // todo fix test
-  //  public StateSnapshotController(
-  //      final ZeebeDbFactory rocksDbFactory, final SnapshotStore store) {
-  //    this(rocksDbFactory, storage, new NoneSnapshotReplication(),
-  //        new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader), zeebeDb -> -1);
-  //  }
+  private final ReplicationController replicationController;
 
   public StateSnapshotController(
+      final int partitionId,
       final ZeebeDbFactory zeebeDbFactory,
       final SnapshotStore store,
       final Path runtimeDirectory,
@@ -56,11 +51,9 @@ public class StateSnapshotController implements SnapshotController {
     this.runtimeDirectory = runtimeDirectory;
     this.zeebeDbFactory = zeebeDbFactory;
     this.exporterPositionSupplier = exporterPositionSupplier;
-    ;
     this.entrySupplier = entrySupplier;
-    // todo(zell) replication
-    //    store.addSnapshotListener(new ReplicationController(replication))
-    //    this.replicationController = new ReplicationController(replication, storage);
+    replicationController = new ReplicationController(partitionId, replication, store);
+    store.addSnapshotListener(replicationController);
   }
 
   @Override
@@ -90,45 +83,10 @@ public class StateSnapshotController implements SnapshotController {
     optTransientSnapshot.ifPresent(this::createSnapshot);
     return optTransientSnapshot;
   }
-  //
-  //  @Override
-  //  public void replicateLatestSnapshot(final Consumer<Runnable> executor) {
-  //    final var optionalLatest = storage.getLatestSnapshot();
-  //    if (optionalLatest.isPresent()) {
-  //      final var latestSnapshotDirectory = optionalLatest.get().getPath();
-  //      LOG.debug("Start replicating latest snapshot {}", latestSnapshotDirectory);
-  //
-  //      try (final var stream = Files.list(latestSnapshotDirectory)) {
-  //        final var paths = stream.sorted().collect(Collectors.toList());
-  //        final long combinedChecksum = ChecksumUtil.createCombinedChecksum(paths);
-  //
-  //        for (final var path : paths) {
-  //          executor.accept(
-  //              () -> {
-  //                LOG.debug("Replicate snapshot chunk {}", path);
-  //                replicationController.replicate(
-  //                    latestSnapshotDirectory.getFileName().toString(),
-  //                    paths.size(),
-  //                    path.toFile(),
-  //                    combinedChecksum);
-  //              });
-  //        }
-  //      } catch (final IOException e) {
-  //        throw new UncheckedIOException(e);
-  //      }
-  //    }
-  //  }
-  //
-  //  @Override
-  //  public void consumeReplicatedSnapshots() {
-  //    replicationController.consumeReplicatedSnapshots();
-  //  }
 
-  // todo move runtime directory to this class
-  // this is only for zeebe useful
-
-  public Path getRuntimeDirectory() {
-    return runtimeDirectory;
+  @Override
+  public void consumeReplicatedSnapshots() {
+    replicationController.consumeReplicatedSnapshots();
   }
 
   @Override
@@ -182,6 +140,10 @@ public class StateSnapshotController implements SnapshotController {
   @Override
   public File getLastValidSnapshotDirectory() {
     return store.getLatestSnapshot().map(Snapshot::getPath).map(Path::toFile).orElse(null);
+  }
+
+  Path getRuntimeDirectory() {
+    return runtimeDirectory;
   }
 
   @Override
