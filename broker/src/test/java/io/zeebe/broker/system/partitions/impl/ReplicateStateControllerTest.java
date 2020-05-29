@@ -35,10 +35,8 @@ public final class ReplicateStateControllerTest {
   private static final int VALUE = 0xCAFE;
   private static final String KEY = "test";
 
-  @Rule
-  public final TemporaryFolder tempFolderRule = new TemporaryFolder();
-  @Rule
-  public final AutoCloseableRule autoCloseableRule = new AutoCloseableRule();
+  @Rule public final TemporaryFolder tempFolderRule = new TemporaryFolder();
+  @Rule public final AutoCloseableRule autoCloseableRule = new AutoCloseableRule();
 
   private StateControllerImpl replicatorSnapshotController;
   private StateControllerImpl receiverSnapshotController;
@@ -56,24 +54,26 @@ public final class ReplicateStateControllerTest {
 
     replicator = new Replicator();
     replicatorSnapshotController =
-        new StateControllerImpl(1,
+        new StateControllerImpl(
+            1,
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             senderStore,
             senderRoot.resolve("runtime"),
             replicator,
-            l -> Optional
-                .ofNullable(
+            l ->
+                Optional.ofNullable(
                     new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
             db -> Long.MAX_VALUE);
 
     receiverSnapshotController =
-        new StateControllerImpl(1,
+        new StateControllerImpl(
+            1,
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             receiverStore,
             receiverRoot.resolve("runtime"),
             replicator,
-            l -> Optional
-                .ofNullable(
+            l ->
+                Optional.ofNullable(
                     new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
             db -> Long.MAX_VALUE);
 
@@ -136,7 +136,7 @@ public final class ReplicateStateControllerTest {
   public void shouldReceiveSnapshotChunks() throws Exception {
     // given
     receiverSnapshotController.consumeReplicatedSnapshots();
-    final var snapshot = replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();//    replicatorSnapshotController.commitSnapshot(snapshot);
+    final var snapshot = replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
 
     // when
     snapshot.commit();
@@ -155,7 +155,8 @@ public final class ReplicateStateControllerTest {
   public void shouldNotFailOnReplicatingAndReceivingTwice() throws Exception {
     // given
     receiverSnapshotController.consumeReplicatedSnapshots();
-    final var transientSnapshot = replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
+    final var transientSnapshot =
+        replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
 
     // when
     final var snapshot = transientSnapshot.commit();
@@ -190,7 +191,6 @@ public final class ReplicateStateControllerTest {
     }
 
     @Override
-    public void close() {
-    }
+    public void close() {}
   }
 }

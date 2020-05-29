@@ -224,8 +224,7 @@ public final class TestStreams {
       final Duration snapshotInterval) {
     final SnapshotStore store = createSnapshotStore(stream);
 
-    final StateControllerImpl currentSnapshotController =
-        createSnapshotController(stream, store);
+    final StateControllerImpl currentSnapshotController = createSnapshotController(stream, store);
 
     final String logName = stream.getLogName();
 

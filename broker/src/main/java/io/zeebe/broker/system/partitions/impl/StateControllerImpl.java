@@ -29,9 +29,7 @@ import java.util.function.ToLongFunction;
 import org.agrona.collections.Object2NullableObjectHashMap;
 import org.slf4j.Logger;
 
-/**
- * Controls how snapshot/recovery operations are performed
- */
+/** Controls how snapshot/recovery operations are performed */
 public class StateControllerImpl implements StateController, SnapshotListener {
 
   private static final ReplicationContext INVALID_SNAPSHOT = new ReplicationContext(-1, null);
@@ -293,8 +291,7 @@ public class StateControllerImpl implements StateController, SnapshotListener {
     private final TransientSnapshot transientSnapshot;
     private long chunkCount;
 
-    ReplicationContext(
-        final long startTimestamp, final TransientSnapshot transientSnapshot) {
+    ReplicationContext(final long startTimestamp, final TransientSnapshot transientSnapshot) {
       this.startTimestamp = startTimestamp;
       this.chunkCount = 0L;
       this.transientSnapshot = transientSnapshot;

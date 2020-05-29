@@ -1,3 +1,12 @@
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
+ */
+package io.zeebe.broker.system.partitions.impl;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.atomix.raft.snapshot.SnapshotChunk;
@@ -7,7 +16,6 @@ import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.broker.system.partitions.SnapshotReplication;
-import io.zeebe.broker.system.partitions.impl.StateControllerImpl;
 import io.zeebe.db.impl.DefaultColumnFamily;
 import io.zeebe.db.impl.rocksdb.ZeebeRocksDbFactory;
 import io.zeebe.test.util.AutoCloseableRule;
@@ -20,46 +28,46 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
- public final class FailingSnapshotChunkReplicationTest {
+public final class FailingSnapshotChunkReplicationTest {
 
   @Rule public final TemporaryFolder tempFolderRule = new TemporaryFolder();
   @Rule public final AutoCloseableRule autoCloseableRule = new AutoCloseableRule();
 
   private StateControllerImpl replicatorSnapshotController;
   private StateControllerImpl receiverSnapshotController;
-   private SnapshotStore senderStore;
-   private SnapshotStore receiverStore;
+  private SnapshotStore senderStore;
+  private SnapshotStore receiverStore;
 
-   public void setup(final SnapshotReplication replicator) throws IOException {
+  public void setup(final SnapshotReplication replicator) throws IOException {
     final var senderRoot = tempFolderRule.newFolder("sender").toPath();
     senderStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(senderRoot, "1");
 
     final var receiverRoot = tempFolderRule.newFolder("receiver").toPath();
-     receiverStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
-
+    receiverStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
 
     replicatorSnapshotController =
-        new StateControllerImpl(1,
+        new StateControllerImpl(
+            1,
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             senderStore,
             senderRoot.resolve("runtime"),
             replicator,
-            l -> Optional
-                .ofNullable(
+            l ->
+                Optional.ofNullable(
                     new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
             db -> Long.MAX_VALUE);
 
-
-     receiverSnapshotController =
-         new StateControllerImpl(1,
-             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
-             receiverStore,
-             receiverRoot.resolve("runtime"),
-             replicator,
-             l -> Optional
-                 .ofNullable(
-                     new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
-             db -> Long.MAX_VALUE);
+    receiverSnapshotController =
+        new StateControllerImpl(
+            1,
+            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
+            receiverStore,
+            receiverRoot.resolve("runtime"),
+            replicator,
+            l ->
+                Optional.ofNullable(
+                    new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
+            db -> Long.MAX_VALUE);
 
     autoCloseableRule.manage(replicatorSnapshotController);
     autoCloseableRule.manage(senderStore);
@@ -99,7 +107,7 @@ import org.junit.rules.TemporaryFolder;
     final List<SnapshotChunk> replicatedChunks = replicator.replicatedChunks;
     assertThat(replicatedChunks.size()).isGreaterThan(0);
     assertThat(receiverStore.getLatestSnapshot()).isEmpty();
- }
+  }
 
   private TransientSnapshot takeSnapshot() {
     receiverSnapshotController.consumeReplicatedSnapshots();
@@ -154,6 +162,7 @@ import org.junit.rules.TemporaryFolder;
   }
 
   private final class DisruptedSnapshotChunk implements SnapshotChunk {
+
     private final SnapshotChunk snapshotChunk;
 
     DisruptedSnapshotChunk(final SnapshotChunk snapshotChunk) {
@@ -190,4 +199,4 @@ import org.junit.rules.TemporaryFolder;
       return snapshotChunk.getSnapshotChecksum();
     }
   }
- }
+}

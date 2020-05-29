@@ -53,7 +53,9 @@ public final class StateControllerImplTest {
             store,
             rootDirectory.resolve("runtime"),
             new NoneSnapshotReplication(),
-            l -> Optional.ofNullable(new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
+            l ->
+                Optional.ofNullable(
+                    new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
             db -> exporterPosition.get());
 
     autoCloseableRule.manage(snapshotController);

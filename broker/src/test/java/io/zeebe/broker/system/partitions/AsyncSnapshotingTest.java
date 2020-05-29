@@ -79,8 +79,10 @@ public final class AsyncSnapshotingTest {
             snapshotStore,
             rootDirectory.resolve("runtime"),
             new NoneSnapshotReplication(),
-            l -> Optional.ofNullable(
-                new Indexed(l + 100, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
+            l ->
+                Optional.ofNullable(
+                    new Indexed(
+                        l + 100, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
             db -> Long.MAX_VALUE);
     //
     //
@@ -136,7 +138,6 @@ public final class AsyncSnapshotingTest {
     actorScheduler.submitActor(this.asyncSnapshotDirector).join();
   }
 
-
   @Test
   public void shouldValidSnapshotWhenCommitPositionGreaterEquals() {
     // given
@@ -186,14 +187,15 @@ public final class AsyncSnapshotingTest {
   }
 
   private void awaitSnapshot(final int index) {
-    waitUntil(() -> {
-      final var optSnapshot = snapshotStore.getLatestSnapshot();
-      if (optSnapshot.isPresent()) {
-        final var snapshot = optSnapshot.get();
-        return snapshot.index() == index;
-      }
-      return false;
-    });
+    waitUntil(
+        () -> {
+          final var optSnapshot = snapshotStore.getLatestSnapshot();
+          if (optSnapshot.isPresent()) {
+            final var snapshot = optSnapshot.get();
+            return snapshot.index() == index;
+          }
+          return false;
+        });
   }
 
   @Test
@@ -277,30 +279,30 @@ public final class AsyncSnapshotingTest {
     assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(1);
   }
 
-//  @Test
-//  public void shouldTakeSnapshotEvenExistsAfterRestart() {
-//    // given
-//    final long lastProcessedPosition = 25L;
-//    final long lastWrittenPosition = lastProcessedPosition;
-//    final long commitPosition = 100L;
-//
-//    when(mockStreamProcessor.getLastProcessedPositionAsync())
-//        .thenReturn(CompletableActorFuture.completed(lastProcessedPosition));
-//    when(mockStreamProcessor.getLastWrittenPositionAsync())
-//        .thenReturn(CompletableActorFuture.completed(lastWrittenPosition));
-//    setCommitPosition(commitPosition);
-//
-//    clock.addTime(Duration.ofMinutes(1));
-//    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 1);
-//
-//    // when
-//    asyncSnapshotDirector.closeAsync().join();
-//    createAsyncSnapshotDirector(actorSchedulerRule.get());
-//
-//    clock.addTime(Duration.ofMinutes(1));
-//
-//    // then
-//    waitUntil(() -> snapshotController.getValidSnapshotsCount() >= 2);
-//    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(2);
-//  }
+  //  @Test
+  //  public void shouldTakeSnapshotEvenExistsAfterRestart() {
+  //    // given
+  //    final long lastProcessedPosition = 25L;
+  //    final long lastWrittenPosition = lastProcessedPosition;
+  //    final long commitPosition = 100L;
+  //
+  //    when(mockStreamProcessor.getLastProcessedPositionAsync())
+  //        .thenReturn(CompletableActorFuture.completed(lastProcessedPosition));
+  //    when(mockStreamProcessor.getLastWrittenPositionAsync())
+  //        .thenReturn(CompletableActorFuture.completed(lastWrittenPosition));
+  //    setCommitPosition(commitPosition);
+  //
+  //    clock.addTime(Duration.ofMinutes(1));
+  //    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 1);
+  //
+  //    // when
+  //    asyncSnapshotDirector.closeAsync().join();
+  //    createAsyncSnapshotDirector(actorSchedulerRule.get());
+  //
+  //    clock.addTime(Duration.ofMinutes(1));
+  //
+  //    // then
+  //    waitUntil(() -> snapshotController.getValidSnapshotsCount() >= 2);
+  //    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(2);
+  //  }
 }

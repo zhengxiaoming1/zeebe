@@ -12,7 +12,7 @@
 // * Licensed under the Zeebe Community License 1.0. You may not use this file
 // * except in compliance with the Zeebe Community License 1.0.
 // */
- package io.zeebe.broker.system.partitions;
+package io.zeebe.broker.system.partitions;
 //
 // import static org.assertj.core.api.Assertions.assertThat;
 // import static org.mockito.ArgumentMatchers.eq;
