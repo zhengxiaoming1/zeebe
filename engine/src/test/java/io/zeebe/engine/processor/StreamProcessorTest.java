@@ -5,11 +5,9 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.system.partitions;
+package io.zeebe.engine.processor;
 
 import static io.zeebe.engine.processor.TypedRecordProcessors.processors;
-import static io.zeebe.test.util.TestUtil.doRepeatedly;
-import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -21,20 +19,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
-import io.zeebe.broker.system.partitions.impl.StateControllerImpl;
-import io.zeebe.engine.processor.CommandResponseWriter;
-import io.zeebe.engine.processor.ReadonlyProcessingContext;
-import io.zeebe.engine.processor.SideEffectProducer;
-import io.zeebe.engine.processor.StreamProcessor;
-import io.zeebe.engine.processor.StreamProcessorLifecycleAware;
-import io.zeebe.engine.processor.TypedRecord;
-import io.zeebe.engine.processor.TypedRecordProcessor;
-import io.zeebe.engine.processor.TypedResponseWriter;
-import io.zeebe.engine.processor.TypedStreamWriter;
 import io.zeebe.engine.state.ZeebeState;
-import io.zeebe.logstreams.impl.Loggers;
+import io.zeebe.engine.util.StreamProcessorRule;
 import io.zeebe.protocol.impl.record.UnifiedRecordValue;
 import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceRecord;
 import io.zeebe.protocol.record.Record;
@@ -42,6 +29,7 @@ import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
 import io.zeebe.protocol.record.intent.DeploymentIntent;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
+import io.zeebe.test.util.TestUtil;
 import io.zeebe.util.exception.RecoverableException;
 import io.zeebe.util.sched.ActorControl;
 import java.time.Duration;
@@ -52,6 +40,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.InOrder;
@@ -59,7 +48,6 @@ import org.mockito.verification.VerificationWithTimeout;
 
 public final class StreamProcessorTest {
 
-  private static final Duration SNAPSHOT_INTERVAL = Duration.ofMinutes(1);
   private static final long TIMEOUT_MILLIS = 2_000L;
   private static final VerificationWithTimeout TIMEOUT = timeout(TIMEOUT_MILLIS);
 
@@ -171,7 +159,7 @@ public final class StreamProcessorTest {
 
     inOrder.verifyNoMoreInteractions();
 
-    assertThat(streamProcessorRule.getZeebeState().getLastSuccessfulProcessedRecordPosition())
+    Assertions.assertThat(streamProcessorRule.getZeebeState().getLastSuccessfulProcessedRecordPosition())
         .isEqualTo(position);
   }
 
@@ -270,7 +258,7 @@ public final class StreamProcessorTest {
 
     // then
     final Record<WorkflowInstanceRecord> activatedEvent =
-        doRepeatedly(
+        TestUtil.doRepeatedly(
                 () ->
                     streamProcessorRule
                         .events()
@@ -497,98 +485,6 @@ public final class StreamProcessorTest {
               assertThat(generatedKey.get()).isLessThan(newGenerated);
             })
         .join();
-  }
-
-  @Test
-  public void shouldCreateSnapshot() throws Exception {
-    // given
-    final var onProcessedListener = new AwaitableProcessedListener();
-    streamProcessorRule.startTypedStreamProcessor(
-        (processors, context) ->
-            processors.onEvent(
-                ValueType.WORKFLOW_INSTANCE,
-                WorkflowInstanceIntent.ELEMENT_ACTIVATING,
-                mock(TypedRecordProcessor.class)),
-        onProcessedListener.expect(1));
-
-    // when
-    streamProcessorRule.writeWorkflowInstanceEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING);
-    onProcessedListener.await();
-    streamProcessorRule.getClock().addTime(SNAPSHOT_INTERVAL);
-
-    // then
-    final StateControllerImpl stateSnapshotController =
-        streamProcessorRule.getStateSnapshotController();
-    waitUntil(() -> stateSnapshotController.getValidSnapshotsCount() == 1);
-    assertThat(stateSnapshotController.getValidSnapshotsCount()).isEqualTo(1);
-  }
-
-  @Test
-  public void shouldCreateSnapshotsEvenIfNoProcessorProcessEvent()
-      throws InterruptedException, TimeoutException {
-    // given
-    final var onProcessedListener = new AwaitableProcessedListener();
-    streamProcessorRule.startTypedStreamProcessor(
-        (processors, context) ->
-            processors.onEvent(
-                ValueType.WORKFLOW_INSTANCE,
-                WorkflowInstanceIntent.ELEMENT_ACTIVATING,
-                mock(TypedRecordProcessor.class)),
-        onProcessedListener.expect(1));
-    streamProcessorRule.writeWorkflowInstanceEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING);
-    onProcessedListener.await();
-    streamProcessorRule.getClock().addTime(SNAPSHOT_INTERVAL);
-
-    // when
-    final var snapshotController = streamProcessorRule.getStateSnapshotController();
-    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 1);
-    streamProcessorRule.getClock().addTime(SNAPSHOT_INTERVAL);
-    waitUntil(() -> snapshotController.getValidSnapshotsCount() == 2);
-
-    // then
-    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(2);
-  }
-
-  @Test
-  public void shouldNotCreateSnapshotIfNothingProcessedEver() {
-    // given
-    final var streamProcessor =
-        streamProcessorRule.startTypedStreamProcessor((processors, context) -> processors);
-    final var stateSnapshotController = streamProcessorRule.getStateSnapshotController();
-
-    // when
-    streamProcessorRule.getClock().addTime(SNAPSHOT_INTERVAL);
-    streamProcessorRule.closeStreamProcessor();
-
-    // then
-    assertThat(streamProcessor.isClosed()).isTrue();
-    assertThat(stateSnapshotController.getValidSnapshotsCount()).isEqualTo(0);
-    verify(stateSnapshotController, TIMEOUT.times(0)).takeTransientSnapshot(anyLong());
-  }
-
-  @Test
-  public void shouldCreateSnapshotsAfterInterval() throws InterruptedException, TimeoutException {
-    // given
-    final var onProcessedListener = new AwaitableProcessedListener();
-    streamProcessorRule.startTypedStreamProcessor(
-        (processors, context) ->
-            processors.onEvent(
-                ValueType.WORKFLOW_INSTANCE,
-                WorkflowInstanceIntent.ELEMENT_ACTIVATING,
-                mock(TypedRecordProcessor.class)),
-        onProcessedListener.expect(1));
-
-    // when
-    final StateControllerImpl stateSnapshotController =
-        streamProcessorRule.getStateSnapshotController();
-    streamProcessorRule.writeWorkflowInstanceEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING);
-    onProcessedListener.await();
-    Loggers.LOGSTREAMS_LOGGER.info("Adding snapshot interval time!");
-    streamProcessorRule.getClock().addTime(SNAPSHOT_INTERVAL);
-    waitUntil(() -> stateSnapshotController.getValidSnapshotsCount() == 1);
-
-    // then
-    assertThat(stateSnapshotController.getValidSnapshotsCount()).isEqualTo(1);
   }
 
   @Test

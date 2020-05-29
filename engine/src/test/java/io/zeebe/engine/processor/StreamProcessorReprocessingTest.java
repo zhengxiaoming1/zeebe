@@ -5,7 +5,7 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.system.partitions;
+package io.zeebe.engine.processor;
 
 import static io.zeebe.protocol.record.intent.WorkflowInstanceIntent.ELEMENT_ACTIVATED;
 import static io.zeebe.protocol.record.intent.WorkflowInstanceIntent.ELEMENT_ACTIVATING;
@@ -21,11 +21,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
-import io.zeebe.engine.processor.SideEffectProducer;
-import io.zeebe.engine.processor.TypedRecord;
-import io.zeebe.engine.processor.TypedRecordProcessor;
-import io.zeebe.engine.processor.TypedResponseWriter;
-import io.zeebe.engine.processor.TypedStreamWriter;
+import io.zeebe.engine.util.StreamProcessorRule;
 import io.zeebe.protocol.impl.record.UnifiedRecordValue;
 import io.zeebe.protocol.record.ValueType;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
@@ -317,7 +313,7 @@ public final class StreamProcessorReprocessingTest {
   }
 
   @Test
-  public void shouldStartFromLastSnapshotPosition() throws Exception {
+  public void shouldStartFromLastProcessedEvent() throws Exception {
     // given
     final CountDownLatch processingLatch = new CountDownLatch(2);
     streamProcessorRule.startTypedStreamProcessor(
@@ -340,7 +336,6 @@ public final class StreamProcessorReprocessingTest {
     streamProcessorRule.writeWorkflowInstanceEvent(ELEMENT_ACTIVATING);
     streamProcessorRule.writeWorkflowInstanceEvent(ELEMENT_ACTIVATING);
     processingLatch.await();
-    streamProcessorRule.waitForNextSnapshot();
     streamProcessorRule.closeStreamProcessor();
 
     // when
@@ -372,9 +367,9 @@ public final class StreamProcessorReprocessingTest {
   }
 
   @Test
-  public void shouldNotReprocessEventAtSnapshotPosition() throws Exception {
+  public void shouldNotReprocessEventAtLastProcessedEvent() throws Exception {
     // given
-    final CountDownLatch processingLatch = new CountDownLatch(2);
+    final CountDownLatch processingLatch = new CountDownLatch(3);
     streamProcessorRule.startTypedStreamProcessor(
         (processors, context) ->
             processors.onEvent(
@@ -395,8 +390,10 @@ public final class StreamProcessorReprocessingTest {
     streamProcessorRule.writeWorkflowInstanceEvent(ELEMENT_ACTIVATING, 1);
     final long snapshotPosition =
         streamProcessorRule.writeWorkflowInstanceEvent(ELEMENT_ACTIVATING, 1);
+    streamProcessorRule.writeWorkflowInstanceEvent(ELEMENT_ACTIVATING, 1);
+    // we write three event to make sure that the second event was committed and is part of the
+    // state (lastProcessedEvent)
     processingLatch.await();
-    streamProcessorRule.waitForNextSnapshot();
     streamProcessorRule.closeStreamProcessor();
     final long lastSourceEvent =
         streamProcessorRule.writeWorkflowInstanceEvent(ELEMENT_ACTIVATING, 1);
@@ -429,6 +426,6 @@ public final class StreamProcessorReprocessingTest {
     newProcessLatch.await();
 
     assertThat(processedPositions).doesNotContain(snapshotPosition);
-    assertThat(processedPositions).containsExactly(lastSourceEvent, lastEvent);
+    assertThat(processedPositions).endsWith(lastSourceEvent, lastEvent);
   }
 }
