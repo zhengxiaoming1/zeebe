@@ -8,11 +8,11 @@
 package io.zeebe.broker.system.partitions.impl;
 
 import io.atomix.raft.snapshot.TransientSnapshot;
+import io.zeebe.broker.system.partitions.StateController;
 import io.zeebe.engine.processor.RandomDuration;
 import io.zeebe.engine.processor.StreamProcessor;
 import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.log.LogStream;
-import io.zeebe.logstreams.spi.SnapshotController;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.ActorCondition;
 import io.zeebe.util.sched.SchedulingHints;
@@ -35,7 +35,7 @@ public final class AsyncSnapshotDirector extends Actor {
   private static final String ERROR_MSG_MOVE_SNAPSHOT =
       "Unexpected exception occurred on moving valid snapshot.";
 
-  private final SnapshotController snapshotController;
+  private final StateController stateController;
   private final LogStream logStream;
   private final Duration snapshotRate;
   private final String processorName;
@@ -51,11 +51,11 @@ public final class AsyncSnapshotDirector extends Actor {
   public AsyncSnapshotDirector(
       final int nodeId,
       final StreamProcessor streamProcessor,
-      final SnapshotController snapshotController,
+      final StateController stateController,
       final LogStream logStream,
       final Duration snapshotRate) {
     this.streamProcessor = streamProcessor;
-    this.snapshotController = snapshotController;
+    this.stateController = stateController;
     this.logStream = logStream;
     this.processorName = streamProcessor.getName();
     this.snapshotRate = snapshotRate;
@@ -138,7 +138,7 @@ public final class AsyncSnapshotDirector extends Actor {
             (commitPosition, errorOnRetrievingCommitPosition) -> {
               if (errorOnRetrievingCommitPosition == null) {
                 final var optionalPendingSnapshot =
-                    snapshotController.takeTempSnapshot(tempSnapshotPosition);
+                    stateController.takeTransientSnapshot(tempSnapshotPosition);
                 if (optionalPendingSnapshot.isEmpty()) {
                   LOG.warn(
                       "Failed to obtain a pending snapshot directory for position {}",

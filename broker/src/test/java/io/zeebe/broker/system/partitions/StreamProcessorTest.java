@@ -23,7 +23,7 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
+import io.zeebe.broker.system.partitions.impl.StateControllerImpl;
 import io.zeebe.engine.processor.CommandResponseWriter;
 import io.zeebe.engine.processor.ReadonlyProcessingContext;
 import io.zeebe.engine.processor.SideEffectProducer;
@@ -517,7 +517,7 @@ public final class StreamProcessorTest {
     streamProcessorRule.getClock().addTime(SNAPSHOT_INTERVAL);
 
     // then
-    final StateSnapshotController stateSnapshotController =
+    final StateControllerImpl stateSnapshotController =
         streamProcessorRule.getStateSnapshotController();
     waitUntil(() -> stateSnapshotController.getValidSnapshotsCount() == 1);
     assertThat(stateSnapshotController.getValidSnapshotsCount()).isEqualTo(1);
@@ -563,7 +563,7 @@ public final class StreamProcessorTest {
     // then
     assertThat(streamProcessor.isClosed()).isTrue();
     assertThat(stateSnapshotController.getValidSnapshotsCount()).isEqualTo(0);
-    verify(stateSnapshotController, TIMEOUT.times(0)).takeTempSnapshot(anyLong());
+    verify(stateSnapshotController, TIMEOUT.times(0)).takeTransientSnapshot(anyLong());
   }
 
   @Test
@@ -579,7 +579,7 @@ public final class StreamProcessorTest {
         onProcessedListener.expect(1));
 
     // when
-    final StateSnapshotController stateSnapshotController =
+    final StateControllerImpl stateSnapshotController =
         streamProcessorRule.getStateSnapshotController();
     streamProcessorRule.writeWorkflowInstanceEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING);
     onProcessedListener.await();

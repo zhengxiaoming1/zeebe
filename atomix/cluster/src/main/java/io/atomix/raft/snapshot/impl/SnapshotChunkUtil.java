@@ -13,15 +13,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.zip.CRC32;
 
-public final class SnapshotChunkUtil {
+final class SnapshotChunkUtil {
 
-  public static long createChecksum(final byte[] content) {
+  private SnapshotChunkUtil() {}
+
+  static long createChecksum(final byte[] content) {
     final CRC32 crc32 = new CRC32();
     crc32.update(content);
     return crc32.getValue();
   }
 
-  public static SnapshotChunk createSnapshotChunkFromFile(
+  static SnapshotChunk createSnapshotChunkFromFile(
       final File snapshotChunkFile,
       final String snapshotId,
       final int totalCount,

@@ -10,7 +10,7 @@ package io.zeebe.broker.system.partitions;
 import static io.zeebe.engine.util.StreamProcessingComposite.getLogName;
 
 import io.zeebe.broker.system.partitions.StreamProcessingComposite.StreamProcessorTestFactory;
-import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
+import io.zeebe.broker.system.partitions.impl.StateControllerImpl;
 import io.zeebe.db.ZeebeDbFactory;
 import io.zeebe.engine.processor.CommandResponseWriter;
 import io.zeebe.engine.processor.StreamProcessor;
@@ -146,11 +146,11 @@ public final class StreamProcessorRule implements TestRule {
     closeStreamProcessor(startPartitionId);
   }
 
-  public StateSnapshotController getStateSnapshotController(final int partitionId) {
+  public StateControllerImpl getStateSnapshotController(final int partitionId) {
     return streams.getStateSnapshotController(getLogName(partitionId));
   }
 
-  public StateSnapshotController getStateSnapshotController() {
+  public StateControllerImpl getStateSnapshotController() {
     return getStateSnapshotController(startPartitionId);
   }
 

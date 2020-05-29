@@ -32,8 +32,8 @@ import io.zeebe.broker.system.configuration.DataCfg;
 import io.zeebe.broker.system.monitoring.HealthMetrics;
 import io.zeebe.broker.system.partitions.impl.AsyncSnapshotDirector;
 import io.zeebe.broker.system.partitions.impl.NoneSnapshotReplication;
+import io.zeebe.broker.system.partitions.impl.StateControllerImpl;
 import io.zeebe.broker.system.partitions.impl.StateReplication;
-import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
 import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.engine.processor.StreamProcessor;
@@ -90,7 +90,7 @@ public final class ZeebePartition extends Actor
   private Role raftRole;
   private SnapshotReplication stateReplication;
   private SnapshotStore snapshotStore;
-  private StateSnapshotController snapshotController;
+  private StateControllerImpl snapshotController;
   private ZeebeDb zeebeDb;
   private final String actorName;
   private FailureListener failureListener;
@@ -414,7 +414,7 @@ public final class ZeebePartition extends Actor
     return scheduler.submitActor(deletionService);
   }
 
-  private StateSnapshotController createSnapshotController() {
+  private StateControllerImpl createSnapshotController() {
     final var runtimeDirectory = atomixRaftPartition.dataDirectory().toPath().resolve("runtime");
     final var reader = atomixRaftPartition.getServer().openReader(-1, Mode.COMMITS);
     stateReplication =
@@ -422,7 +422,7 @@ public final class ZeebePartition extends Actor
             ? new StateReplication(messagingService, partitionId, localBroker.getNodeId())
             : new NoneSnapshotReplication();
 
-    return new StateSnapshotController(
+    return new StateControllerImpl(
         partitionId,
         DefaultZeebeDbFactory.DEFAULT_DB_FACTORY,
         snapshotStore,

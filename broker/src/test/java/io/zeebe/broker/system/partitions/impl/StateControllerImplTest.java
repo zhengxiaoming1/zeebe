@@ -26,7 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import org.agrona.collections.MutableLong;
 import org.junit.Before;
 import org.junit.Rule;
@@ -34,14 +33,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 @SuppressWarnings("unchecked")
-public final class StateSnapshotControllerTest {
+public final class StateControllerImplTest {
   @Rule public final TemporaryFolder tempFolderRule = new TemporaryFolder();
   @Rule public final AutoCloseableRule autoCloseableRule = new AutoCloseableRule();
 
   private final MutableLong exporterPosition = new MutableLong(Long.MAX_VALUE);
-  private final AtomicReference<Indexed> indexedAtomicReference = new AtomicReference<>();
-
-  private StateSnapshotController snapshotController;
+  private StateControllerImpl snapshotController;
   private SnapshotStore store;
 
   @Before
@@ -49,16 +46,14 @@ public final class StateSnapshotControllerTest {
     final var rootDirectory = tempFolderRule.newFolder("state").toPath();
     store = new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
 
-    indexedAtomicReference.set(
-        new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     snapshotController =
-        new StateSnapshotController(
+        new StateControllerImpl(
             1,
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             store,
             rootDirectory.resolve("runtime"),
             new NoneSnapshotReplication(),
-            l -> Optional.ofNullable(indexedAtomicReference.get()),
+            l -> Optional.ofNullable(new Indexed(l, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0)),
             db -> exporterPosition.get());
 
     autoCloseableRule.manage(snapshotController);
@@ -71,7 +66,7 @@ public final class StateSnapshotControllerTest {
 
     // then
     assertThat(snapshotController.isDbOpened()).isFalse();
-    assertThat(snapshotController.takeTempSnapshot(1)).isEmpty();
+    assertThat(snapshotController.takeTransientSnapshot(1)).isEmpty();
   }
 
   @Test
@@ -82,7 +77,7 @@ public final class StateSnapshotControllerTest {
     snapshotController.openDb();
 
     // when
-    final var tmpSnapshot = snapshotController.takeTempSnapshot(snapshotPosition);
+    final var tmpSnapshot = snapshotController.takeTransientSnapshot(snapshotPosition);
     final var snapshot = tmpSnapshot.map(TransientSnapshot::commit).orElseThrow();
 
     // then
@@ -101,7 +96,7 @@ public final class StateSnapshotControllerTest {
     // when
     wrapper.wrap(snapshotController.openDb());
     wrapper.putInt(key, value);
-    final var tmpSnapshot = snapshotController.takeTempSnapshot(snapshotPosition);
+    final var tmpSnapshot = snapshotController.takeTransientSnapshot(snapshotPosition);
     tmpSnapshot.orElseThrow().commit();
     snapshotController.close();
     wrapper.wrap(snapshotController.openDb());
@@ -200,29 +195,6 @@ public final class StateSnapshotControllerTest {
   }
 
   @Test
-  public void shouldRecoverFromLatestNotCorruptedSnapshot() throws Exception {
-    // given two snapshots
-    final RocksDBWrapper wrapper = new RocksDBWrapper();
-    wrapper.wrap(snapshotController.openDb());
-
-    wrapper.putInt("x", 1);
-    takeSnapshot(1);
-
-    wrapper.putInt("x", 2);
-    takeSnapshot(2);
-
-    snapshotController.close();
-    corruptLatestSnapshot();
-
-    // when
-    snapshotController.recover();
-    wrapper.wrap(snapshotController.openDb());
-
-    // then
-    assertThat(wrapper.getInt("x")).isEqualTo(1);
-  }
-
-  @Test
   public void shouldFailToRecoverIfAllSnapshotsAreCorrupted() throws Exception {
     // given two snapshots
     final RocksDBWrapper wrapper = new RocksDBWrapper();
@@ -250,31 +222,14 @@ public final class StateSnapshotControllerTest {
     takeSnapshot(1L);
     takeSnapshot(3L);
     takeSnapshot(5L);
-    snapshotController.takeTempSnapshot(6L);
+    snapshotController.takeTransientSnapshot(6L);
 
     // when/then
-    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(3);
-  }
-
-  @Test
-  public void shouldGetLastValidSnapshot() {
-    // given
-    snapshotController.openDb();
-    assertThat(snapshotController.getLastValidSnapshotDirectory()).isNull();
-
-    takeSnapshot(1L);
-    takeSnapshot(3L);
-    final var lastValidSnapshot = takeSnapshot(5L);
-    final var lastTempSnapshot = snapshotController.takeTempSnapshot(6L).orElseThrow();
-
-    // when/then
-    assertThat(snapshotController.getLastValidSnapshotDirectory().toPath())
-        .isEqualTo(lastValidSnapshot.toPath())
-        .isNotEqualTo(lastTempSnapshot.getPath());
+    assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(1);
   }
 
   private File takeSnapshot(final long position) {
-    final var snapshot = snapshotController.takeTempSnapshot(position).orElseThrow();
+    final var snapshot = snapshotController.takeTransientSnapshot(position).orElseThrow();
     return snapshot.commit().getPath().toFile();
   }
 

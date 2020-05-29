@@ -5,15 +5,14 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.logstreams.spi;
+package io.zeebe.broker.system.partitions;
 
 import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.zeebe.db.ZeebeDb;
-import java.io.File;
 import java.util.Optional;
 
-public interface SnapshotController extends AutoCloseable {
+public interface StateController extends AutoCloseable {
   /**
    * Takes a snapshot based on the given position. The position is a last processed lower bound
    * event position.
@@ -22,25 +21,7 @@ public interface SnapshotController extends AutoCloseable {
    * @return a pending snapshot, or nothing if the operation fails
    * @see SnapshotStorage#getPendingSnapshotFor(long)
    */
-  Optional<TransientSnapshot> takeTempSnapshot(long lowerBoundSnapshotPosition);
-  //
-  //  /**
-  //   * Commits the given temporary snapshot to the underlying storage.
-  //   *
-  //   * @param snapshot the snapshot to commit
-  //   * @throws IOException thrown if moving the snapshot fails
-  //   */
-  //  void commitSnapshot(Snapshot snapshot) throws IOException;
-  //
-  //  /**
-  //   * Replicates the latest valid snapshot. The given executor is called for each snapshot chunk
-  // in
-  //   * the latest snapshot. The executor should execute/run the given Runnable in a specific
-  //   * environment (e.g. ActorThread).
-  //   *
-  //   * @param executor executor which executed the given Runnable
-  //   */
-  //  void replicateLatestSnapshot(Consumer<Runnable> executor);
+  Optional<TransientSnapshot> takeTransientSnapshot(long lowerBoundSnapshotPosition);
 
   /** Registers to consumes replicated snapshots. */
   void consumeReplicatedSnapshots();
@@ -65,11 +46,4 @@ public interface SnapshotController extends AutoCloseable {
    * @return valid snapshots count
    */
   int getValidSnapshotsCount();
-
-  /**
-   * Returns the latest valid snapshot's directory.
-   *
-   * @return the latest valid snapshot's directory
-   */
-  File getLastValidSnapshotDirectory();
 }

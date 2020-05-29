@@ -22,7 +22,7 @@ import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.broker.system.partitions.impl.AsyncSnapshotDirector;
 import io.zeebe.broker.system.partitions.impl.NoneSnapshotReplication;
-import io.zeebe.broker.system.partitions.impl.StateSnapshotController;
+import io.zeebe.broker.system.partitions.impl.StateControllerImpl;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
 import io.zeebe.db.impl.DefaultColumnFamily;
@@ -224,7 +224,7 @@ public final class TestStreams {
       final Duration snapshotInterval) {
     final SnapshotStore store = createSnapshotStore(stream);
 
-    final StateSnapshotController currentSnapshotController =
+    final StateControllerImpl currentSnapshotController =
         createSnapshotController(stream, store);
 
     final String logName = stream.getLogName();
@@ -266,7 +266,7 @@ public final class TestStreams {
     return streamProcessor;
   }
 
-  public StateSnapshotController createSnapshotController(
+  public StateControllerImpl createSnapshotController(
       final SynchronousLogStream stream, final SnapshotStore store) {
     final Path rootDirectory =
         dataDirectory.getRoot().toPath().resolve(stream.getLogName()).resolve("state");
@@ -274,7 +274,7 @@ public final class TestStreams {
     indexedAtomicReference.set(
         new Indexed(1, new ZeebeEntry(1, System.currentTimeMillis(), 1, 10, null), 0));
     return spy(
-        new StateSnapshotController(
+        new StateControllerImpl(
             stream.getPartitionId(),
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
             store,
@@ -284,7 +284,7 @@ public final class TestStreams {
             db -> -1));
   }
 
-  public StateSnapshotController getStateSnapshotController(final String stream) {
+  public StateControllerImpl getStateSnapshotController(final String stream) {
     return streamContextMap.get(stream).getStateSnapshotController();
   }
 
@@ -427,7 +427,7 @@ public final class TestStreams {
   private static final class ProcessorContext implements AutoCloseable {
 
     private final LogContext logContext;
-    private final StateSnapshotController stateSnapshotController;
+    private final StateControllerImpl stateSnapshotController;
     private final AsyncSnapshotDirector asyncSnapshotDirector;
     private final ZeebeDb zeebeDb;
 
@@ -437,7 +437,7 @@ public final class TestStreams {
     private ProcessorContext(
         final LogContext logContext,
         final StreamProcessor streamProcessor,
-        final StateSnapshotController stateSnapshotController,
+        final StateControllerImpl stateSnapshotController,
         final AsyncSnapshotDirector asyncSnapshotDirector,
         final ZeebeDb zeebeDb) {
       this.logContext = logContext;
@@ -450,7 +450,7 @@ public final class TestStreams {
     public static ProcessorContext createStreamContext(
         final LogContext logContext,
         final StreamProcessor streamProcessor,
-        final StateSnapshotController stateSnapshotController,
+        final StateControllerImpl stateSnapshotController,
         final AsyncSnapshotDirector asyncSnapshotDirector,
         final ZeebeDb zeebeDb) {
       return new ProcessorContext(
@@ -461,7 +461,7 @@ public final class TestStreams {
       return logContext.getLogStream();
     }
 
-    public StateSnapshotController getStateSnapshotController() {
+    public StateControllerImpl getStateSnapshotController() {
       return stateSnapshotController;
     }
 

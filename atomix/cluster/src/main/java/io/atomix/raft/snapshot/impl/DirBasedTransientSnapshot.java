@@ -174,13 +174,6 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
       return false;
     }
 
-    //    final var optionalPath = store.getPendingDirectoryFor(snapshotId);
-    //    if (optionalPath.isEmpty()) {
-    //      logger.warn("Failed to obtain pending snapshot directory for snapshot ID {}",
-    // snapshotId);
-    //      return false;
-    //    }
-
     final var tmpSnapshotDirectory = directory;
     FileUtil.ensureDirectoryExists(tmpSnapshotDirectory);
 
@@ -221,7 +214,6 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
     }
   }
 
-  @Override
   public Path getPath() {
     return directory;
   }

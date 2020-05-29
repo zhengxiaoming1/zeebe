@@ -10,7 +10,7 @@ package io.zeebe.broker.system.partitions;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import java.util.function.Consumer;
 
-public interface SnapshotReplication {
+public interface SnapshotReplication extends AutoCloseable {
 
   /**
    * Replicates the given snapshot chunk.
@@ -25,7 +25,4 @@ public interface SnapshotReplication {
    * @param consumer the consumer which should be called
    */
   void consume(Consumer<SnapshotChunk> consumer);
-
-  /** Closes the snapshot replication. */
-  void close() throws Exception;
 }

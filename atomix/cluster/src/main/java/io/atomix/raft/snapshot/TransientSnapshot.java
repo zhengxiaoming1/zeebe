@@ -69,7 +69,4 @@ public interface TransientSnapshot {
    * Aborts the pending snapshot, closing all allocated resources and removing any partial files.
    */
   void abort();
-
-  /** @return the working directory of the pending snapshot */
-  Path getPath();
 }
