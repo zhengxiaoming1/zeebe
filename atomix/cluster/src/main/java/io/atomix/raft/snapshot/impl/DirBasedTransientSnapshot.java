@@ -72,28 +72,26 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
   }
 
   @Override
-  public void take(final Predicate<Path> takeSnapshot) {
+  public boolean take(final Predicate<Path> takeSnapshot) {
+    boolean failed;
 
-    // todo metrics
-    if (!takeSnapshot.test(getPath())) {
-      // todo(zell): before we did nothing?!
+    try {
+      failed = !takeSnapshot.test(getPath());
+    } catch (final Exception exception) {
+      LOGGER.warn("Catched unexpected exception on taking snapshot ({})", metadata, exception);
+      failed = true;
+    }
+
+    if (failed) {
       abort();
     }
+
+    return !failed;
   }
 
   @Override
   public long index() {
     return metadata.getIndex();
-  }
-
-  @Override
-  public long term() {
-    return metadata.getTerm();
-  }
-
-  @Override
-  public WallClockTimestamp timestamp() {
-    return metadata.getTimestamp();
   }
 
   @Override

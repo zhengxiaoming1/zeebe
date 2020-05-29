@@ -54,7 +54,8 @@ public final class DirBasedSnapshotMetadata implements SnapshotId {
     return metadata;
   }
 
-  public String getFileName() {
+  @Override
+  public String getSnapshotIdAsString() {
     return String.format("%d-%d-%d", getIndex(), getTerm(), getTimestamp().unixTimestamp());
   }
 

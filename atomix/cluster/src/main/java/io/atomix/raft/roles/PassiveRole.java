@@ -45,7 +45,6 @@ import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.storage.StorageException;
 import io.atomix.storage.journal.Indexed;
 import io.atomix.utils.concurrent.ThreadContext;
-import io.atomix.utils.time.WallClockTimestamp;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -173,6 +172,9 @@ public class PassiveRole extends InactiveRole {
                   .build()));
     }
 
+    final var snapshotChunk = new SnapshotChunkImpl();
+    snapshotChunk.wrap(new UnsafeBuffer(request.data()), 0, request.data().capacity());
+
     // If there is no pending snapshot, create a new snapshot.
     if (pendingSnapshot == null) {
       // if we have no pending snapshot then the request must be the first chunk, otherwise we could
@@ -189,8 +191,7 @@ public class PassiveRole extends InactiveRole {
 
       pendingSnapshot =
           raft.getSnapshotStore()
-              .takeTransientSnapshot(
-                  request.index(), request.term(), WallClockTimestamp.from(request.timestamp()));
+              .takeTransientSnapshot(snapshotChunk.getSnapshotId());
       pendingSnapshotStartTimestamp = System.currentTimeMillis();
       snapshotReplicationMetrics.incrementCount();
     } else {
@@ -212,20 +213,6 @@ public class PassiveRole extends InactiveRole {
                     .build()));
       }
     }
-
-    final var snapshotChunk = new SnapshotChunkImpl();
-    snapshotChunk.wrap(new UnsafeBuffer(request.data()), 0, request.data().capacity());
-
-    //
-    //    request.data()
-    //    final var snapshotChunk =
-    //        SnapshotChunk.builder()
-    //            .withChecksum(request.chunkChecksum())
-    //            .withChunkName(request.chunkId().toString())
-    //            .withTotalCount(request.totalChunkCount())
-    //            .withContent(request.data().array())
-    //            .withSnapshotChecksum(request.snapshotChecksum())
-    //            .build();
 
     try {
       final var success = pendingSnapshot.write(snapshotChunk);

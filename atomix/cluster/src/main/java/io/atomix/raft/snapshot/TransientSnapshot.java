@@ -17,7 +17,6 @@
 
 package io.atomix.raft.snapshot;
 
-import io.atomix.utils.time.WallClockTimestamp;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -25,16 +24,10 @@ import java.util.function.Predicate;
 
 public interface TransientSnapshot {
 
-  void take(Predicate<Path> takeSnapshot);
+  boolean take(Predicate<Path> takeSnapshot);
 
   /** @return the snapshot's index */
   long index();
-
-  /** @return the snapshot's term */
-  long term();
-
-  /** @return the snapshot's timestamp */
-  WallClockTimestamp timestamp();
 
   /**
    * Returns true if the chunk identified by the given ID has already been written to the snapshot.

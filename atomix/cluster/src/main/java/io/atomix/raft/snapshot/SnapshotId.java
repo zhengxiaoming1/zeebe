@@ -19,6 +19,8 @@ public interface SnapshotId extends Comparable<SnapshotId> {
 
   WallClockTimestamp getTimestamp();
 
+  String getSnapshotIdAsString();
+
   /**
    * A snapshot is considered "lower" if its index is less than that of the other snapshot. If they
    * are the same, then it is considered "lower" if its timestamp is less than that of the other

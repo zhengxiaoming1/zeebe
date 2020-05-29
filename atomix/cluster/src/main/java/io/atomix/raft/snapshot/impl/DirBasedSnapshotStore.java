@@ -110,7 +110,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     final var optMetadata = DirBasedSnapshotMetadata.ofFileName(snapshotId);
     final var metadata = optMetadata.orElseThrow();
 
-    final var pendingSnapshotDir = pendingDirectory.resolve(metadata.getFileName());
+    final var pendingSnapshotDir = pendingDirectory.resolve(metadata.getSnapshotIdAsString());
     return new DirBasedTransientSnapshot(metadata, pendingSnapshotDir, this);
   }
 
@@ -223,12 +223,12 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     // nothing to be done
   }
 
-  public Snapshot newSnapshot(
+  Snapshot newSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp, final Path directory) {
     return newSnapshot(new DirBasedSnapshotMetadata(index, term, timestamp), directory);
   }
 
-  public Snapshot newSnapshot(final DirBasedSnapshotMetadata metadata, final Path directory) {
+  Snapshot newSnapshot(final DirBasedSnapshotMetadata metadata, final Path directory) {
 
     if (currentSnapshot != null && currentSnapshot.id().compareTo(metadata) >= 0) {
       LOGGER.debug("Snapshot is older then {} already exists", currentSnapshot);
@@ -321,10 +321,10 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   private Path buildPendingSnapshotDirectory(
       final long index, final long term, final WallClockTimestamp timestamp) {
     final var metadata = new DirBasedSnapshotMetadata(index, term, timestamp);
-    return pendingDirectory.resolve(metadata.getFileName());
+    return pendingDirectory.resolve(metadata.getSnapshotIdAsString());
   }
 
   private Path buildSnapshotDirectory(final DirBasedSnapshotMetadata metadata) {
-    return snapshotsDirectory.resolve(metadata.getFileName());
+    return snapshotsDirectory.resolve(metadata.getSnapshotIdAsString());
   }
 }
