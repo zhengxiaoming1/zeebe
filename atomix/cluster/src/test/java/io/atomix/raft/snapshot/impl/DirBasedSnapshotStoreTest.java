@@ -5,7 +5,7 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.system.partitions;
+package io.atomix.raft.snapshot.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -16,9 +16,6 @@ import static org.mockito.Mockito.verify;
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotListener;
 import io.atomix.raft.snapshot.SnapshotStore;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStore;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
-import io.atomix.raft.snapshot.impl.SnapshotMetrics;
 import io.atomix.utils.time.WallClockTimestamp;
 import java.io.IOException;
 import java.nio.file.Path;

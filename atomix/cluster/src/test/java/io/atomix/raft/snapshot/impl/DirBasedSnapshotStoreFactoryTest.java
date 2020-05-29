@@ -5,11 +5,10 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.broker.system.partitions;
+package io.atomix.raft.snapshot.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
