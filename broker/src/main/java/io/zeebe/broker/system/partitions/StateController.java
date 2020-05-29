@@ -7,7 +7,6 @@
  */
 package io.zeebe.broker.system.partitions;
 
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotStorage;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.zeebe.db.ZeebeDb;
 import java.util.Optional;
@@ -19,7 +18,6 @@ public interface StateController extends AutoCloseable {
    *
    * @param lowerBoundSnapshotPosition the lower bound snapshot position
    * @return a pending snapshot, or nothing if the operation fails
-   * @see SnapshotStorage#getPendingSnapshotFor(long)
    */
   Optional<TransientSnapshot> takeTransientSnapshot(long lowerBoundSnapshotPosition);
 

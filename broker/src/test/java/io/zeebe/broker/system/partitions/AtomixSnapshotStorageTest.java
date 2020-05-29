@@ -19,7 +19,7 @@ package io.zeebe.broker.system.partitions;
 // import static org.mockito.Mockito.mock;
 // import static org.mockito.Mockito.verify;
 //
-// import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
+// import io.zeebe.broker.system.partitions.AtomixRecordEntrySupplier;
 // import io.atomix.raft.snapshot.Snapshot;
 // import io.atomix.raft.snapshot.SnapshotDeletionListener;
 // import io.atomix.raft.snapshot.SnapshotMetrics;
@@ -28,7 +28,7 @@ package io.zeebe.broker.system.partitions;
 // import io.atomix.storage.journal.JournalReader.Mode;
 // import io.zeebe.broker.snapshot.impl.AtomixSnapshotStorage;
 // import io.zeebe.broker.snapshot.impl.DirBasedSnapshotStore;
-// import io.zeebe.logstreams.storage.atomix.AtomixRecordEntrySupplierImpl;
+// import io.zeebe.broker.system.partitions.impl.AtomixRecordEntrySupplierImpl;
 // import io.zeebe.logstreams.util.AtomixLogStorageRule;
 // import java.io.IOException;
 // import java.nio.ByteBuffer;

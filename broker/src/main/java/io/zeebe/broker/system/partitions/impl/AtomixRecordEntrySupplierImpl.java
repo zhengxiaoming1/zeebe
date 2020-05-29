@@ -5,12 +5,13 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.zeebe.logstreams.storage.atomix;
+package io.zeebe.broker.system.partitions.impl;
 
-import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.storage.journal.Indexed;
+import io.zeebe.broker.system.partitions.AtomixRecordEntrySupplier;
+import io.zeebe.logstreams.storage.atomix.ZeebeIndexMapping;
 import java.util.Optional;
 
 public final class AtomixRecordEntrySupplierImpl implements AtomixRecordEntrySupplier {

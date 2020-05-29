@@ -7,13 +7,13 @@
  */
 package io.zeebe.broker.system.partitions.impl;
 
-import io.atomix.raft.impl.zeebe.snapshot.AtomixRecordEntrySupplier;
 import io.atomix.raft.snapshot.Snapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.SnapshotListener;
 import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.broker.system.partitions.AtomixRecordEntrySupplier;
 import io.zeebe.broker.system.partitions.SnapshotReplication;
 import io.zeebe.broker.system.partitions.StateController;
 import io.zeebe.db.ZeebeDb;

@@ -10,8 +10,8 @@ package io.zeebe.broker.logstreams;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
 import io.atomix.raft.snapshot.impl.DirBasedSnapshotStore;
+import io.atomix.raft.snapshot.impl.SnapshotMetrics;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.storage.journal.Indexed;

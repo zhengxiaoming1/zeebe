@@ -16,8 +16,6 @@
  */
 package io.atomix.raft.snapshot.impl;
 
-import io.atomix.raft.impl.zeebe.snapshot.DbSnapshotMetadata;
-import io.atomix.raft.impl.zeebe.snapshot.SnapshotMetrics;
 import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.SnapshotStoreFactory;
 import java.nio.file.Path;
@@ -27,8 +25,8 @@ import org.agrona.IoUtil;
  * Loads existing snapshots in memory, cleaning out old and/or invalid snapshots if present.
  *
  * <p>The current load strategy is to lookup all files directly under the {@code
- * SNAPSHOTS_DIRECTORY}, try to extract {@link DbSnapshotMetadata} from them, and if not possible
- * skip them (and print out a warning).
+ * SNAPSHOTS_DIRECTORY}, try to extract {@link DirBasedSnapshotMetadata} from them, and if not
+ * possible skip them (and print out a warning).
  *
  * <p>The metadata extraction is done by parsing the directory name using '%d-%d-%d-%d', where in
  * order we expect: index, term, timestamp, and position.
