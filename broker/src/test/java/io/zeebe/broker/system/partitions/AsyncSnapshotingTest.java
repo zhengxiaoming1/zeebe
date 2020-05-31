@@ -186,7 +186,7 @@ public final class AsyncSnapshotingTest {
     awaitSnapshot(100);
     assertThat(persistedSnapshotStore.getLatestSnapshot())
         .get()
-        .extracting(PersistedSnapshot::index)
+        .extracting(PersistedSnapshot::getIndex)
         .isEqualTo(100L);
   }
 
@@ -196,7 +196,7 @@ public final class AsyncSnapshotingTest {
           final var optSnapshot = persistedSnapshotStore.getLatestSnapshot();
           if (optSnapshot.isPresent()) {
             final var snapshot = optSnapshot.get();
-            return snapshot.index() == index;
+            return snapshot.getIndex() == index;
           }
           return false;
         });

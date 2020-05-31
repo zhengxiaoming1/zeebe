@@ -153,7 +153,7 @@ public class PassiveRole extends InactiveRole {
     // request successfully.
     final var optLatestSnapshot = raft.getPersistedSnapshotStore().getLatestSnapshot();
     if (optLatestSnapshot.isPresent()) {
-      if (optLatestSnapshot.get().index() >= request.index()) {
+      if (optLatestSnapshot.get().getIndex() >= request.index()) {
         abortPendingSnapshots();
 
         return CompletableFuture.completedFuture(
@@ -456,7 +456,7 @@ public class PassiveRole extends InactiveRole {
         if (optCurrentSnapshot.isPresent()) {
           final var currentSnapshot = optCurrentSnapshot.get();
           return checkPreviousEntry(
-              request, currentSnapshot.index(), currentSnapshot.term(), future);
+              request, currentSnapshot.getIndex(), currentSnapshot.getTerm(), future);
         } else {
           // If the previous log index is set and the last entry is null and there is no snapshot,
           // fail the append.
@@ -739,7 +739,7 @@ public class PassiveRole extends InactiveRole {
                 .withLastSnapshotIndex(
                     raft.getPersistedSnapshotStore()
                         .getLatestSnapshot()
-                        .map(PersistedSnapshot::index)
+                        .map(PersistedSnapshot::getIndex)
                         .orElse(0L))
                 .build()));
     return succeeded;
@@ -764,7 +764,7 @@ public class PassiveRole extends InactiveRole {
             // this is called after the snapshot is commited
             // on install requests and on Zeebe snapshot replication
 
-            final var index = persistedSnapshot.index();
+            final var index = persistedSnapshot.getIndex();
             // It might happen that the last index is far behind our current snapshot index.
             // E. g. on slower followers, we need to throw away the existing log,
             // otherwise we might end with an inconsistent log (gaps between last index and

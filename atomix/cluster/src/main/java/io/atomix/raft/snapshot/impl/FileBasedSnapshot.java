@@ -51,7 +51,7 @@ public final class FileBasedSnapshot implements PersistedSnapshot {
   }
 
   @Override
-  public WallClockTimestamp timestamp() {
+  public WallClockTimestamp getTimestamp() {
     return metadata.getTimestamp();
   }
 
@@ -61,12 +61,12 @@ public final class FileBasedSnapshot implements PersistedSnapshot {
   }
 
   @Override
-  public long index() {
+  public long getIndex() {
     return metadata.getIndex();
   }
 
   @Override
-  public long term() {
+  public long getTerm() {
     return metadata.getTerm();
   }
 
@@ -137,7 +137,7 @@ public final class FileBasedSnapshot implements PersistedSnapshot {
 
   @Override
   public long getCompactionBound() {
-    return index();
+    return getIndex();
   }
 
   @Override

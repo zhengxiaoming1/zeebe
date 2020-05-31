@@ -27,12 +27,12 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
   /**
    * Returns the snapshot timestamp.
    *
-   * <p>The timestamp is the wall clock time at the {@link #index()} at which the snapshot was
+   * <p>The timestamp is the wall clock time at the {@link #getIndex()} at which the snapshot was
    * taken.
    *
    * @return The snapshot timestamp.
    */
-  WallClockTimestamp timestamp();
+  WallClockTimestamp getTimestamp();
 
   /**
    * Returns the snapshot format version.
@@ -49,7 +49,7 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
    *
    * @return The snapshot index.
    */
-  long index();
+  long getIndex();
 
   /**
    * Returns the snapshot term.
@@ -59,7 +59,7 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
    *
    * @return The snapshot term.
    */
-  long term();
+  long getTerm();
 
   /**
    * Returns a new snapshot chunk reader for this snapshot. Chunk readers are meant to be one-time
@@ -77,9 +77,9 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
 
   @Override
   default int compareTo(final PersistedSnapshot other) {
-    return Comparator.comparingLong(PersistedSnapshot::index)
-        .thenComparingLong(PersistedSnapshot::term)
-        .thenComparing(PersistedSnapshot::timestamp)
+    return Comparator.comparingLong(PersistedSnapshot::getIndex)
+        .thenComparingLong(PersistedSnapshot::getTerm)
+        .thenComparing(PersistedSnapshot::getTimestamp)
         .thenComparing(PersistedSnapshot::getCompactionBound)
         .compare(this, other);
   }

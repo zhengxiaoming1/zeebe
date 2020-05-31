@@ -140,7 +140,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   @Override
   public long getCurrentSnapshotIndex() {
-    return getLatestSnapshot().map(PersistedSnapshot::index).orElse(0L);
+    return getLatestSnapshot().map(PersistedSnapshot::getIndex).orElse(0L);
   }
 
   @Override
@@ -262,7 +262,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       LOGGER.error("Deleting snapshot {}", previousSnapshot);
       previousSnapshot.delete();
     }
-    purgePendingSnapshots(currentPersistedSnapshot.index());
+    purgePendingSnapshots(currentPersistedSnapshot.getIndex());
 
     listeners.forEach(listener -> listener.onNewSnapshot(currentPersistedSnapshot));
 

@@ -119,8 +119,8 @@ abstract class AbstractAppender implements AutoCloseable {
       final var optCurrentSnapshot = raft.getPersistedSnapshotStore().getLatestSnapshot();
       if (optCurrentSnapshot.isPresent()) {
         final var currentSnapshot = optCurrentSnapshot.get();
-        prevIndex = currentSnapshot.index();
-        prevTerm = currentSnapshot.term();
+        prevIndex = currentSnapshot.getIndex();
+        prevTerm = currentSnapshot.getTerm();
       }
     }
     return AppendRequest.builder().withPrevLogTerm(prevTerm).withPrevLogIndex(prevIndex);
@@ -453,8 +453,8 @@ abstract class AbstractAppender implements AutoCloseable {
   /** Builds an install request for the given member. */
   protected InstallRequest buildInstallRequest(
       final RaftMemberContext member, final PersistedSnapshot persistedSnapshot) {
-    if (member.getNextSnapshotIndex() != persistedSnapshot.index()) {
-      member.setNextSnapshotIndex(persistedSnapshot.index());
+    if (member.getNextSnapshotIndex() != persistedSnapshot.getIndex()) {
+      member.setNextSnapshotIndex(persistedSnapshot.getIndex());
       member.setNextSnapshotChunk(null);
     }
 
@@ -473,9 +473,9 @@ abstract class AbstractAppender implements AutoCloseable {
             InstallRequest.builder()
                 .withCurrentTerm(raft.getTerm())
                 .withLeader(leader.memberId())
-                .withIndex(persistedSnapshot.index())
-                .withTerm(persistedSnapshot.term())
-                .withTimestamp(persistedSnapshot.timestamp().unixTimestamp())
+                .withIndex(persistedSnapshot.getIndex())
+                .withTerm(persistedSnapshot.getTerm())
+                .withTimestamp(persistedSnapshot.getTimestamp().unixTimestamp())
                 .withVersion(persistedSnapshot.version())
                 .withData(new SnapshotChunkImpl(chunk).toByteBuffer())
                 .withChunkId(ByteBuffer.wrap(chunk.getChunkName().getBytes()))

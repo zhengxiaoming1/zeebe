@@ -296,14 +296,14 @@ final class LeaderAppender extends AbstractAppender {
     }
 
     final var snapshot = optSnapshot.get();
-    if (member.getSnapshotIndex() >= snapshot.index()) {
+    if (member.getSnapshotIndex() >= snapshot.getIndex()) {
       if (canAppend) {
         sendAppendRequest(member, buildAppendRequest(member, -1));
       }
       return;
     }
 
-    if (snapshot.index() < member.getLogReader().getCurrentIndex()) {
+    if (snapshot.getIndex() < member.getLogReader().getCurrentIndex()) {
       if (canAppend) {
         sendAppendRequest(member, buildAppendRequest(member, -1));
       }
@@ -311,7 +311,7 @@ final class LeaderAppender extends AbstractAppender {
     }
 
     if (member.canInstall()) {
-      log.debug("Replicating snapshot {} to {}", snapshot.index(), member.getMember().memberId());
+      log.debug("Replicating snapshot {} to {}", snapshot.getIndex(), member.getMember().memberId());
       sendInstallRequest(member, buildInstallRequest(member, snapshot));
     }
   }
