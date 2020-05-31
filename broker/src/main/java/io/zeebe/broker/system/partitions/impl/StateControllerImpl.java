@@ -10,6 +10,7 @@ package io.zeebe.broker.system.partitions.impl;
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
 import io.atomix.raft.snapshot.PersistedSnapshotStore;
+import io.atomix.raft.snapshot.ReceivedSnapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
@@ -204,7 +205,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
             snapshotId,
             id -> {
               final var startTimestamp = System.currentTimeMillis();
-              final TransientSnapshot transientSnapshot =
+              final ReceivedSnapshot transientSnapshot =
                   store.newReceivedSnapshot(snapshotChunk.getSnapshotId());
               return newReplication(startTimestamp, transientSnapshot);
             });
@@ -216,9 +217,9 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
       return;
     }
 
-    final var transientSnapshot = context.getTransientSnapshot();
+    final var receivedSnapshot = context.getReceivedSnapshot();
     try {
-      if (transientSnapshot.write(snapshotChunk)) {
+      if (receivedSnapshot.apply(snapshotChunk)) {
         validateWhenReceivedAllChunks(snapshotChunk, context);
       } else {
         markSnapshotAsInvalid(context, snapshotChunk);
@@ -231,7 +232,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
 
   private void markSnapshotAsInvalid(
       final ReplicationContext replicationContext, final SnapshotChunk chunk) {
-    replicationContext.getTransientSnapshot().abort();
+    replicationContext.getReceivedSnapshot().abort();
     receivedSnapshots.put(chunk.getSnapshotId(), INVALID_SNAPSHOT);
     metrics.decrementCount();
   }
@@ -261,7 +262,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
 
     // todo(zell): validate snapshot checksum
     // give it the commit thing?
-    context.getTransientSnapshot().persist();
+    context.getReceivedSnapshot().persist();
 
     final var elapsed = System.currentTimeMillis() - context.getStartTimestamp();
     receivedSnapshots.remove(snapshotChunk.getSnapshotId());
@@ -279,7 +280,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
   }
 
   private ReplicationContext newReplication(
-      final long startTimestamp, final TransientSnapshot transientSnapshot) {
+      final long startTimestamp, final ReceivedSnapshot transientSnapshot) {
     final var context = new ReplicationContext(startTimestamp, transientSnapshot);
     metrics.incrementCount();
     return context;
@@ -288,13 +289,13 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
   private static final class ReplicationContext {
 
     private final long startTimestamp;
-    private final TransientSnapshot transientSnapshot;
+    private final ReceivedSnapshot receivedSnapshot;
     private long chunkCount;
 
-    ReplicationContext(final long startTimestamp, final TransientSnapshot transientSnapshot) {
+    ReplicationContext(final long startTimestamp, final ReceivedSnapshot receivedSnapshot) {
       this.startTimestamp = startTimestamp;
       this.chunkCount = 0L;
-      this.transientSnapshot = transientSnapshot;
+      this.receivedSnapshot = receivedSnapshot;
     }
 
     long getStartTimestamp() {
@@ -309,8 +310,8 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
       return chunkCount;
     }
 
-    TransientSnapshot getTransientSnapshot() {
-      return transientSnapshot;
+    ReceivedSnapshot getReceivedSnapshot() {
+      return receivedSnapshot;
     }
   }
 }

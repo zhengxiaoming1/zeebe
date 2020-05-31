@@ -103,7 +103,8 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   public TransientSnapshot newTransientSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp) {
     final var directory = buildPendingSnapshotDirectory(index, term, timestamp);
-    return new FileBasedTransientSnapshot(index, term, timestamp, directory, this);
+    final var fileBasedSnapshotMetadata = new FileBasedSnapshotMetadata(index, term, timestamp);
+    return new FileBasedTransientSnapshot(fileBasedSnapshotMetadata, directory, this);
   }
 
   @Override
@@ -224,16 +225,16 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     // nothing to be done
   }
 
-  PersistedSnapshot newSnapshot(
-      final long index, final long term, final WallClockTimestamp timestamp, final Path directory) {
-    return newSnapshot(new FileBasedSnapshotMetadata(index, term, timestamp), directory);
+  private boolean isCurrentSnapshotNewer(final FileBasedSnapshotMetadata metadata) {
+    return  (currentPersistedSnapshot != null
+        && currentPersistedSnapshot.id().compareTo(metadata) >= 0);
   }
 
   PersistedSnapshot newSnapshot(final FileBasedSnapshotMetadata metadata, final Path directory) {
 
-    if (currentPersistedSnapshot != null
-        && currentPersistedSnapshot.id().compareTo(metadata) >= 0) {
+    if (isCurrentSnapshotNewer(metadata)) {
       LOGGER.debug("Snapshot is older then {} already exists", currentPersistedSnapshot);
+      purgePendingSnapshots(metadata.getIndex() + 1);
       return currentPersistedSnapshot;
     }
 

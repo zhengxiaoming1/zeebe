@@ -18,7 +18,6 @@ package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.TransientSnapshot;
-import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
 import io.zeebe.util.ZbLogger;
 import java.io.IOException;
@@ -36,15 +35,6 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
   private final Path directory;
   private final FileBasedSnapshotStore snapshotStore;
   private final FileBasedSnapshotMetadata metadata;
-
-  FileBasedTransientSnapshot(
-      final long index,
-      final long term,
-      final WallClockTimestamp timestamp,
-      final Path directory,
-      final FileBasedSnapshotStore snapshotStore) {
-    this(new FileBasedSnapshotMetadata(index, term, timestamp), directory, snapshotStore);
-  }
 
   FileBasedTransientSnapshot(
       final FileBasedSnapshotMetadata metadata,
