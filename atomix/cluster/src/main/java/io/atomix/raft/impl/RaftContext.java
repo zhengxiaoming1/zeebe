@@ -45,7 +45,7 @@ import io.atomix.raft.roles.LeaderRole;
 import io.atomix.raft.roles.PassiveRole;
 import io.atomix.raft.roles.PromotableRole;
 import io.atomix.raft.roles.RaftRole;
-import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLog;
 import io.atomix.raft.storage.log.RaftLogReader;
@@ -96,7 +96,7 @@ public class RaftContext implements AutoCloseable {
   private final RaftLog raftLog;
   private final RaftLogWriter logWriter;
   private final RaftLogReader logReader;
-  private final SnapshotStore snapshotStore;
+  private final PersistedSnapshotStore persistedSnapshotStore;
   private final RaftStateMachine stateMachine;
   private final ThreadContextFactory threadContextFactory;
   private final ThreadContext loadContext;
@@ -162,7 +162,7 @@ public class RaftContext implements AutoCloseable {
     this.logReader = raftLog.openReader(1, RaftLogReader.Mode.ALL);
 
     // Open the snapshot store.
-    this.snapshotStore = storage.getSnapshotStore();
+    this.persistedSnapshotStore = storage.getPersistedSnapshotStore();
 
     // Create a new internal server state machine.
     checkNotNull(stateMachineFactory, "stateMachineFactory must be not null");
@@ -615,7 +615,7 @@ public class RaftContext implements AutoCloseable {
 
     // Close the snapshot store.
     try {
-      snapshotStore.close();
+      persistedSnapshotStore.close();
     } catch (final Exception e) {
       log.error("Failed to close snapshot store", e);
     }
@@ -875,8 +875,8 @@ public class RaftContext implements AutoCloseable {
    *
    * @return The server snapshot store.
    */
-  public SnapshotStore getSnapshotStore() {
-    return snapshotStore;
+  public PersistedSnapshotStore getPersistedSnapshotStore() {
+    return persistedSnapshotStore;
   }
 
   /**

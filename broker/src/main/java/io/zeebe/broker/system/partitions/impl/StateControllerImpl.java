@@ -7,10 +7,10 @@
  */
 package io.zeebe.broker.system.partitions.impl;
 
-import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.PersistedSnapshot;
+import io.atomix.raft.snapshot.PersistedSnapshotListener;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.SnapshotChunk;
-import io.atomix.raft.snapshot.SnapshotListener;
-import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.broker.system.partitions.AtomixRecordEntrySupplier;
@@ -30,7 +30,7 @@ import org.agrona.collections.Object2NullableObjectHashMap;
 import org.slf4j.Logger;
 
 /** Controls how snapshot/recovery operations are performed */
-public class StateControllerImpl implements StateController, SnapshotListener {
+public class StateControllerImpl implements StateController, PersistedSnapshotListener {
 
   private static final ReplicationContext INVALID_SNAPSHOT = new ReplicationContext(-1, null);
   private static final Logger LOG = Loggers.SNAPSHOT_LOGGER;
@@ -39,7 +39,7 @@ public class StateControllerImpl implements StateController, SnapshotListener {
   private final Map<String, ReplicationContext> receivedSnapshots =
       new Object2NullableObjectHashMap<>();
 
-  private final SnapshotStore store;
+  private final PersistedSnapshotStore store;
 
   private final Path runtimeDirectory;
   private final ZeebeDbFactory zeebeDbFactory;
@@ -53,7 +53,7 @@ public class StateControllerImpl implements StateController, SnapshotListener {
   public StateControllerImpl(
       final int partitionId,
       final ZeebeDbFactory zeebeDbFactory,
-      final SnapshotStore store,
+      final PersistedSnapshotStore store,
       final Path runtimeDirectory,
       final SnapshotReplication replication,
       final AtomixRecordEntrySupplier entrySupplier,
@@ -80,7 +80,7 @@ public class StateControllerImpl implements StateController, SnapshotListener {
     final var optionalIndexed = entrySupplier.getIndexedEntry(snapshotPosition);
 
     final Long previousSnapshotIndex =
-        store.getLatestSnapshot().map(Snapshot::getCompactionBound).orElse(-1L);
+        store.getLatestSnapshot().map(PersistedSnapshot::getCompactionBound).orElse(-1L);
 
     final var optTransientSnapshot =
         optionalIndexed
@@ -180,9 +180,9 @@ public class StateControllerImpl implements StateController, SnapshotListener {
   }
 
   @Override
-  public void onNewSnapshot(final Snapshot newSnapshot) {
+  public void onNewSnapshot(final PersistedSnapshot newPersistedSnapshot) {
     // replicate snapshots when new snapshot was committed
-    try (final var snapshotChunkReader = newSnapshot.newChunkReader()) {
+    try (final var snapshotChunkReader = newPersistedSnapshot.newChunkReader()) {
       while (snapshotChunkReader.hasNext()) {
         final var snapshotChunk = snapshotChunkReader.next();
         replication.replicate(snapshotChunk);
@@ -261,7 +261,7 @@ public class StateControllerImpl implements StateController, SnapshotListener {
 
     // todo(zell): validate snapshot checksum
     // give it the commit thing?
-    context.getTransientSnapshot().commit();
+    context.getTransientSnapshot().persist();
 
     final var elapsed = System.currentTimeMillis() - context.getStartTimestamp();
     receivedSnapshots.remove(snapshotChunk.getSnapshotId());

@@ -40,7 +40,7 @@ import org.agrona.concurrent.UnsafeBuffer;
  * ordered lexicographically, and the files are assumed to be immutable, i.e. no more are added to
  * the directory once this is created.
  */
-public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
+public final class FileBasedSnapshotChunkReader implements SnapshotChunkReader {
   public static final Charset ID_CHARSET = StandardCharsets.US_ASCII;
   private final Path directory;
   private final NavigableSet<CharSequence> chunks;
@@ -51,7 +51,7 @@ public final class DirBasedSnapshotChunkReader implements SnapshotChunkReader {
   private final long snapshotChecksum;
   private final String snapshotID;
 
-  public DirBasedSnapshotChunkReader(final Path directory) throws IOException {
+  public FileBasedSnapshotChunkReader(final Path directory) throws IOException {
     this.directory = directory;
     this.chunks = collectChunks(directory);
     this.totalCount = chunks.size();

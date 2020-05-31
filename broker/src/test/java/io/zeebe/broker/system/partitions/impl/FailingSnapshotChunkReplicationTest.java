@@ -9,10 +9,10 @@ package io.zeebe.broker.system.partitions.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.SnapshotChunk;
-import io.atomix.raft.snapshot.SnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.broker.system.partitions.SnapshotReplication;
@@ -35,15 +35,15 @@ public final class FailingSnapshotChunkReplicationTest {
 
   private StateControllerImpl replicatorSnapshotController;
   private StateControllerImpl receiverSnapshotController;
-  private SnapshotStore senderStore;
-  private SnapshotStore receiverStore;
+  private PersistedSnapshotStore senderStore;
+  private PersistedSnapshotStore receiverStore;
 
   public void setup(final SnapshotReplication replicator) throws IOException {
     final var senderRoot = tempFolderRule.newFolder("sender").toPath();
-    senderStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(senderRoot, "1");
+    senderStore = new FileBasedSnapshotStoreFactory().createSnapshotStore(senderRoot, "1");
 
     final var receiverRoot = tempFolderRule.newFolder("receiver").toPath();
-    receiverStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
+    receiverStore = new FileBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
 
     replicatorSnapshotController =
         new StateControllerImpl(
@@ -84,7 +84,7 @@ public final class FailingSnapshotChunkReplicationTest {
     final var transientSnapshot = takeSnapshot();
 
     // when
-    transientSnapshot.commit();
+    transientSnapshot.persist();
 
     // then
     final List<SnapshotChunk> replicatedChunks = replicator.replicatedChunks;
@@ -101,7 +101,7 @@ public final class FailingSnapshotChunkReplicationTest {
     final var transientSnapshot = takeSnapshot();
 
     // when
-    transientSnapshot.commit();
+    transientSnapshot.persist();
 
     // then
     final List<SnapshotChunk> replicatedChunks = replicator.replicatedChunks;

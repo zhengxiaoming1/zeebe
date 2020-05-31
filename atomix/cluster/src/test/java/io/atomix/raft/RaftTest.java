@@ -40,7 +40,7 @@ import io.atomix.raft.primitive.TestMember;
 import io.atomix.raft.protocol.TestRaftProtocolFactory;
 import io.atomix.raft.protocol.TestRaftServerProtocol;
 import io.atomix.raft.roles.LeaderRole;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.entry.InitializeEntry;
@@ -199,7 +199,7 @@ public class RaftTest extends ConcurrentTestCase {
             .withDirectory(directory)
             .withMaxEntriesPerSegment(10)
             .withSnapshotStore(
-                new DirBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(), "1"))
+                new FileBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(), "1"))
             .withMaxSegmentSize(1024 * 10)
             .withNamespace(RaftNamespaces.RAFT_STORAGE);
     return configurator.apply(defaults).build();

@@ -11,7 +11,7 @@ import io.atomix.raft.RaftCommitListener;
 import io.atomix.raft.RaftRoleChangeListener;
 import io.atomix.raft.RaftServer.Role;
 import io.atomix.raft.partition.RaftPartition;
-import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
@@ -89,7 +89,7 @@ public final class ZeebePartition extends Actor
   private LogStream logStream;
   private Role raftRole;
   private SnapshotReplication stateReplication;
-  private SnapshotStore snapshotStore;
+  private PersistedSnapshotStore persistedSnapshotStore;
   private StateControllerImpl snapshotController;
   private ZeebeDb zeebeDb;
   private final String actorName;
@@ -403,12 +403,13 @@ public final class ZeebePartition extends Actor
       return CompletableActorFuture.completedExceptionally(e);
     }
 
-    snapshotStore = atomixRaftPartition.getServer().getSnapshotStore();
+    persistedSnapshotStore = atomixRaftPartition.getServer().getPersistedSnapshotStore();
     snapshotController = createSnapshotController();
 
     final LogCompactor logCompactor = new AtomixLogCompactor(atomixRaftPartition.getServer());
     final LogDeletionService deletionService =
-        new LogDeletionService(localBroker.getNodeId(), partitionId, logCompactor, snapshotStore);
+        new LogDeletionService(
+            localBroker.getNodeId(), partitionId, logCompactor, persistedSnapshotStore);
     closeables.add(deletionService);
 
     return scheduler.submitActor(deletionService);
@@ -425,7 +426,7 @@ public final class ZeebePartition extends Actor
     return new StateControllerImpl(
         partitionId,
         DefaultZeebeDbFactory.DEFAULT_DB_FACTORY,
-        snapshotStore,
+        persistedSnapshotStore,
         runtimeDirectory,
         stateReplication,
         new AtomixRecordEntrySupplierImpl(zeebeIndexMapping, reader),
@@ -568,17 +569,17 @@ public final class ZeebePartition extends Actor
   }
 
   private void closeSnapshotStorage() {
-    if (snapshotStore == null) {
+    if (persistedSnapshotStore == null) {
       return;
     }
 
     try {
-      snapshotStore.close();
+      persistedSnapshotStore.close();
     } catch (final Exception e) {
       LOG.error(
           "Unexpected error occurred closing snapshot storage for partition {}", partitionId, e);
     } finally {
-      snapshotStore = null;
+      persistedSnapshotStore = null;
     }
   }
 

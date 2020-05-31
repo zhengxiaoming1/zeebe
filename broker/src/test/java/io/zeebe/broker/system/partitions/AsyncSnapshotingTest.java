@@ -17,9 +17,9 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.atomix.raft.snapshot.Snapshot;
-import io.atomix.raft.snapshot.SnapshotStore;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.PersistedSnapshot;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
+import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.broker.system.partitions.impl.AsyncSnapshotDirector;
@@ -64,19 +64,20 @@ public final class AsyncSnapshotingTest {
   private AsyncSnapshotDirector asyncSnapshotDirector;
   private StreamProcessor mockStreamProcessor;
   private List<ActorCondition> conditionList;
-  private SnapshotStore snapshotStore;
+  private PersistedSnapshotStore persistedSnapshotStore;
   private final AtomicReference<Indexed> indexedAtomicReference = new AtomicReference<>();
 
   @Before
   public void setup() throws IOException {
     final var rootDirectory = tempFolderRule.getRoot().toPath();
-    snapshotStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
+    persistedSnapshotStore =
+        new FileBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
 
     snapshotController =
         new StateControllerImpl(
             1,
             ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class),
-            snapshotStore,
+            persistedSnapshotStore,
             rootDirectory.resolve("runtime"),
             new NoneSnapshotReplication(),
             l ->
@@ -93,7 +94,7 @@ public final class AsyncSnapshotingTest {
     //            ZeebeRocksDbFactory.newFactory(DefaultColumnFamily.class), storage);
     snapshotController.openDb();
     autoCloseableRule.manage(snapshotController);
-    autoCloseableRule.manage(snapshotStore);
+    autoCloseableRule.manage(persistedSnapshotStore);
     snapshotController = spy(snapshotController);
 
     logStream = mock(LogStream.class);
@@ -183,13 +184,16 @@ public final class AsyncSnapshotingTest {
 
     // then
     awaitSnapshot(100);
-    assertThat(snapshotStore.getLatestSnapshot()).get().extracting(Snapshot::index).isEqualTo(100L);
+    assertThat(persistedSnapshotStore.getLatestSnapshot())
+        .get()
+        .extracting(PersistedSnapshot::index)
+        .isEqualTo(100L);
   }
 
   private void awaitSnapshot(final int index) {
     waitUntil(
         () -> {
-          final var optSnapshot = snapshotStore.getLatestSnapshot();
+          final var optSnapshot = persistedSnapshotStore.getLatestSnapshot();
           if (optSnapshot.isPresent()) {
             final var snapshot = optSnapshot.get();
             return snapshot.index() == index;

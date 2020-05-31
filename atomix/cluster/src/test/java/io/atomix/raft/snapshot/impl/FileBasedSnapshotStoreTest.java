@@ -13,9 +13,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.atomix.raft.snapshot.Snapshot;
-import io.atomix.raft.snapshot.SnapshotListener;
-import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.PersistedSnapshot;
+import io.atomix.raft.snapshot.PersistedSnapshotListener;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.utils.time.WallClockTimestamp;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -28,12 +28,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public final class DirBasedSnapshotStoreTest {
+public final class FileBasedSnapshotStoreTest {
   @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private Path snapshotsDirectory;
   private Path pendingDirectory;
-  private DirBasedSnapshotStore store;
+  private FileBasedSnapshotStore store;
 
   @Before
   public void setUp() throws Exception {
@@ -43,14 +43,14 @@ public final class DirBasedSnapshotStoreTest {
 
   @After
   public void tearDown() {
-    Optional.ofNullable(store).ifPresent(SnapshotStore::close);
+    Optional.ofNullable(store).ifPresent(PersistedSnapshotStore::close);
   }
 
   @Test
   public void shouldNotifyListenersOnNewSnapshot() {
     // given
     final var directory = pendingDirectory.resolve("1-1-1-1");
-    final var listener = mock(SnapshotListener.class);
+    final var listener = mock(PersistedSnapshotListener.class);
     final var store = newStore();
     store.addSnapshotListener(listener);
     IoUtil.ensureDirectoryExists(directory.toFile(), "snapshot directory");
@@ -191,19 +191,20 @@ public final class DirBasedSnapshotStoreTest {
     assertThat(store.getLatestSnapshot()).get().isEqualTo(secondSnapshot);
   }
 
-  private Snapshot newCommittedSnapshot(final DirBasedSnapshotStore store, final long index) {
+  private PersistedSnapshot newCommittedSnapshot(
+      final FileBasedSnapshotStore store, final long index) {
     final var directory =
         store
             .getPath()
-            .resolveSibling(DirBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY)
+            .resolveSibling(FileBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY)
             .resolve(String.format("%d-1-1-1", index));
     IoUtil.ensureDirectoryExists(directory.toFile(), "snapshot directory " + index);
     return store.newSnapshot(index, 1, WallClockTimestamp.from(1), directory);
   }
 
-  private DirBasedSnapshotStore newStore() {
+  private FileBasedSnapshotStore newStore() {
     store =
-        new DirBasedSnapshotStore(new SnapshotMetrics("1"), snapshotsDirectory, pendingDirectory);
+        new FileBasedSnapshotStore(new SnapshotMetrics("1"), snapshotsDirectory, pendingDirectory);
     return store;
   }
 }

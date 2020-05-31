@@ -23,7 +23,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public final class DirBasedSnapshotChunkReaderTest {
+public final class FileBasedSnapshotChunkReaderTest {
   @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
@@ -36,7 +36,7 @@ public final class DirBasedSnapshotChunkReaderTest {
 
     // then
     Assertions.assertThat(reader).hasNext();
-    Assertions.assertThat(reader.next().getChunkName()).isEqualTo(asBuffer("bar"));
+    Assertions.assertThat(reader.next().getChunkName()).isEqualTo("bar");
     Assertions.assertThat(reader.nextId()).isEqualTo(asBuffer("foo"));
   }
 
@@ -50,7 +50,7 @@ public final class DirBasedSnapshotChunkReaderTest {
 
     // then
     Assertions.assertThat(reader).hasNext();
-    Assertions.assertThat(reader.next().getChunkName()).isEqualTo(asBuffer("foo"));
+    Assertions.assertThat(reader.next().getChunkName()).isEqualTo("foo");
     Assertions.assertThat(reader.nextId()).isEqualTo(null);
   }
 
@@ -72,7 +72,7 @@ public final class DirBasedSnapshotChunkReaderTest {
   }
 
   private ByteBuffer asBuffer(final CharSequence chunk) {
-    return ByteBuffer.wrap(chunk.toString().getBytes(DirBasedSnapshotChunkReader.ID_CHARSET));
+    return ByteBuffer.wrap(chunk.toString().getBytes(FileBasedSnapshotChunkReader.ID_CHARSET));
   }
 
   private NavigableSet<CharSequence> chunksOf(final CharSequence... chunks) {
@@ -81,7 +81,7 @@ public final class DirBasedSnapshotChunkReaderTest {
     return set;
   }
 
-  private DirBasedSnapshotChunkReader newReader(final NavigableSet<CharSequence> chunks) {
+  private FileBasedSnapshotChunkReader newReader(final NavigableSet<CharSequence> chunks) {
     final var directory = temporaryFolder.getRoot().toPath();
     for (final var chunk : chunks) {
       final var path = directory.resolve(chunk.toString());
@@ -93,7 +93,7 @@ public final class DirBasedSnapshotChunkReaderTest {
     }
 
     try {
-      return new DirBasedSnapshotChunkReader(directory);
+      return new FileBasedSnapshotChunkReader(directory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }

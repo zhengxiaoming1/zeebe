@@ -9,9 +9,9 @@ package io.zeebe.broker.system.partitions.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.SnapshotChunk;
-import io.atomix.raft.snapshot.SnapshotStore;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.broker.system.partitions.SnapshotReplication;
@@ -41,16 +41,16 @@ public final class ReplicateStateControllerTest {
   private StateControllerImpl replicatorSnapshotController;
   private StateControllerImpl receiverSnapshotController;
   private Replicator replicator;
-  private SnapshotStore senderStore;
-  private SnapshotStore receiverStore;
+  private PersistedSnapshotStore senderStore;
+  private PersistedSnapshotStore receiverStore;
 
   @Before
   public void setup() throws IOException {
     final var senderRoot = tempFolderRule.newFolder("sender").toPath();
-    senderStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(senderRoot, "1");
+    senderStore = new FileBasedSnapshotStoreFactory().createSnapshotStore(senderRoot, "1");
 
     final var receiverRoot = tempFolderRule.newFolder("receiver").toPath();
-    receiverStore = new DirBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
+    receiverStore = new FileBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
 
     replicator = new Replicator();
     replicatorSnapshotController =
@@ -93,7 +93,7 @@ public final class ReplicateStateControllerTest {
     final var snapshot = replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
 
     // when
-    snapshot.commit();
+    snapshot.persist();
 
     // then
     final List<SnapshotChunk> replicatedChunks = replicator.replicatedChunks;
@@ -118,7 +118,7 @@ public final class ReplicateStateControllerTest {
     final var snapshot = replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
 
     // when
-    snapshot.commit();
+    snapshot.persist();
 
     // then
     final List<SnapshotChunk> replicatedChunks = replicator.replicatedChunks;
@@ -139,7 +139,7 @@ public final class ReplicateStateControllerTest {
     final var snapshot = replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
 
     // when
-    snapshot.commit();
+    snapshot.persist();
 
     // then
     final RocksDBWrapper wrapper = new RocksDBWrapper();
@@ -159,7 +159,7 @@ public final class ReplicateStateControllerTest {
         replicatorSnapshotController.takeTransientSnapshot(1).orElseThrow();
 
     // when
-    final var snapshot = transientSnapshot.commit();
+    final var snapshot = transientSnapshot.persist();
     receiverSnapshotController.onNewSnapshot(snapshot);
 
     // then

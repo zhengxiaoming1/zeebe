@@ -16,7 +16,7 @@
  */
 package io.atomix.raft.snapshot.impl;
 
-import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.SnapshotChunkReader;
 import io.atomix.raft.snapshot.SnapshotId;
 import io.atomix.utils.time.WallClockTimestamp;
@@ -29,20 +29,20 @@ import java.nio.file.Path;
 import java.util.Objects;
 import org.slf4j.Logger;
 
-public final class DirBasedSnapshot implements Snapshot {
+public final class FileBasedSnapshot implements PersistedSnapshot {
   // version currently hardcoded, could be used for backwards compatibility
   private static final int VERSION = 1;
-  private static final Logger LOGGER = new ZbLogger(DirBasedSnapshot.class);
+  private static final Logger LOGGER = new ZbLogger(FileBasedSnapshot.class);
 
   private final Path directory;
-  private final DirBasedSnapshotMetadata metadata;
+  private final FileBasedSnapshotMetadata metadata;
 
-  DirBasedSnapshot(final Path directory, final DirBasedSnapshotMetadata metadata) {
+  FileBasedSnapshot(final Path directory, final FileBasedSnapshotMetadata metadata) {
     this.directory = directory;
     this.metadata = metadata;
   }
 
-  public DirBasedSnapshotMetadata getMetadata() {
+  public FileBasedSnapshotMetadata getMetadata() {
     return metadata;
   }
 
@@ -73,7 +73,7 @@ public final class DirBasedSnapshot implements Snapshot {
   @Override
   public SnapshotChunkReader newChunkReader() {
     try {
-      return new DirBasedSnapshotChunkReader(directory);
+      return new FileBasedSnapshotChunkReader(directory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -103,12 +103,12 @@ public final class DirBasedSnapshot implements Snapshot {
   }
 
   @Override
-  public int compareTo(final Snapshot other) {
-    if (other instanceof DirBasedSnapshot) {
-      return getMetadata().compareTo(((DirBasedSnapshot) other).getMetadata());
+  public int compareTo(final PersistedSnapshot other) {
+    if (other instanceof FileBasedSnapshot) {
+      return getMetadata().compareTo(((FileBasedSnapshot) other).getMetadata());
     }
 
-    return Snapshot.super.compareTo(other);
+    return PersistedSnapshot.super.compareTo(other);
   }
 
   @Override
@@ -126,7 +126,7 @@ public final class DirBasedSnapshot implements Snapshot {
       return false;
     }
 
-    final DirBasedSnapshot that = (DirBasedSnapshot) o;
+    final FileBasedSnapshot that = (FileBasedSnapshot) o;
     return getDirectory().equals(that.getDirectory()) && getMetadata().equals(that.getMetadata());
   }
 

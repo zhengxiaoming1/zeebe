@@ -18,7 +18,7 @@ package io.atomix.raft.snapshot.impl;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
-import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
@@ -37,14 +37,14 @@ import org.slf4j.Logger;
  * Represents a pending snapshot, that is a snapshot in the process of being written and has not yet
  * been committed to the store.
  */
-public final class DirBasedTransientSnapshot implements TransientSnapshot {
-  private static final Logger LOGGER = new ZbLogger(DirBasedTransientSnapshot.class);
+public final class FileBasedTransientSnapshot implements TransientSnapshot {
+  private static final Logger LOGGER = new ZbLogger(FileBasedTransientSnapshot.class);
 
   private final Path directory;
-  private final DirBasedSnapshotStore snapshotStore;
+  private final FileBasedSnapshotStore snapshotStore;
 
   private ByteBuffer expectedId;
-  private final DirBasedSnapshotMetadata metadata;
+  private final FileBasedSnapshotMetadata metadata;
 
   /**
    * @param index the snapshot's index
@@ -53,19 +53,19 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
    * @param directory the snapshot's working directory (i.e. where we should write chunks)
    * @param snapshotStore the store which will be called when the snapshot is to be committed
    */
-  DirBasedTransientSnapshot(
+  FileBasedTransientSnapshot(
       final long index,
       final long term,
       final WallClockTimestamp timestamp,
       final Path directory,
-      final DirBasedSnapshotStore snapshotStore) {
-    this(new DirBasedSnapshotMetadata(index, term, timestamp), directory, snapshotStore);
+      final FileBasedSnapshotStore snapshotStore) {
+    this(new FileBasedSnapshotMetadata(index, term, timestamp), directory, snapshotStore);
   }
 
-  DirBasedTransientSnapshot(
-      final DirBasedSnapshotMetadata metadata,
+  FileBasedTransientSnapshot(
+      final FileBasedSnapshotMetadata metadata,
       final Path directory,
-      final DirBasedSnapshotStore snapshotStore) {
+      final FileBasedSnapshotStore snapshotStore) {
     this.metadata = metadata;
     this.snapshotStore = snapshotStore;
     this.directory = directory;
@@ -198,7 +198,7 @@ public final class DirBasedTransientSnapshot implements TransientSnapshot {
   }
 
   @Override
-  public Snapshot commit() {
+  public PersistedSnapshot persist() {
     return snapshotStore.newSnapshot(metadata, directory);
   }
 

@@ -189,7 +189,7 @@ public final class AsyncSnapshotDirector extends Actor {
                     currentCommitPosition,
                     lastWrittenEventPosition);
                 try {
-                  pendingSnapshot.commit();
+                  pendingSnapshot.persist();
 
                 } catch (final Exception ex) {
                   LOG.error(ERROR_MSG_MOVE_SNAPSHOT, ex);

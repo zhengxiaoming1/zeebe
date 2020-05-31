@@ -15,27 +15,27 @@ import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 
-public final class DirBasedSnapshotMetadata implements SnapshotId {
-  private static final Logger LOGGER = new ZbLogger(DirBasedSnapshotMetadata.class);
+public final class FileBasedSnapshotMetadata implements SnapshotId {
+  private static final Logger LOGGER = new ZbLogger(FileBasedSnapshotMetadata.class);
   private static final int METADATA_PARTS = 3;
 
   private final long index;
   private final long term;
   private final WallClockTimestamp timestamp;
 
-  DirBasedSnapshotMetadata(final long index, final long term, final WallClockTimestamp timestamp) {
+  FileBasedSnapshotMetadata(final long index, final long term, final WallClockTimestamp timestamp) {
     this.index = index;
     this.term = term;
     this.timestamp = timestamp;
   }
 
-  public static Optional<DirBasedSnapshotMetadata> ofPath(final Path path) {
+  public static Optional<FileBasedSnapshotMetadata> ofPath(final Path path) {
     return ofFileName(path.getFileName().toString());
   }
 
-  static Optional<DirBasedSnapshotMetadata> ofFileName(final String name) {
+  static Optional<FileBasedSnapshotMetadata> ofFileName(final String name) {
     final var parts = name.split("-");
-    Optional<DirBasedSnapshotMetadata> metadata = Optional.empty();
+    Optional<FileBasedSnapshotMetadata> metadata = Optional.empty();
 
     if (parts.length >= METADATA_PARTS) {
       try {
@@ -45,7 +45,7 @@ public final class DirBasedSnapshotMetadata implements SnapshotId {
 
         metadata =
             Optional.of(
-                new DirBasedSnapshotMetadata(index, term, WallClockTimestamp.from(timestamp)));
+                new FileBasedSnapshotMetadata(index, term, WallClockTimestamp.from(timestamp)));
       } catch (final NumberFormatException e) {
         LOGGER.warn("Failed to parse part of snapshot metadata", e);
       }
@@ -88,7 +88,7 @@ public final class DirBasedSnapshotMetadata implements SnapshotId {
       return false;
     }
 
-    final DirBasedSnapshotMetadata that = (DirBasedSnapshotMetadata) other;
+    final FileBasedSnapshotMetadata that = (FileBasedSnapshotMetadata) other;
     return getIndex() == that.getIndex()
         && getTerm() == that.getTerm()
         && Objects.equals(getTimestamp(), that.getTimestamp());

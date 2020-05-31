@@ -13,23 +13,25 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public final class DirBasedSnapshotStoreFactoryTest {
+public final class FileBasedSnapshotStoreFactoryTest {
   @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
   public void shouldCreateDirectoriesIfNotExist() {
     // given
     final var root = temporaryFolder.getRoot().toPath();
-    final var factory = new DirBasedSnapshotStoreFactory();
+    final var factory = new FileBasedSnapshotStoreFactory();
 
     // when
     final var store = factory.createSnapshotStore(root, "ignored");
 
     // then
-    assertThat(root.resolve(DirBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY))
+    assertThat(root.resolve(FileBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY))
         .exists()
         .isDirectory();
-    assertThat(root.resolve(DirBasedSnapshotStoreFactory.PENDING_DIRECTORY)).exists().isDirectory();
+    assertThat(root.resolve(FileBasedSnapshotStoreFactory.PENDING_DIRECTORY))
+        .exists()
+        .isDirectory();
     assertThat(store.getLatestSnapshot()).isEmpty();
   }
 }

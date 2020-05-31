@@ -10,10 +10,10 @@ package io.zeebe.broker.system.partitions.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.atomix.raft.snapshot.Snapshot;
-import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.PersistedSnapshot;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
 import io.atomix.raft.zeebe.ZeebeEntry;
 import io.atomix.storage.journal.Indexed;
 import io.zeebe.db.impl.DefaultColumnFamily;
@@ -39,12 +39,12 @@ public final class StateControllerImplTest {
 
   private final MutableLong exporterPosition = new MutableLong(Long.MAX_VALUE);
   private StateControllerImpl snapshotController;
-  private SnapshotStore store;
+  private PersistedSnapshotStore store;
 
   @Before
   public void setup() throws IOException {
     final var rootDirectory = tempFolderRule.newFolder("state").toPath();
-    store = new DirBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
+    store = new FileBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
 
     snapshotController =
         new StateControllerImpl(
@@ -80,10 +80,12 @@ public final class StateControllerImplTest {
 
     // when
     final var tmpSnapshot = snapshotController.takeTransientSnapshot(snapshotPosition);
-    final var snapshot = tmpSnapshot.map(TransientSnapshot::commit).orElseThrow();
+    final var snapshot = tmpSnapshot.map(TransientSnapshot::persist).orElseThrow();
 
     // then
-    assertThat(snapshot).extracting(Snapshot::getCompactionBound).isEqualTo(exporterPosition.get());
+    assertThat(snapshot)
+        .extracting(PersistedSnapshot::getCompactionBound)
+        .isEqualTo(exporterPosition.get());
   }
 
   @Test
@@ -99,7 +101,7 @@ public final class StateControllerImplTest {
     wrapper.wrap(snapshotController.openDb());
     wrapper.putInt(key, value);
     final var tmpSnapshot = snapshotController.takeTransientSnapshot(snapshotPosition);
-    tmpSnapshot.orElseThrow().commit();
+    tmpSnapshot.orElseThrow().persist();
     snapshotController.close();
     wrapper.wrap(snapshotController.openDb());
 
@@ -232,7 +234,7 @@ public final class StateControllerImplTest {
 
   private File takeSnapshot(final long position) {
     final var snapshot = snapshotController.takeTransientSnapshot(position).orElseThrow();
-    return snapshot.commit().getPath().toFile();
+    return snapshot.persist().getPath().toFile();
   }
 
   private void corruptLatestSnapshot() throws IOException {

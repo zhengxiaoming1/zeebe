@@ -22,7 +22,7 @@ import io.zeebe.util.CloseableSilently;
 import java.io.IOException;
 import java.util.Optional;
 
-public interface SnapshotStore extends CloseableSilently {
+public interface PersistedSnapshotStore extends CloseableSilently {
 
   /**
    * Returns true if a snapshot with the given ID exists already, false otherwise.
@@ -38,18 +38,18 @@ public interface SnapshotStore extends CloseableSilently {
 
   TransientSnapshot takeTransientSnapshot(String snapshotId);
 
-  Optional<Snapshot> getLatestSnapshot();
+  Optional<PersistedSnapshot> getLatestSnapshot();
 
   void purgePendingSnapshots() throws IOException;
 
-  void addSnapshotListener(SnapshotListener listener);
+  void addSnapshotListener(PersistedSnapshotListener listener);
 
-  void removeSnapshotListener(SnapshotListener listener);
+  void removeSnapshotListener(PersistedSnapshotListener listener);
 
   long getCurrentSnapshotIndex();
 
   /**
-   * Deletes a {@link SnapshotStore} from disk.
+   * Deletes a {@link PersistedSnapshotStore} from disk.
    *
    * <p>The snapshot store will be deleted by simply reading {@code snapshot} file names from disk
    * and deleting snapshot files directly. Deleting the snapshot store does not involve reading any

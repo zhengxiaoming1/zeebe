@@ -16,9 +16,9 @@
  */
 package io.atomix.raft.snapshot.impl;
 
-import io.atomix.raft.snapshot.Snapshot;
-import io.atomix.raft.snapshot.SnapshotListener;
-import io.atomix.raft.snapshot.SnapshotStore;
+import io.atomix.raft.snapshot.PersistedSnapshot;
+import io.atomix.raft.snapshot.PersistedSnapshotListener;
+import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
@@ -35,22 +35,22 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.slf4j.Logger;
 
-public final class DirBasedSnapshotStore implements SnapshotStore {
+public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
-  private static final Logger LOGGER = new ZbLogger(DirBasedSnapshotStore.class);
+  private static final Logger LOGGER = new ZbLogger(FileBasedSnapshotStore.class);
 
   // the root snapshotsDirectory where all snapshots should be stored
   private final Path snapshotsDirectory;
   // the root snapshotsDirectory when pending snapshots should be stored
   private final Path pendingDirectory;
   // keeps track of all snapshot modification listeners
-  private final Set<SnapshotListener> listeners;
+  private final Set<PersistedSnapshotListener> listeners;
 
   private final SnapshotMetrics snapshotMetrics;
 
-  private Snapshot currentSnapshot;
+  private PersistedSnapshot currentPersistedSnapshot;
 
-  public DirBasedSnapshotStore(
+  public FileBasedSnapshotStore(
       final SnapshotMetrics snapshotMetrics,
       final Path snapshotsDirectory,
       final Path pendingDirectory) {
@@ -61,26 +61,26 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     this.listeners = new CopyOnWriteArraySet<>();
 
     // load previous snapshots
-    currentSnapshot = loadLatestSnapshot(snapshotsDirectory);
+    currentPersistedSnapshot = loadLatestSnapshot(snapshotsDirectory);
   }
 
-  private Snapshot loadLatestSnapshot(final Path snapshotDirectory) {
-    Snapshot latestSnapshot = null;
+  private PersistedSnapshot loadLatestSnapshot(final Path snapshotDirectory) {
+    PersistedSnapshot latestPersistedSnapshot = null;
     try (final var stream = Files.newDirectoryStream(snapshotDirectory)) {
       for (final var path : stream) {
-        latestSnapshot = collectSnapshot(path);
+        latestPersistedSnapshot = collectSnapshot(path);
       }
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
-    return latestSnapshot;
+    return latestPersistedSnapshot;
   }
 
-  private Snapshot collectSnapshot(final Path path) {
-    final var optionalMeta = DirBasedSnapshotMetadata.ofPath(path);
+  private PersistedSnapshot collectSnapshot(final Path path) {
+    final var optionalMeta = FileBasedSnapshotMetadata.ofPath(path);
     if (optionalMeta.isPresent()) {
       final var metadata = optionalMeta.get();
-      return new DirBasedSnapshot(path, metadata);
+      return new FileBasedSnapshot(path, metadata);
     } else {
       LOGGER.warn("Expected snapshot file format to be %d-%d-%d-%d, but was {}", path);
     }
@@ -102,21 +102,21 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   public TransientSnapshot takeTransientSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp) {
     final var directory = buildPendingSnapshotDirectory(index, term, timestamp);
-    return new DirBasedTransientSnapshot(index, term, timestamp, directory, this);
+    return new FileBasedTransientSnapshot(index, term, timestamp, directory, this);
   }
 
   @Override
   public TransientSnapshot takeTransientSnapshot(final String snapshotId) {
-    final var optMetadata = DirBasedSnapshotMetadata.ofFileName(snapshotId);
+    final var optMetadata = FileBasedSnapshotMetadata.ofFileName(snapshotId);
     final var metadata = optMetadata.orElseThrow();
 
     final var pendingSnapshotDir = pendingDirectory.resolve(metadata.getSnapshotIdAsString());
-    return new DirBasedTransientSnapshot(metadata, pendingSnapshotDir, this);
+    return new FileBasedTransientSnapshot(metadata, pendingSnapshotDir, this);
   }
 
   @Override
-  public Optional<Snapshot> getLatestSnapshot() {
-    return Optional.ofNullable(currentSnapshot);
+  public Optional<PersistedSnapshot> getLatestSnapshot() {
+    return Optional.ofNullable(currentPersistedSnapshot);
   }
 
   @Override
@@ -127,18 +127,18 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   }
 
   @Override
-  public void addSnapshotListener(final SnapshotListener listener) {
+  public void addSnapshotListener(final PersistedSnapshotListener listener) {
     listeners.add(listener);
   }
 
   @Override
-  public void removeSnapshotListener(final SnapshotListener listener) {
+  public void removeSnapshotListener(final PersistedSnapshotListener listener) {
     listeners.remove(listener);
   }
 
   @Override
   public long getCurrentSnapshotIndex() {
-    return getLatestSnapshot().map(Snapshot::index).orElse(0L);
+    return getLatestSnapshot().map(PersistedSnapshot::index).orElse(0L);
   }
 
   @Override
@@ -146,7 +146,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     // currently only called by Atomix when permanently leaving a cluster - it should be safe here
     // to not update the metrics, as they will simply disappear as time moves on. Once we have a
     // single store/replication mechanism, we can consider updating the metrics here
-    currentSnapshot = null;
+    currentPersistedSnapshot = null;
     //    snapshotMetrics.decrementSnapshotCount();
 
     try {
@@ -164,8 +164,8 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     }
   }
 
-  private void observeSnapshotSize(final Snapshot snapshot) {
-    try (final var contents = Files.newDirectoryStream(snapshot.getPath())) {
+  private void observeSnapshotSize(final PersistedSnapshot persistedSnapshot) {
+    try (final var contents = Files.newDirectoryStream(persistedSnapshot.getPath())) {
       var totalSize = 0L;
 
       for (final var path : contents) {
@@ -178,7 +178,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
 
       snapshotMetrics.observeSnapshotSize(totalSize);
     } catch (final IOException e) {
-      LOGGER.warn("Failed to observe size for snapshot {}", snapshot, e);
+      LOGGER.warn("Failed to observe size for snapshot {}", persistedSnapshot, e);
     }
   }
 
@@ -200,7 +200,7 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
   }
 
   private void purgePendingSnapshot(final long cutoffIndex, final Path pendingSnapshot) {
-    final var optionalMetadata = DirBasedSnapshotMetadata.ofPath(pendingSnapshot);
+    final var optionalMetadata = FileBasedSnapshotMetadata.ofPath(pendingSnapshot);
     if (optionalMetadata.isPresent() && optionalMetadata.get().getIndex() < cutoffIndex) {
       try {
         LOGGER.error("Deleted orphaned snapshot {}", pendingSnapshot);
@@ -223,16 +223,17 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
     // nothing to be done
   }
 
-  Snapshot newSnapshot(
+  PersistedSnapshot newSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp, final Path directory) {
-    return newSnapshot(new DirBasedSnapshotMetadata(index, term, timestamp), directory);
+    return newSnapshot(new FileBasedSnapshotMetadata(index, term, timestamp), directory);
   }
 
-  Snapshot newSnapshot(final DirBasedSnapshotMetadata metadata, final Path directory) {
+  PersistedSnapshot newSnapshot(final FileBasedSnapshotMetadata metadata, final Path directory) {
 
-    if (currentSnapshot != null && currentSnapshot.id().compareTo(metadata) >= 0) {
-      LOGGER.debug("Snapshot is older then {} already exists", currentSnapshot);
-      return currentSnapshot;
+    if (currentPersistedSnapshot != null
+        && currentPersistedSnapshot.id().compareTo(metadata) >= 0) {
+      LOGGER.debug("Snapshot is older then {} already exists", currentPersistedSnapshot);
+      return currentPersistedSnapshot;
     }
 
     final var destination = buildSnapshotDirectory(metadata);
@@ -248,23 +249,23 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
       throw new UncheckedIOException(e);
     }
 
-    final var previousSnapshot = currentSnapshot;
+    final var previousSnapshot = currentPersistedSnapshot;
 
-    currentSnapshot = new DirBasedSnapshot(destination, metadata);
+    currentPersistedSnapshot = new FileBasedSnapshot(destination, metadata);
     snapshotMetrics.incrementSnapshotCount();
-    observeSnapshotSize(currentSnapshot);
+    observeSnapshotSize(currentPersistedSnapshot);
 
-    LOGGER.debug("Purging snapshots older than {}", currentSnapshot);
+    LOGGER.debug("Purging snapshots older than {}", currentPersistedSnapshot);
     if (previousSnapshot != null) {
       LOGGER.error("Deleting snapshot {}", previousSnapshot);
       previousSnapshot.delete();
     }
-    purgePendingSnapshots(currentSnapshot.index());
+    purgePendingSnapshots(currentPersistedSnapshot.index());
 
-    listeners.forEach(listener -> listener.onNewSnapshot(currentSnapshot));
+    listeners.forEach(listener -> listener.onNewSnapshot(currentPersistedSnapshot));
 
-    LOGGER.debug("Created new snapshot {}", currentSnapshot);
-    return currentSnapshot;
+    LOGGER.debug("Created new snapshot {}", currentPersistedSnapshot);
+    return currentPersistedSnapshot;
   }
   //
   //  private DirBasedSnapshot put(final DirBasedSnapshot snapshot) {
@@ -320,11 +321,11 @@ public final class DirBasedSnapshotStore implements SnapshotStore {
 
   private Path buildPendingSnapshotDirectory(
       final long index, final long term, final WallClockTimestamp timestamp) {
-    final var metadata = new DirBasedSnapshotMetadata(index, term, timestamp);
+    final var metadata = new FileBasedSnapshotMetadata(index, term, timestamp);
     return pendingDirectory.resolve(metadata.getSnapshotIdAsString());
   }
 
-  private Path buildSnapshotDirectory(final DirBasedSnapshotMetadata metadata) {
+  private Path buildSnapshotDirectory(final FileBasedSnapshotMetadata metadata) {
     return snapshotsDirectory.resolve(metadata.getSnapshotIdAsString());
   }
 }

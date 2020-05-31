@@ -56,7 +56,7 @@ public interface TransientSnapshot {
   void setNextExpected(ByteBuffer nextChunkId);
 
   /** Marks the snapshot as complete and valid. */
-  Snapshot commit();
+  PersistedSnapshot persist();
 
   /**
    * Aborts the pending snapshot, closing all allocated resources and removing any partial files.

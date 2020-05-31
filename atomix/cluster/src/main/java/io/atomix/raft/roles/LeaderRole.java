@@ -42,7 +42,7 @@ import io.atomix.raft.protocol.TransferRequest;
 import io.atomix.raft.protocol.TransferResponse;
 import io.atomix.raft.protocol.VoteRequest;
 import io.atomix.raft.protocol.VoteResponse;
-import io.atomix.raft.snapshot.SnapshotListener;
+import io.atomix.raft.snapshot.PersistedSnapshotListener;
 import io.atomix.raft.storage.log.entry.ConfigurationEntry;
 import io.atomix.raft.storage.log.entry.InitializeEntry;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
@@ -90,7 +90,7 @@ public final class LeaderRole extends ActiveRole implements ZeebeLogAppender {
   }
 
   @Override
-  protected SnapshotListener createSnapshotListener() {
+  protected PersistedSnapshotListener createSnapshotListener() {
     return null;
   }
 
@@ -524,7 +524,7 @@ public final class LeaderRole extends ActiveRole implements ZeebeLogAppender {
                   .withTerm(raft.getTerm())
                   .withSucceeded(false)
                   .withLastLogIndex(raft.getLogWriter().getLastIndex())
-                  .withLastSnapshotIndex(raft.getSnapshotStore().getCurrentSnapshotIndex())
+                  .withLastSnapshotIndex(raft.getPersistedSnapshotStore().getCurrentSnapshotIndex())
                   .build()));
     } else {
       raft.setLeader(request.leader());

@@ -10,7 +10,7 @@ package io.zeebe.broker.logstreams;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.atomix.raft.snapshot.impl.DirBasedSnapshotStore;
+import io.atomix.raft.snapshot.impl.FileBasedSnapshotStore;
 import io.atomix.raft.snapshot.impl.SnapshotMetrics;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLogReader;
@@ -58,7 +58,8 @@ public final class AtomixLogDeletionServiceTest {
   public void setUp() throws IOException {
     compactor = new Compactor();
     deletionService =
-        new LogDeletionService(0, PARTITION_ID, compactor, logStorageRule.getSnapshotStore());
+        new LogDeletionService(
+            0, PARTITION_ID, compactor, logStorageRule.getPersistedSnapshotStore());
     actorScheduler.submitActor(deletionService).join();
   }
 
@@ -126,7 +127,7 @@ public final class AtomixLogDeletionServiceTest {
   }
 
   private void createSnapshot(final long index) {
-    final var store = logStorageRule.getSnapshotStore();
+    final var store = logStorageRule.getPersistedSnapshotStore();
     final var now = WallClockTimestamp.from(System.currentTimeMillis());
     final var transientSnapshot = store.takeTransientSnapshot(index, 0, now);
     transientSnapshot.take(
@@ -138,7 +139,7 @@ public final class AtomixLogDeletionServiceTest {
             throw new UncheckedIOException(e);
           }
         });
-    transientSnapshot.commit();
+    transientSnapshot.persist();
   }
 
   private static RaftStorage.Builder builder(
@@ -148,7 +149,7 @@ public final class AtomixLogDeletionServiceTest {
           // hardcode max segment size to allow a single entry only
           .withMaxSegmentSize(JournalSegmentDescriptor.BYTES + 8 * Integer.BYTES)
           .withSnapshotStore(
-              new DirBasedSnapshotStore(
+              new FileBasedSnapshotStore(
                   new SnapshotMetrics("1"),
                   folder.newFolder("runtime").toPath(),
                   folder.newFolder("snapshots").toPath()));

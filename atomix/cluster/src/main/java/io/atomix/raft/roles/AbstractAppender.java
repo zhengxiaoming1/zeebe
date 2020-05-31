@@ -31,7 +31,7 @@ import io.atomix.raft.protocol.InstallRequest;
 import io.atomix.raft.protocol.InstallResponse;
 import io.atomix.raft.protocol.RaftRequest;
 import io.atomix.raft.protocol.RaftResponse;
-import io.atomix.raft.snapshot.Snapshot;
+import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.SnapshotChunkReader;
 import io.atomix.raft.snapshot.impl.SnapshotChunkImpl;
@@ -116,7 +116,7 @@ abstract class AbstractAppender implements AutoCloseable {
       prevIndex = prevEntry.index();
       prevTerm = prevEntry.entry().term();
     } else {
-      final var optCurrentSnapshot = raft.getSnapshotStore().getLatestSnapshot();
+      final var optCurrentSnapshot = raft.getPersistedSnapshotStore().getLatestSnapshot();
       if (optCurrentSnapshot.isPresent()) {
         final var currentSnapshot = optCurrentSnapshot.get();
         prevIndex = currentSnapshot.index();
@@ -452,16 +452,16 @@ abstract class AbstractAppender implements AutoCloseable {
 
   /** Builds an install request for the given member. */
   protected InstallRequest buildInstallRequest(
-      final RaftMemberContext member, final Snapshot snapshot) {
-    if (member.getNextSnapshotIndex() != snapshot.index()) {
-      member.setNextSnapshotIndex(snapshot.index());
+      final RaftMemberContext member, final PersistedSnapshot persistedSnapshot) {
+    if (member.getNextSnapshotIndex() != persistedSnapshot.index()) {
+      member.setNextSnapshotIndex(persistedSnapshot.index());
       member.setNextSnapshotChunk(null);
     }
 
     final InstallRequest request;
-    synchronized (snapshot) {
+    synchronized (persistedSnapshot) {
       // Open a new snapshot reader.
-      try (final SnapshotChunkReader reader = snapshot.newChunkReader()) {
+      try (final SnapshotChunkReader reader = persistedSnapshot.newChunkReader()) {
         reader.seek(member.getNextSnapshotChunk());
         final SnapshotChunk chunk = reader.next();
 
@@ -473,10 +473,10 @@ abstract class AbstractAppender implements AutoCloseable {
             InstallRequest.builder()
                 .withCurrentTerm(raft.getTerm())
                 .withLeader(leader.memberId())
-                .withIndex(snapshot.index())
-                .withTerm(snapshot.term())
-                .withTimestamp(snapshot.timestamp().unixTimestamp())
-                .withVersion(snapshot.version())
+                .withIndex(persistedSnapshot.index())
+                .withTerm(persistedSnapshot.term())
+                .withTimestamp(persistedSnapshot.timestamp().unixTimestamp())
+                .withVersion(persistedSnapshot.version())
                 .withData(new SnapshotChunkImpl(chunk).toByteBuffer())
                 .withChunkId(ByteBuffer.wrap(chunk.getChunkName().getBytes()))
                 .withInitial(member.getNextSnapshotChunk() == null)

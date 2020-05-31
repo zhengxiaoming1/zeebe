@@ -14,10 +14,23 @@
  *  limitations under the License.
  *
  */
-
 package io.atomix.raft.snapshot;
 
-public interface SnapshotListener {
+import java.nio.file.Path;
 
-  void onNewSnapshot(Snapshot newSnapshot);
+/**
+ * Creates a snapshot store which should store its {@link PersistedSnapshot} and {@link
+ * TransientSnapshot} instances in the given directory.
+ */
+@FunctionalInterface
+public interface PersistedSnapshotStoreFactory {
+
+  /**
+   * Creates a snapshot store operating in the given {@code directory}.
+   *
+   * @param directory the root directory where snapshots should be stored
+   * @param partitionName the partition name for this store
+   * @return a new {@link PersistedSnapshotStore}
+   */
+  PersistedSnapshotStore createSnapshotStore(Path directory, String partitionName);
 }

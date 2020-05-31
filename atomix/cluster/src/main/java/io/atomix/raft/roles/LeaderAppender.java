@@ -285,7 +285,7 @@ final class LeaderAppender extends AbstractAppender {
   }
 
   private void replicateSnapshot(final RaftMemberContext member) {
-    final var optSnapshot = raft.getSnapshotStore().getLatestSnapshot();
+    final var optSnapshot = raft.getPersistedSnapshotStore().getLatestSnapshot();
 
     final var canAppend = member.canAppend();
     if (optSnapshot.isEmpty()) {

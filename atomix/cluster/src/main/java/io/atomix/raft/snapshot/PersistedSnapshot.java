@@ -22,7 +22,7 @@ import io.zeebe.util.CloseableSilently;
 import java.nio.file.Path;
 import java.util.Comparator;
 
-public interface Snapshot extends CloseableSilently, Comparable<Snapshot> {
+public interface PersistedSnapshot extends CloseableSilently, Comparable<PersistedSnapshot> {
 
   /**
    * Returns the snapshot timestamp.
@@ -76,11 +76,11 @@ public interface Snapshot extends CloseableSilently, Comparable<Snapshot> {
   Path getPath();
 
   @Override
-  default int compareTo(final Snapshot other) {
-    return Comparator.comparingLong(Snapshot::index)
-        .thenComparingLong(Snapshot::term)
-        .thenComparing(Snapshot::timestamp)
-        .thenComparing(Snapshot::getCompactionBound)
+  default int compareTo(final PersistedSnapshot other) {
+    return Comparator.comparingLong(PersistedSnapshot::index)
+        .thenComparingLong(PersistedSnapshot::term)
+        .thenComparing(PersistedSnapshot::timestamp)
+        .thenComparing(PersistedSnapshot::getCompactionBound)
         .compare(this, other);
   }
 

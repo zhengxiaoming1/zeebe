@@ -63,14 +63,6 @@ public final class SnapshotMetrics {
   public void incrementSnapshotCount() {
     SNAPSHOT_COUNT.labels(partitionId).inc();
   }
-  //
-  //  public void decrementSnapshotCount() {
-  //    SNAPSHOT_COUNT.labels(partitionId).dec();
-  //  }
-
-  //  public void setSnapshotCount(final int count) {
-  //    SNAPSHOT_COUNT.labels(partitionId).set(count);
-  //  }
 
   public void observeSnapshotSize(final long sizeInBytes) {
     SNAPSHOT_SIZE.labels(partitionId).set(sizeInBytes);

@@ -10,7 +10,7 @@ package io.atomix.raft.snapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import java.util.Comparator;
 
-/** A {@link Snapshot}'s ID is simply a combination of its index and its position. */
+/** A {@link PersistedSnapshot}'s ID is simply a combination of its index and its position. */
 public interface SnapshotId extends Comparable<SnapshotId> {
 
   long getIndex();
