@@ -226,7 +226,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   }
 
   private boolean isCurrentSnapshotNewer(final FileBasedSnapshotMetadata metadata) {
-    return  (currentPersistedSnapshot != null
+    return (currentPersistedSnapshot != null
         && currentPersistedSnapshot.id().compareTo(metadata) >= 0);
   }
 

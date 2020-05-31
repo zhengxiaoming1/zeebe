@@ -35,8 +35,7 @@ import org.junit.rules.TemporaryFolder;
 
 public class FileBasedSnapshotStoreTest {
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private PersistedSnapshotStore persistedSnapshotStore;
   private Path snapshotsDir;
   private Path pendingSnapshotsDir;
@@ -60,7 +59,6 @@ public class FileBasedSnapshotStoreTest {
     pendingSnapshotsDir =
         temporaryFolder.getRoot().toPath().resolve(FileBasedSnapshotStoreFactory.PENDING_DIRECTORY);
   }
-
 
   @Test
   public void shouldCreateSubFoldersOnCreatingDirBasedStore() {

@@ -84,10 +84,13 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
 
   @Override
   public String toString() {
-    return "FileBasedTransientSnapshot{" +
-        "directory=" + directory +
-        ", snapshotStore=" + snapshotStore +
-        ", metadata=" + metadata +
-        '}';
+    return "FileBasedTransientSnapshot{"
+        + "directory="
+        + directory
+        + ", snapshotStore="
+        + snapshotStore
+        + ", metadata="
+        + metadata
+        + '}';
   }
 }
