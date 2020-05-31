@@ -1,3 +1,18 @@
+/*
+ * Copyright © 2020 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.atomix.raft.snapshot;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -30,8 +45,7 @@ import org.junit.rules.TemporaryFolder;
 
 public class SnapshotChunkReaderTest {
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private PersistedSnapshotStore persistedSnapshotStore;
 
   @Before
@@ -72,9 +86,11 @@ public class SnapshotChunkReaderTest {
         .containsExactly(asByteBuffer("file1"), asByteBuffer("file2"), asByteBuffer("file3"));
 
     final var path = persistedSnapshot.getPath();
-    final var paths = Arrays.stream(Objects.requireNonNull(path.toFile().listFiles())).sorted()
-        .map(File::toPath)
-        .collect(Collectors.toList());
+    final var paths =
+        Arrays.stream(Objects.requireNonNull(path.toFile().listFiles()))
+            .sorted()
+            .map(File::toPath)
+            .collect(Collectors.toList());
     final var expectedSnapshotChecksum = ChecksumUtil.createCombinedChecksum(paths);
 
     // chunks should always read in order
@@ -112,16 +128,17 @@ public class SnapshotChunkReaderTest {
     assertThat(snapshotChunkIds).containsExactly(asByteBuffer("file2"), asByteBuffer("file3"));
 
     final var path = persistedSnapshot.getPath();
-    final var paths = Arrays.stream(Objects.requireNonNull(path.toFile().listFiles())).sorted()
-        .map(File::toPath)
-        .collect(Collectors.toList());
+    final var paths =
+        Arrays.stream(Objects.requireNonNull(path.toFile().listFiles()))
+            .sorted()
+            .map(File::toPath)
+            .collect(Collectors.toList());
     final var expectedSnapshotChecksum = ChecksumUtil.createCombinedChecksum(paths);
 
     // chunks should always read in order
     assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(0), "file2", "is");
     assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(1), "file3", "content");
   }
-
 
   @Test
   public void shouldThrowExceptionOnReachingLimit() throws Exception {
@@ -141,14 +158,17 @@ public class SnapshotChunkReaderTest {
     }
 
     // then
-    assertThat( snapshotChunkReader.hasNext()).isFalse();
+    assertThat(snapshotChunkReader.hasNext()).isFalse();
     assertThat(snapshotChunkReader.nextId()).isNull();
 
     assertThatThrownBy(snapshotChunkReader::next).isInstanceOf(NoSuchElementException.class);
   }
 
-  private void assertSnapshotChunk(final long expectedSnapshotChecksum,
-      final SnapshotChunk snapshotChunk, final String fileName, final String chunkContent) {
+  private void assertSnapshotChunk(
+      final long expectedSnapshotChecksum,
+      final SnapshotChunk snapshotChunk,
+      final String fileName,
+      final String chunkContent) {
     assertThat(snapshotChunk.getSnapshotId()).isEqualTo("1-0-123");
     assertThat(snapshotChunk.getChunkName()).isEqualTo(fileName);
     assertThat(snapshotChunk.getContent()).isEqualTo(chunkContent.getBytes());
@@ -164,8 +184,8 @@ public class SnapshotChunkReaderTest {
     return ByteBuffer.wrap(string.getBytes()).order(Protocol.ENDIANNESS);
   }
 
-  private boolean takeSnapshot(final Path path, final List<String> fileNames,
-      final List<String> fileContents) {
+  private boolean takeSnapshot(
+      final Path path, final List<String> fileNames, final List<String> fileContents) {
     assertThat(fileNames).hasSize(fileContents.size());
 
     try {
@@ -175,10 +195,7 @@ public class SnapshotChunkReaderTest {
         final var fileName = fileNames.get(i);
         final var fileContent = fileContents.get(i);
         Files.write(
-            path.resolve(fileName),
-            fileContent.getBytes(),
-            CREATE_NEW,
-            StandardOpenOption.WRITE);
+            path.resolve(fileName), fileContent.getBytes(), CREATE_NEW, StandardOpenOption.WRITE);
       }
     } catch (final IOException e) {
       throw new UncheckedIOException(e);

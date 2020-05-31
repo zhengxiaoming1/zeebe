@@ -82,14 +82,15 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
   public boolean apply(final SnapshotChunk snapshotChunk) throws IOException {
     final var currentSnapshotChecksum = snapshotChunk.getSnapshotChecksum();
 
-    if (expectedSnapshotChecksum == Long.MIN_VALUE)
-    {
+    if (expectedSnapshotChecksum == Long.MIN_VALUE) {
       this.expectedSnapshotChecksum = currentSnapshotChecksum;
     }
 
     if (expectedSnapshotChecksum != currentSnapshotChecksum) {
-      LOGGER.warn("Expected snapshot chunk with equal snapshot checksum {}, but got chunk with snapshot checksum {}.",
-          expectedSnapshotChecksum, currentSnapshotChecksum);
+      LOGGER.warn(
+          "Expected snapshot chunk with equal snapshot checksum {}, but got chunk with snapshot checksum {}.",
+          expectedSnapshotChecksum,
+          currentSnapshotChecksum);
       return FAILED;
     }
 
@@ -147,8 +148,8 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
     final var files = directory.toFile().listFiles();
     Objects.requireNonNull(files);
 
-    final var filePaths = Arrays.stream(files).sorted().map(File::toPath)
-        .collect(Collectors.toList());
+    final var filePaths =
+        Arrays.stream(files).sorted().map(File::toPath).collect(Collectors.toList());
     final long actualSnapshotChecksum;
     try {
       actualSnapshotChecksum = ChecksumUtil.createCombinedChecksum(filePaths);
@@ -157,7 +158,10 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
     }
 
     if (actualSnapshotChecksum != expectedSnapshotChecksum) {
-      throw new IllegalStateException(String.format("Expected snapshot checksum %d, but calculated %d.", expectedSnapshotChecksum, actualSnapshotChecksum));
+      throw new IllegalStateException(
+          String.format(
+              "Expected snapshot checksum %d, but calculated %d.",
+              expectedSnapshotChecksum, actualSnapshotChecksum));
     }
 
     return snapshotStore.newSnapshot(metadata, directory);

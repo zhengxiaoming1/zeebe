@@ -1,3 +1,18 @@
+/*
+ * Copyright © 2020 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.atomix.raft.snapshot;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -21,8 +36,7 @@ import org.junit.rules.TemporaryFolder;
 
 public class ReceviedSnapshotTest {
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private PersistedSnapshotStore senderSnapshotStore;
   private PersistedSnapshotStore receiverSnapshotStore;
@@ -32,8 +46,10 @@ public class ReceviedSnapshotTest {
     final FileBasedSnapshotStoreFactory factory = new FileBasedSnapshotStoreFactory();
     final String partitionName = "1";
 
-    senderSnapshotStore = factory.createSnapshotStore(temporaryFolder.newFolder("sender").toPath(), partitionName);
-    receiverSnapshotStore = factory.createSnapshotStore(temporaryFolder.newFolder("received").toPath(), partitionName);
+    senderSnapshotStore =
+        factory.createSnapshotStore(temporaryFolder.newFolder("sender").toPath(), partitionName);
+    receiverSnapshotStore =
+        factory.createSnapshotStore(temporaryFolder.newFolder("received").toPath(), partitionName);
   }
 
   @Test
@@ -41,8 +57,8 @@ public class ReceviedSnapshotTest {
     // given
 
     // when
-    assertThatThrownBy(() -> receiverSnapshotStore
-        .newReceivedSnapshot("invalid")).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> receiverSnapshotStore.newReceivedSnapshot("invalid"))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -68,8 +84,9 @@ public class ReceviedSnapshotTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
       while (snapshotChunkReader.hasNext()) {
         receivedSnapshot.apply(snapshotChunkReader.next());
@@ -85,11 +102,12 @@ public class ReceviedSnapshotTest {
     assertThat(receivedPersistedSnapshot.getPath()).isNotEqualTo(persistedSnapshot.getPath());
     assertThat(receivedPersistedSnapshot.getIndex()).isEqualTo(persistedSnapshot.getIndex());
     assertThat(receivedPersistedSnapshot.getTerm()).isEqualTo(persistedSnapshot.getTerm());
-    assertThat(receivedPersistedSnapshot.getCompactionBound()).isEqualTo(persistedSnapshot.getCompactionBound());
-    assertThat(receivedPersistedSnapshot.getTimestamp()).isEqualTo(persistedSnapshot.getTimestamp());
+    assertThat(receivedPersistedSnapshot.getCompactionBound())
+        .isEqualTo(persistedSnapshot.getCompactionBound());
+    assertThat(receivedPersistedSnapshot.getTimestamp())
+        .isEqualTo(persistedSnapshot.getTimestamp());
     assertThat(receivedPersistedSnapshot.getId()).isEqualTo(persistedSnapshot.getId());
   }
-
 
   @Test
   public void shouldReturnTrueOnConsumingChunk() throws Exception {
@@ -103,12 +121,12 @@ public class ReceviedSnapshotTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
 
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
-      final var success = receivedSnapshot
-          .apply(snapshotChunkReader.next());
+      final var success = receivedSnapshot.apply(snapshotChunkReader.next());
 
       // then
       assertThat(success).isTrue();
@@ -127,16 +145,16 @@ public class ReceviedSnapshotTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
 
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
-      var success = receivedSnapshot
-          .apply(snapshotChunkReader.next());
+      var success = receivedSnapshot.apply(snapshotChunkReader.next());
       assertThat(success).isTrue();
-      success = receivedSnapshot
-          .apply(new SnapshotChunkWithInvalidSnapshotChunk(snapshotChunkReader.next()));
-
+      success =
+          receivedSnapshot.apply(
+              new SnapshotChunkWithInvalidSnapshotChunk(snapshotChunkReader.next()));
 
       // then
       assertThat(success).isFalse();
@@ -155,13 +173,13 @@ public class ReceviedSnapshotTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
 
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
-      final var success = receivedSnapshot
-          .apply(new InvalidSnapshotChunk(snapshotChunkReader.next()));
-
+      final var success =
+          receivedSnapshot.apply(new InvalidSnapshotChunk(snapshotChunkReader.next()));
 
       // then
       assertThat(success).isFalse();
@@ -178,11 +196,13 @@ public class ReceviedSnapshotTest {
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
       while (snapshotChunkReader.hasNext()) {
-        receivedSnapshot.apply(new SnapshotChunkWithInvalidSnapshotChunk(snapshotChunkReader.next()));
+        receivedSnapshot.apply(
+            new SnapshotChunkWithInvalidSnapshotChunk(snapshotChunkReader.next()));
       }
     }
 
@@ -200,11 +220,13 @@ public class ReceviedSnapshotTest {
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
       while (snapshotChunkReader.hasNext()) {
-        receivedSnapshot.apply(new SnapshotChunkWithInvalidSnapshotChunk(snapshotChunkReader.next()));
+        receivedSnapshot.apply(
+            new SnapshotChunkWithInvalidSnapshotChunk(snapshotChunkReader.next()));
       }
     }
     assertThatThrownBy(receivedSnapshot::persist).isInstanceOf(IllegalStateException.class);
@@ -225,8 +247,9 @@ public class ReceviedSnapshotTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
       while (snapshotChunkReader.hasNext()) {
         receivedSnapshot.apply(snapshotChunkReader.next());
@@ -254,8 +277,9 @@ public class ReceviedSnapshotTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
     try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
       receivedSnapshot.setNextExpected(snapshotChunkReader.nextId());
     }
@@ -276,8 +300,9 @@ public class ReceviedSnapshotTest {
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
 
     // when
     assertThatThrownBy(receivedSnapshot::persist).hasCauseInstanceOf(NoSuchFileException.class);
@@ -293,15 +318,16 @@ public class ReceviedSnapshotTest {
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
-    final var receivedSnapshot = receiverSnapshotStore
-        .newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
 
     // when - then
     receivedSnapshot.abort();
   }
 
-  private boolean takeSnapshot(final Path path, final List<String> fileNames,
-      final List<String> fileContents) {
+  private boolean takeSnapshot(
+      final Path path, final List<String> fileNames, final List<String> fileContents) {
     assertThat(fileNames).hasSize(fileContents.size());
 
     try {
@@ -311,10 +337,7 @@ public class ReceviedSnapshotTest {
         final var fileName = fileNames.get(i);
         final var fileContent = fileContents.get(i);
         Files.write(
-            path.resolve(fileName),
-            fileContent.getBytes(),
-            CREATE_NEW,
-            StandardOpenOption.WRITE);
+            path.resolve(fileName), fileContent.getBytes(), CREATE_NEW, StandardOpenOption.WRITE);
       }
     } catch (final IOException e) {
       throw new UncheckedIOException(e);

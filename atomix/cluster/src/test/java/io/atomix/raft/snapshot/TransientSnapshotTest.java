@@ -1,3 +1,18 @@
+/*
+ * Copyright © 2020 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.atomix.raft.snapshot;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -26,8 +41,7 @@ import org.junit.rules.TemporaryFolder;
 
 public class TransientSnapshotTest {
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private PersistedSnapshotStore persistedSnapshotStore;
   private Path lastTransientSnapshotPath;
 
@@ -50,10 +64,11 @@ public class TransientSnapshotTest {
     final AtomicReference<Path> transientPath = new AtomicReference<>();
 
     // when
-    transientSnapshot.take(p -> {
-      transientPath.set(p);
-    return true;
-    });
+    transientSnapshot.take(
+        p -> {
+          transientPath.set(p);
+          return true;
+        });
 
     // then
     assertThat(transientPath.get()).doesNotExist();
@@ -69,10 +84,11 @@ public class TransientSnapshotTest {
     final AtomicReference<Path> transientPath = new AtomicReference<>();
 
     // when
-    transientSnapshot.take(p -> {
-      transientPath.set(p);
-      return true;
-    });
+    transientSnapshot.take(
+        p -> {
+          transientPath.set(p);
+          return true;
+        });
 
     // then
     assertThat(transientPath.get()).hasFileName("1-0-123");
@@ -117,12 +133,15 @@ public class TransientSnapshotTest {
     final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
 
     // when
-    final var success = transientSnapshot.take(p -> {throw new RuntimeException("EXPECTED");});
+    final var success =
+        transientSnapshot.take(
+            p -> {
+              throw new RuntimeException("EXPECTED");
+            });
 
     // then
     assertThat(success).isFalse();
   }
-
 
   @Test
   public void shouldFailToPersistWhenTakeDoesntWrote() {
@@ -215,7 +234,8 @@ public class TransientSnapshotTest {
     final var previousSnapshot = transientSnapshot.persist();
 
     // when
-    final var newTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
+    final var newTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
     newTransientSnapshot.take(this::takeSnapshot);
     final var persistedSnapshot = newTransientSnapshot.persist();
 
@@ -235,7 +255,8 @@ public class TransientSnapshotTest {
     final var previousSnapshot = transientSnapshot.persist();
 
     // when
-    final var newTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
+    final var newTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
     newTransientSnapshot.take(this::takeSnapshot);
     final var persistedSnapshot = newTransientSnapshot.persist();
 
@@ -281,7 +302,8 @@ public class TransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var newTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
+    final var newTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
     newTransientSnapshot.take(this::takeSnapshot);
     final var oldTransientSnapshotPath = this.lastTransientSnapshotPath;
 

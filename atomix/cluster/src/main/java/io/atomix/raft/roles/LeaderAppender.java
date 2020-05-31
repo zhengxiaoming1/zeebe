@@ -311,7 +311,8 @@ final class LeaderAppender extends AbstractAppender {
     }
 
     if (member.canInstall()) {
-      log.debug("Replicating snapshot {} to {}", snapshot.getIndex(), member.getMember().memberId());
+      log.debug(
+          "Replicating snapshot {} to {}", snapshot.getIndex(), member.getMember().memberId());
       sendInstallRequest(member, buildInstallRequest(member, snapshot));
     }
   }
