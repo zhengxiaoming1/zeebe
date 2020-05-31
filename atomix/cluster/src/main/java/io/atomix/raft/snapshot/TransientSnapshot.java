@@ -17,49 +17,21 @@
 
 package io.atomix.raft.snapshot;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.function.Predicate;
 
-public interface TransientSnapshot {
+/**
+ * An transient snapshot which can be persisted after taking a snapshot.
+ */
+public interface TransientSnapshot extends PersistableSnapshot {
 
+  /**
+   * Takes a snapshot on the given path. This can be persisted later via calling {@link PersistableSnapshot#persist()}.
+   * Based on the implementation this could mean that this is writen before on a temporary folder and then moved to
+   * the valid snapshot directory.
+   *
+   * @param takeSnapshot the predicate which should take the snapshot and should return true on success
+   * @return true on success, false otherwise
+   */
   boolean take(Predicate<Path> takeSnapshot);
-
-  /** @return the snapshot's index */
-  long index();
-
-  /**
-   * Returns true if the chunk identified by the given ID has already been written to the snapshot.
-   *
-   * @param chunkId the chunk ID to check for
-   * @return true if already written, false otherwise
-   */
-  boolean containsChunk(ByteBuffer chunkId);
-
-  /**
-   * Returns true if the chunk identified by chunkId is the expected next chunk, false otherwise.
-   *
-   * @param chunkId the ID of the new chunk
-   * @return true if is expected, false otherwise
-   */
-  boolean isExpectedChunk(ByteBuffer chunkId);
-
-  /** Writes the chunk data {@code chunkData} as identified by {@code chunkId}. */
-  boolean write(SnapshotChunk chunk) throws IOException;
-
-  /**
-   * Sets that the next expected chunk ID is the one with the given {@code nextChunkId}.
-   *
-   * @param nextChunkId the next expected chunk ID
-   */
-  void setNextExpected(ByteBuffer nextChunkId);
-
-  /** Marks the snapshot as complete and valid. */
-  PersistedSnapshot persist();
-
-  /**
-   * Aborts the pending snapshot, closing all allocated resources and removing any partial files.
-   */
-  void abort();
 }

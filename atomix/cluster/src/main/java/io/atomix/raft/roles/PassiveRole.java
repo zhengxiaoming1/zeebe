@@ -37,7 +37,7 @@ import io.atomix.raft.protocol.VoteRequest;
 import io.atomix.raft.protocol.VoteResponse;
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
-import io.atomix.raft.snapshot.TransientSnapshot;
+import io.atomix.raft.snapshot.ReceivedSnapshot;
 import io.atomix.raft.snapshot.impl.SnapshotChunkImpl;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.RaftLogWriter;
@@ -55,7 +55,7 @@ public class PassiveRole extends InactiveRole {
   private final SnapshotReplicationMetrics snapshotReplicationMetrics;
 
   private long pendingSnapshotStartTimestamp;
-  private TransientSnapshot pendingSnapshot;
+  private ReceivedSnapshot pendingSnapshot;
 
   public PassiveRole(final RaftContext context) {
     super(context);
@@ -190,7 +190,7 @@ public class PassiveRole extends InactiveRole {
       }
 
       pendingSnapshot =
-          raft.getPersistedSnapshotStore().takeTransientSnapshot(snapshotChunk.getSnapshotId());
+          raft.getPersistedSnapshotStore().newReceivedSnapshot(snapshotChunk.getSnapshotId());
       pendingSnapshotStartTimestamp = System.currentTimeMillis();
       snapshotReplicationMetrics.incrementCount();
     } else {
@@ -214,7 +214,7 @@ public class PassiveRole extends InactiveRole {
     }
 
     try {
-      final var success = pendingSnapshot.write(snapshotChunk);
+      final var success = pendingSnapshot.apply(snapshotChunk);
 
       if (!success) {
         // todo(zell) react on exceptional cases like checksum doesnt match, chunk already exist

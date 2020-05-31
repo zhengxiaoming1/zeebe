@@ -32,11 +32,24 @@ public interface PersistedSnapshotStore extends CloseableSilently {
    */
   boolean exists(String id);
 
-  // for replication
-  TransientSnapshot takeTransientSnapshot(
+  /**
+   * Starts a new transient snapshot which can be persisted after the snapshot was taken.
+   *
+   * @param index the index to which the snapshot corresponds to
+   * @param term the term to which the snapshots corresponds to
+   * @param timestamp the time to which the snapshots corresponds to
+   * @return the new transient snapshot
+   */
+  TransientSnapshot newTransientSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp);
 
-  TransientSnapshot takeTransientSnapshot(String snapshotId);
+  /**
+   * Starts a new received volatile snapshot which can be persisted later.
+   *
+   * @param snapshotId the snapshot id which is defined as {@code index-term-timestamp}
+   * @return the new volatile received snapshot
+   */
+  ReceivedSnapshot newReceivedSnapshot(String snapshotId);
 
   Optional<PersistedSnapshot> getLatestSnapshot();
 

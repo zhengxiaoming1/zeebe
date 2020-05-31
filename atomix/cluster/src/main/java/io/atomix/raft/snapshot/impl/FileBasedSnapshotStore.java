@@ -19,6 +19,7 @@ package io.atomix.raft.snapshot.impl;
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
 import io.atomix.raft.snapshot.PersistedSnapshotStore;
+import io.atomix.raft.snapshot.ReceivedSnapshot;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
@@ -99,19 +100,19 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   }
 
   @Override
-  public TransientSnapshot takeTransientSnapshot(
+  public TransientSnapshot newTransientSnapshot(
       final long index, final long term, final WallClockTimestamp timestamp) {
     final var directory = buildPendingSnapshotDirectory(index, term, timestamp);
     return new FileBasedTransientSnapshot(index, term, timestamp, directory, this);
   }
 
   @Override
-  public TransientSnapshot takeTransientSnapshot(final String snapshotId) {
+  public ReceivedSnapshot newReceivedSnapshot(final String snapshotId) {
     final var optMetadata = FileBasedSnapshotMetadata.ofFileName(snapshotId);
     final var metadata = optMetadata.orElseThrow();
 
     final var pendingSnapshotDir = pendingDirectory.resolve(metadata.getSnapshotIdAsString());
-    return new FileBasedTransientSnapshot(metadata, pendingSnapshotDir, this);
+    return new FileBasedReceivedSnapshot(metadata, pendingSnapshotDir, this);
   }
 
   @Override

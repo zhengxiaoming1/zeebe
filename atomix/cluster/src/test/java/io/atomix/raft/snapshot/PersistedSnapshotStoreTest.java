@@ -92,14 +92,14 @@ public class PersistedSnapshotStoreTest {
   }
 
   @Test
-  public void shouldTakeTransientSnapshot() {
+  public void shouldTakeReceivedSnapshot() {
     // given
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
 
     // when
-    final var transientSnapshot = persistedSnapshotStore.takeTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newReceivedSnapshot("1-0-123");
 
     // then
     assertThat(transientSnapshot.index()).isEqualTo(index);

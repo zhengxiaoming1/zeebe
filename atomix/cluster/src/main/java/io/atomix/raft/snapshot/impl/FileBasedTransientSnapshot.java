@@ -16,21 +16,14 @@
  */
 package io.atomix.raft.snapshot.impl;
 
-import static java.nio.file.StandardOpenOption.CREATE_NEW;
-
 import io.atomix.raft.snapshot.PersistedSnapshot;
-import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
 import io.zeebe.util.ZbLogger;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.function.Predicate;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
 /**
@@ -42,17 +35,8 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
 
   private final Path directory;
   private final FileBasedSnapshotStore snapshotStore;
-
-  private ByteBuffer expectedId;
   private final FileBasedSnapshotMetadata metadata;
 
-  /**
-   * @param index the snapshot's index
-   * @param term the snapshot's term
-   * @param timestamp the snapshot's creation timestamp
-   * @param directory the snapshot's working directory (i.e. where we should write chunks)
-   * @param snapshotStore the store which will be called when the snapshot is to be committed
-   */
   FileBasedTransientSnapshot(
       final long index,
       final long term,
@@ -90,114 +74,6 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
   }
 
   @Override
-  public long index() {
-    return metadata.getIndex();
-  }
-
-  @Override
-  public boolean containsChunk(final ByteBuffer chunkId) {
-    return Files.exists(directory.resolve(getFile(chunkId)));
-  }
-
-  @Override
-  public boolean isExpectedChunk(final ByteBuffer chunkId) {
-    if (expectedId == null) {
-      return chunkId == null;
-    }
-
-    return expectedId.equals(chunkId);
-  }
-
-  //  @Override
-  //  public void write(final ByteBuffer chunkId, final ByteBuffer chunkData) {
-  //    final var filename = getFile(chunkId);
-  //    final var path = directory.resolve(filename);
-  //
-  //    try {
-  //      FileUtil.ensureDirectoryExists(directory);
-  //    } catch (final IOException e) {
-  //      LOGGER.error("Failed to ensure pending snapshot directory {} exists", directory, e);
-  //      throw new UncheckedIOException(e);
-  //    }
-  //
-  //    try (final var channel =
-  //        Files.newByteChannel(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
-  //      final var expectedToWrite = chunkData.remaining();
-  //      long actualWrittenBytes = 0L;
-  //      while (chunkData.hasRemaining()) {
-  //        actualWrittenBytes += channel.write(chunkData);
-  //      }
-  //
-  //      if (actualWrittenBytes != expectedToWrite) {
-  //        throw new IllegalStateException(
-  //            "Expected to write "
-  //                + expectedToWrite
-  //                + " bytes of the given snapshot chunk with id "
-  //                + chunkId
-  //                + ", but only "
-  //                + actualWrittenBytes
-  //                + " bytes were written");
-  //      }
-  //    } catch (final FileAlreadyExistsException e) {
-  //      LOGGER.debug("Chunk {} of pending snapshot {} already exists at {}", filename, this, path,
-  // e);
-  //    } catch (final IOException e) {
-  //      throw new UncheckedIOException(e);
-  //    }
-  //  }
-
-  @Override
-  public boolean write(final SnapshotChunk snapshotChunk) throws IOException {
-    final String snapshotId = snapshotChunk.getSnapshotId();
-    final String chunkName = snapshotChunk.getChunkName();
-
-    if (snapshotStore.exists(snapshotId)) {
-      LOGGER.debug(
-          "Ignore snapshot snapshotChunk {}, because snapshot {} already exists.",
-          chunkName,
-          snapshotId);
-      return true;
-    }
-
-    final long expectedChecksum = snapshotChunk.getChecksum();
-    final long actualChecksum = SnapshotChunkUtil.createChecksum(snapshotChunk.getContent());
-
-    if (expectedChecksum != actualChecksum) {
-      LOGGER.warn(
-          "Expected to have checksum {} for snapshot snapshotChunk file {} ({}), but calculated {}",
-          expectedChecksum,
-          chunkName,
-          snapshotId,
-          actualChecksum);
-      return false;
-    }
-
-    final var tmpSnapshotDirectory = directory;
-    FileUtil.ensureDirectoryExists(tmpSnapshotDirectory);
-
-    final var snapshotFile = tmpSnapshotDirectory.resolve(chunkName);
-    if (Files.exists(snapshotFile)) {
-      LOGGER.debug("Received a snapshot snapshotChunk which already exist '{}'.", snapshotFile);
-      return false;
-    }
-
-    LOGGER.debug("Consume snapshot snapshotChunk {} of snapshot {}", chunkName, snapshotId);
-    return writeReceivedSnapshotChunk(snapshotChunk, snapshotFile);
-  }
-
-  private boolean writeReceivedSnapshotChunk(
-      final SnapshotChunk snapshotChunk, final Path snapshotFile) throws IOException {
-    Files.write(snapshotFile, snapshotChunk.getContent(), CREATE_NEW, StandardOpenOption.WRITE);
-    LOGGER.trace("Wrote replicated snapshot chunk to file {}", snapshotFile);
-    return true;
-  }
-
-  @Override
-  public void setNextExpected(final ByteBuffer nextChunkId) {
-    expectedId = nextChunkId;
-  }
-
-  @Override
   public PersistedSnapshot persist() {
     return snapshotStore.newSnapshot(metadata, directory);
   }
@@ -218,20 +94,10 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
 
   @Override
   public String toString() {
-    return "DirBasedTransientSnapshot{"
-        + "directory="
-        + directory
-        + ", snapshotStore="
-        + snapshotStore
-        + ", expectedId="
-        + expectedId
-        + ", metadata="
-        + metadata
-        + '}';
-  }
-
-  private String getFile(final ByteBuffer chunkId) {
-    final var view = new UnsafeBuffer(chunkId);
-    return view.getStringWithoutLengthAscii(0, chunkId.remaining());
+    return "FileBasedTransientSnapshot{" +
+        "directory=" + directory +
+        ", snapshotStore=" + snapshotStore +
+        ", metadata=" + metadata +
+        '}';
   }
 }

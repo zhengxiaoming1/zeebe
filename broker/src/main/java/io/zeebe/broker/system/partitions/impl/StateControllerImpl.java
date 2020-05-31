@@ -87,7 +87,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
             .filter(indexed -> indexed.index() != previousSnapshotIndex)
             .map(
                 indexed ->
-                    store.takeTransientSnapshot(
+                    store.newTransientSnapshot(
                         indexed.index(),
                         indexed.entry().term(),
                         WallClockTimestamp.from(System.currentTimeMillis())));
@@ -205,7 +205,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
             id -> {
               final var startTimestamp = System.currentTimeMillis();
               final TransientSnapshot transientSnapshot =
-                  store.takeTransientSnapshot(snapshotChunk.getSnapshotId());
+                  store.newReceivedSnapshot(snapshotChunk.getSnapshotId());
               return newReplication(startTimestamp, transientSnapshot);
             });
     if (context == INVALID_SNAPSHOT) {
