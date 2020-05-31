@@ -141,7 +141,7 @@ public final class FileBasedSnapshot implements PersistedSnapshot {
   }
 
   @Override
-  public SnapshotId id() {
+  public SnapshotId getId() {
     return metadata;
   }
 }

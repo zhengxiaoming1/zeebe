@@ -20,25 +20,34 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.ReceivedSnapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
+import io.zeebe.util.ChecksumUtil;
 import io.zeebe.util.FileUtil;
 import io.zeebe.util.ZbLogger;
+import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
 public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
 
   private static final Logger LOGGER = new ZbLogger(FileBasedReceivedSnapshot.class);
+  private static final boolean FAILED = false;
+  private static final boolean SUCCESS = true;
 
   private final Path directory;
   private final FileBasedSnapshotStore snapshotStore;
 
   private ByteBuffer expectedId;
   private final FileBasedSnapshotMetadata metadata;
+  private long expectedSnapshotChecksum;
 
   FileBasedReceivedSnapshot(
       final FileBasedSnapshotMetadata metadata,
@@ -47,6 +56,7 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
     this.metadata = metadata;
     this.snapshotStore = snapshotStore;
     this.directory = directory;
+    this.expectedSnapshotChecksum = Long.MIN_VALUE;
   }
 
   @Override
@@ -70,6 +80,19 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
 
   @Override
   public boolean apply(final SnapshotChunk snapshotChunk) throws IOException {
+    final var currentSnapshotChecksum = snapshotChunk.getSnapshotChecksum();
+
+    if (expectedSnapshotChecksum == Long.MIN_VALUE)
+    {
+      this.expectedSnapshotChecksum = currentSnapshotChecksum;
+    }
+
+    if (expectedSnapshotChecksum != currentSnapshotChecksum) {
+      LOGGER.warn("Expected snapshot chunk with equal snapshot checksum {}, but got chunk with snapshot checksum {}.",
+          expectedSnapshotChecksum, currentSnapshotChecksum);
+      return FAILED;
+    }
+
     final String snapshotId = snapshotChunk.getSnapshotId();
     final String chunkName = snapshotChunk.getChunkName();
 
@@ -78,7 +101,7 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
           "Ignore snapshot snapshotChunk {}, because snapshot {} already exists.",
           chunkName,
           snapshotId);
-      return true;
+      return SUCCESS;
     }
 
     final long expectedChecksum = snapshotChunk.getChecksum();
@@ -86,12 +109,12 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
 
     if (expectedChecksum != actualChecksum) {
       LOGGER.warn(
-          "Expected to have checksum {} for snapshot snapshotChunk file {} ({}), but calculated {}",
+          "Expected to have checksum {} for snapshot chunk {} ({}), but calculated {}",
           expectedChecksum,
           chunkName,
           snapshotId,
           actualChecksum);
-      return false;
+      return FAILED;
     }
 
     final var tmpSnapshotDirectory = directory;
@@ -100,7 +123,7 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
     final var snapshotFile = tmpSnapshotDirectory.resolve(chunkName);
     if (Files.exists(snapshotFile)) {
       LOGGER.debug("Received a snapshot snapshotChunk which already exist '{}'.", snapshotFile);
-      return false;
+      return FAILED;
     }
 
     LOGGER.debug("Consume snapshot snapshotChunk {} of snapshot {}", chunkName, snapshotId);
@@ -111,7 +134,7 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
       final SnapshotChunk snapshotChunk, final Path snapshotFile) throws IOException {
     Files.write(snapshotFile, snapshotChunk.getContent(), CREATE_NEW, StandardOpenOption.WRITE);
     LOGGER.trace("Wrote replicated snapshot chunk to file {}", snapshotFile);
-    return true;
+    return SUCCESS;
   }
 
   @Override
@@ -121,6 +144,22 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
 
   @Override
   public PersistedSnapshot persist() {
+    final var files = directory.toFile().listFiles();
+    Objects.requireNonNull(files);
+
+    final var filePaths = Arrays.stream(files).sorted().map(File::toPath)
+        .collect(Collectors.toList());
+    final long actualSnapshotChecksum;
+    try {
+      actualSnapshotChecksum = ChecksumUtil.createCombinedChecksum(filePaths);
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Unexpected exception on calculating snapshot checksum.", e);
+    }
+
+    if (actualSnapshotChecksum != expectedSnapshotChecksum) {
+      throw new IllegalStateException(String.format("Expected snapshot checksum %d, but calculated %d.", expectedSnapshotChecksum, actualSnapshotChecksum));
+    }
+
     return snapshotStore.newSnapshot(metadata, directory);
   }
 

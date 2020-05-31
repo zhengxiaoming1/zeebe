@@ -92,5 +92,5 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
    */
   long getCompactionBound();
 
-  SnapshotId id();
+  SnapshotId getId();
 }

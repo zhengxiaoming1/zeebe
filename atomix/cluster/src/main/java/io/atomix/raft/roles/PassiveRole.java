@@ -213,16 +213,15 @@ public class PassiveRole extends InactiveRole {
       }
     }
 
+    boolean snapshotChunkConsumptionFailed;
     try {
-      final var success = pendingSnapshot.apply(snapshotChunk);
-
-      if (!success) {
-        // todo(zell) react on exceptional cases like checksum doesnt match, chunk already exist
-        // etc.
-      }
-
+      snapshotChunkConsumptionFailed = !pendingSnapshot.apply(snapshotChunk);
     } catch (final Exception e) {
       log.error("Failed to write pending snapshot chunk {}, rolling back", pendingSnapshot, e);
+      snapshotChunkConsumptionFailed = true;
+    }
+
+    if (snapshotChunkConsumptionFailed) {
       abortPendingSnapshots();
       return CompletableFuture.completedFuture(
           logResponse(

@@ -110,7 +110,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   @Override
   public ReceivedSnapshot newReceivedSnapshot(final String snapshotId) {
     final var optMetadata = FileBasedSnapshotMetadata.ofFileName(snapshotId);
-    final var metadata = optMetadata.orElseThrow();
+    final var metadata = optMetadata.orElseThrow(() -> new IllegalArgumentException("Expected snapshot id in a format like 'index-term-timestamp', got '" + snapshotId + "'."));
 
     final var pendingSnapshotDir = pendingDirectory.resolve(metadata.getSnapshotIdAsString());
     return new FileBasedReceivedSnapshot(metadata, pendingSnapshotDir, this);
@@ -227,7 +227,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   private boolean isCurrentSnapshotNewer(final FileBasedSnapshotMetadata metadata) {
     return (currentPersistedSnapshot != null
-        && currentPersistedSnapshot.id().compareTo(metadata) >= 0);
+        && currentPersistedSnapshot.getId().compareTo(metadata) >= 0);
   }
 
   PersistedSnapshot newSnapshot(final FileBasedSnapshotMetadata metadata, final Path directory) {

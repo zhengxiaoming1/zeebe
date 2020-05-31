@@ -259,24 +259,19 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
 
   private boolean tryToMarkSnapshotAsValid(
       final SnapshotChunk snapshotChunk, final ReplicationContext context) {
-
-    // todo(zell): validate snapshot checksum
-    // give it the commit thing?
-    context.getReceivedSnapshot().persist();
-
-    final var elapsed = System.currentTimeMillis() - context.getStartTimestamp();
-    receivedSnapshots.remove(snapshotChunk.getSnapshotId());
-    metrics.decrementCount();
-    metrics.observeDuration(elapsed);
-
+    try {
+      context.getReceivedSnapshot().persist();
+    } catch (final Exception exception) {
+      markSnapshotAsInvalid(context, snapshotChunk);
+      LOG.warn("Unexpected error on persisting received snapshot.", exception);
+      return false;
+    } finally {
+      final var elapsed = System.currentTimeMillis() - context.getStartTimestamp();
+      receivedSnapshots.remove(snapshotChunk.getSnapshotId());
+      metrics.decrementCount();
+      metrics.observeDuration(elapsed);
+    }
     return true;
-
-    // todo(zell): check if verification works
-    //      return true;
-    //    } else {
-    //      markSnapshotAsInvalid(context, snapshotChunk);
-    //      return false;
-    //    }
   }
 
   private ReplicationContext newReplication(

@@ -166,7 +166,7 @@ public class TransientSnapshotTest {
     assertThat(persistedSnapshot.getTerm()).isEqualTo(0L);
     assertThat(persistedSnapshot.getTimestamp()).isEqualTo(time);
 
-    final var snapshotId = persistedSnapshot.id();
+    final var snapshotId = persistedSnapshot.getId();
     assertThat(snapshotId.getSnapshotIdAsString()).isEqualTo("1-0-123");
     assertThat(snapshotId.getIndex()).isEqualTo(1L);
     assertThat(snapshotId.getTerm()).isEqualTo(0L);
@@ -220,7 +220,7 @@ public class TransientSnapshotTest {
     final var persistedSnapshot = newTransientSnapshot.persist();
 
     // then
-    assertThat(previousSnapshot.id()).isLessThan(persistedSnapshot.id());
+    assertThat(previousSnapshot.getId()).isLessThan(persistedSnapshot.getId());
     assertThat(previousSnapshot).isLessThan(persistedSnapshot);
   }
 
