@@ -25,7 +25,6 @@ import io.zeebe.util.FileUtil;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
@@ -131,6 +130,87 @@ public class ReceviedSnapshotTest {
       // then
       assertThat(success).isTrue();
     }
+  }
+
+  @Test
+  public void shouldReturnFalseOnConsumingChunkTwice() throws Exception {
+    // given
+    final var index = 1L;
+    final var term = 0L;
+    final var time = WallClockTimestamp.from(123);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    transientSnapshot.take(
+        p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
+    final var persistedSnapshot = transientSnapshot.persist();
+
+    // when
+    final var receivedSnapshot =
+        receiverSnapshotStore.newReceivedSnapshot(
+            persistedSnapshot.getId().getSnapshotIdAsString());
+
+    try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
+      receivedSnapshot.apply(snapshotChunkReader.next());
+    }
+
+    try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
+      final var success = receivedSnapshot.apply(snapshotChunkReader.next());
+
+      // then
+      assertThat(success).isFalse();
+    }
+  }
+
+  @Test
+  public void shouldReturnTrueWhenSnapshotAlreadyExist() throws Exception {
+    // given
+    final var index = 1L;
+    final var term = 0L;
+    final var time = WallClockTimestamp.from(123);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    transientSnapshot.take(
+        p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
+    final var persistedSnapshot = transientSnapshot.persist();
+
+    // when - sender store receives chunk
+    final var receivedSnapshot =
+        senderSnapshotStore.newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
+      while (snapshotChunkReader.hasNext()) {
+        final var success = receivedSnapshot.apply(snapshotChunkReader.next());
+
+        // then
+        assertThat(success).isTrue();
+      }
+    }
+  }
+
+  @Test
+  public void shouldReturnAlreadyExistingSnapshotOnPersist() throws Exception {
+    // given
+    final var index = 1L;
+    final var term = 0L;
+    final var time = WallClockTimestamp.from(123);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    transientSnapshot.take(
+        p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
+    final var persistedSnapshot = transientSnapshot.persist();
+
+    // when - sender store receives chunk
+    final var receivedSnapshot =
+        senderSnapshotStore.newReceivedSnapshot(persistedSnapshot.getId().getSnapshotIdAsString());
+    try (final var snapshotChunkReader = persistedSnapshot.newChunkReader()) {
+      while (snapshotChunkReader.hasNext()) {
+        final var success = receivedSnapshot.apply(snapshotChunkReader.next());
+
+        // then
+        assertThat(success).isTrue();
+      }
+    }
+    final var persistedReceivedSnapshot = receivedSnapshot.persist();
+
+    // then
+    assertThat(persistedReceivedSnapshot).isEqualTo(persistedSnapshot);
+    assertThat(persistedReceivedSnapshot == persistedSnapshot).isTrue();
   }
 
   @Test
@@ -305,7 +385,7 @@ public class ReceviedSnapshotTest {
             persistedSnapshot.getId().getSnapshotIdAsString());
 
     // when
-    assertThatThrownBy(receivedSnapshot::persist).hasCauseInstanceOf(NoSuchFileException.class);
+    assertThatThrownBy(receivedSnapshot::persist).isInstanceOf(NullPointerException.class);
   }
 
   @Test

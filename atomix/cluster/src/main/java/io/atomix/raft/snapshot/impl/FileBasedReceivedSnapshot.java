@@ -145,8 +145,13 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
 
   @Override
   public PersistedSnapshot persist() {
+    if (snapshotStore.exists(metadata.getSnapshotIdAsString())) {
+      abort();
+      return snapshotStore.getLatestSnapshot().orElseThrow();
+    }
+
     final var files = directory.toFile().listFiles();
-    Objects.requireNonNull(files);
+    Objects.requireNonNull(files, "No chunks have been applied yet");
 
     final var filePaths =
         Arrays.stream(files).sorted().map(File::toPath).collect(Collectors.toList());
