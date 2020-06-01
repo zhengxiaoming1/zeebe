@@ -134,6 +134,49 @@ public class FileBasedTransientSnapshotTest {
   }
 
   @Test
+  public void shouldPurgePendingOnStore() throws Exception {
+    // given
+    final var index = 1L;
+    final var term = 0L;
+    final var time = WallClockTimestamp.from(123);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    transientSnapshot.take(this::createSnapshotDir);
+
+    // when
+    persistedSnapshotStore.purgePendingSnapshots();
+
+    // then
+    assertThat(snapshotsDir.toFile().listFiles()).isEmpty();
+    assertThat(pendingSnapshotsDir.toFile().listFiles()).isEmpty();
+  }
+
+  @Test
+  public void shouldNotDeletePersistedSnapshotOnPurge() throws Exception {
+    // given
+    final var index = 1L;
+    final var term = 0L;
+    final var time = WallClockTimestamp.from(123);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    transientSnapshot.take(this::createSnapshotDir);
+    transientSnapshot.persist();
+
+    // when
+    persistedSnapshotStore.purgePendingSnapshots();
+
+    // then
+    assertThat(pendingSnapshotsDir.toFile().listFiles()).isEmpty();
+    final var snapshotDirs = snapshotsDir.toFile().listFiles();
+    assertThat(snapshotDirs).isNotNull().hasSize(1);
+
+    final var pendingSnapshotDir = snapshotDirs[0];
+    assertThat(pendingSnapshotDir.getName()).isEqualTo("1-0-123");
+    assertThat(pendingSnapshotDir.listFiles())
+        .isNotNull()
+        .extracting(File::getName)
+        .containsExactly("file1.txt");
+  }
+
+  @Test
   public void shouldCommitTakenSnapshot() {
     // given
     final var index = 1L;
