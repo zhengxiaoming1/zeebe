@@ -19,6 +19,7 @@ package io.atomix.raft.snapshot.impl;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
+import java.util.concurrent.Callable;
 
 public final class SnapshotMetrics {
   private static final String NAMESPACE = "zeebe";
@@ -38,11 +39,11 @@ public final class SnapshotMetrics {
           .name("snapshot_size_bytes")
           .help("Estimated snapshot size on disk")
           .register();
-  private static final Gauge SNAPSHOT_DURATION =
-      Gauge.build()
+  private static final Histogram SNAPSHOT_DURATION =
+      Histogram.build()
           .namespace(NAMESPACE)
           .labelNames(PARTITION_LABEL_NAME)
-          .name("snapshot_duration_milliseconds")
+          .name("snapshot_duration")
           .help("Approximate duration of snapshot operation")
           .register();
   private static final Histogram SNAPSHOT_FILE_SIZE =
@@ -60,19 +61,19 @@ public final class SnapshotMetrics {
     this.partitionId = partitionName;
   }
 
-  public void incrementSnapshotCount() {
+  void incrementSnapshotCount() {
     SNAPSHOT_COUNT.labels(partitionId).inc();
   }
 
-  public void observeSnapshotSize(final long sizeInBytes) {
+  void observeSnapshotSize(final long sizeInBytes) {
     SNAPSHOT_SIZE.labels(partitionId).set(sizeInBytes);
   }
 
-  public void observeSnapshotFileSize(final long sizeInBytes) {
+  void observeSnapshotFileSize(final long sizeInBytes) {
     SNAPSHOT_FILE_SIZE.labels(partitionId).observe(sizeInBytes / 1_000_000f);
   }
 
-  public void observeSnapshotOperation(final long elapsedMillis) {
-    SNAPSHOT_DURATION.labels(partitionId).set(elapsedMillis);
+  boolean observeSnapshotOperation(final Callable<Boolean> snapshotTake) {
+    return SNAPSHOT_DURATION.labels(partitionId).time(snapshotTake);
   }
 }

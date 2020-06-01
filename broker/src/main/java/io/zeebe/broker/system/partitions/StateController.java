@@ -25,9 +25,7 @@ public interface StateController extends AutoCloseable {
   void consumeReplicatedSnapshots();
 
   /**
-   * Recovers the state from the latest snapshot and returns the lower bound snapshot position.
-   *
-   * @return the lower bound position related to the snapshot
+   * Recovers the state from the latest snapshot.
    */
   void recover() throws Exception;
 

@@ -151,11 +151,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   @Override
   public void delete() {
-    // currently only called by Atomix when permanently leaving a cluster - it should be safe here
-    // to not update the metrics, as they will simply disappear as time moves on. Once we have a
-    // single store/replication mechanism, we can consider updating the metrics here
     currentPersistedSnapshot = null;
-    //    snapshotMetrics.decrementSnapshotCount();
 
     try {
       LOGGER.error("DELETE FOLDER {}", snapshotsDirectory);
@@ -203,7 +199,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     } catch (final IOException e) {
       LOGGER.warn(
           "Failed to delete orphaned snapshots, could not list pending directory {}",
-          pendingDirectory);
+          pendingDirectory, e);
     }
   }
 
@@ -217,7 +213,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       } catch (final IOException e) {
         LOGGER.warn(
             "Failed to delete orphaned snapshot {}, risk using unnecessary disk space",
-            pendingSnapshot);
+            pendingSnapshot, e);
       }
     }
   }
@@ -228,7 +224,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   @Override
   public void close() {
-    // nothing to be done
+    listeners.clear();
   }
 
   private boolean isCurrentSnapshotNewer(final FileBasedSnapshotMetadata metadata) {
@@ -275,46 +271,13 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     LOGGER.debug("Created new snapshot {}", currentPersistedSnapshot);
     return currentPersistedSnapshot;
   }
-  //
-  //  private DirBasedSnapshot put(final DirBasedSnapshot snapshot) {
-  //    // caveat: if the metadata is the same but the location is different, this will do nothing
-  //    final var previous = snapshots.put(snapshot.getMetadata(), snapshot);
-  //    if (previous == null) {
-  //      listeners.forEach(listener -> listener.onNewSnapshot(snapshot));
-  //    }
-  //
-  //    LOGGER.debug("Committed new snapshot {}", snapshot);
-  //    return snapshot;
-  //  }
-  //
-  //  private DirBasedSnapshot put(final Path directory, final DirBasedSnapshotMetadata metadata) {
-  //    if (snapshots.containsKey(metadata)) {
-  //      LOGGER.debug("Snapshot {} already exists", metadata);
-  //      return snapshots.get(metadata);
-  //    }
-  //
-  //    final var destination = buildSnapshotDirectory(metadata);
-  //    try {
-  //      tryAtomicDirectoryMove(directory, destination);
-  //    } catch (final FileAlreadyExistsException e) {
-  //      LOGGER.debug(
-  //          "Expected to move snapshot from {} to {}, but it already exists",
-  //          directory,
-  //          destination,
-  //          e);
-  //    } catch (final IOException e) {
-  //      throw new UncheckedIOException(e);
-  //    }
-  //
-  //    return put(new DirBasedSnapshot(destination, metadata));
-  //  }
 
   private void purgePendingSnapshot(final Path pendingSnapshot) {
     try {
       FileUtil.deleteFolder(pendingSnapshot);
       LOGGER.error("Delete not completed (orphaned) snapshot {}", pendingSnapshot);
     } catch (final IOException e) {
-      LOGGER.error("Failed to delete not completed (orphaned) snapshot {}", pendingSnapshot);
+      LOGGER.error("Failed to delete not completed (orphaned) snapshot {}", pendingSnapshot, e);
     }
   }
 
@@ -335,5 +298,9 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   private Path buildSnapshotDirectory(final FileBasedSnapshotMetadata metadata) {
     return snapshotsDirectory.resolve(metadata.getSnapshotIdAsString());
+  }
+
+  SnapshotMetrics getSnapshotMetrics() {
+    return snapshotMetrics;
   }
 }

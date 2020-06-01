@@ -41,7 +41,8 @@ import org.agrona.concurrent.UnsafeBuffer;
  * the directory once this is created.
  */
 public final class FileBasedSnapshotChunkReader implements SnapshotChunkReader {
-  public static final Charset ID_CHARSET = StandardCharsets.US_ASCII;
+  static final Charset ID_CHARSET = StandardCharsets.US_ASCII;
+
   private final Path directory;
   private final NavigableSet<CharSequence> chunks;
   private final CharSequenceView chunkIdView;
@@ -51,7 +52,7 @@ public final class FileBasedSnapshotChunkReader implements SnapshotChunkReader {
   private final long snapshotChecksum;
   private final String snapshotID;
 
-  public FileBasedSnapshotChunkReader(final Path directory) throws IOException {
+  FileBasedSnapshotChunkReader(final Path directory) throws IOException {
     this.directory = directory;
     this.chunks = collectChunks(directory);
     this.totalCount = chunks.size();
@@ -95,7 +96,8 @@ public final class FileBasedSnapshotChunkReader implements SnapshotChunkReader {
 
   @Override
   public void close() {
-    // nothing to do
+    chunks.clear();
+    chunksView.clear();
   }
 
   @Override
