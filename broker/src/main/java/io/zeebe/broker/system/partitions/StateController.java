@@ -24,9 +24,7 @@ public interface StateController extends AutoCloseable {
   /** Registers to consumes replicated snapshots. */
   void consumeReplicatedSnapshots();
 
-  /**
-   * Recovers the state from the latest snapshot.
-   */
+  /** Recovers the state from the latest snapshot. */
   void recover() throws Exception;
 
   /**

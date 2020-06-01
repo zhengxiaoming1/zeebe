@@ -49,7 +49,7 @@ public class FileBasedReceivedSnapshotTest {
   private FileBasedSnapshotStoreFactory factory;
 
   @Before
-  public void before() throws Exception{
+  public void before() throws Exception {
     factory = new FileBasedSnapshotStoreFactory();
     final String partitionName = "1";
     final File senderRoot = temporaryFolder.newFolder("sender");
@@ -57,14 +57,12 @@ public class FileBasedReceivedSnapshotTest {
     senderSnapshotStore = factory.createSnapshotStore(senderRoot.toPath(), partitionName);
 
     final var receiverRoot = temporaryFolder.newFolder("received");
-    receiverSnapshotStore =
-        factory.createSnapshotStore(receiverRoot.toPath(), partitionName);
+    receiverSnapshotStore = factory.createSnapshotStore(receiverRoot.toPath(), partitionName);
 
-    receiverSnapshotsDir = receiverRoot
-        .toPath()
-        .resolve(FileBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY);
-    receiverPendingSnapshotsDir = receiverRoot.toPath().resolve(FileBasedSnapshotStoreFactory.PENDING_DIRECTORY);
-
+    receiverSnapshotsDir =
+        receiverRoot.toPath().resolve(FileBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY);
+    receiverPendingSnapshotsDir =
+        receiverRoot.toPath().resolve(FileBasedSnapshotStoreFactory.PENDING_DIRECTORY);
   }
 
   @Test
@@ -221,7 +219,7 @@ public class FileBasedReceivedSnapshotTest {
   }
 
   @Test
-  public void shouldRemovePendingSnapshotOnCommittingSnapshot() throws Exception{
+  public void shouldRemovePendingSnapshotOnCommittingSnapshot() throws Exception {
     // given
     final var index = 1L;
     final var term = 0L;
@@ -252,11 +250,11 @@ public class FileBasedReceivedSnapshotTest {
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
 
-    final var otherStore = factory.createSnapshotStore(temporaryFolder.newFolder("other").toPath(), "1");
+    final var otherStore =
+        factory.createSnapshotStore(temporaryFolder.newFolder("other").toPath(), "1");
     final var olderTransient = otherStore.newTransientSnapshot(index, term, time);
     olderTransient.take(this::takeSnapshot);
     final var olderPersistedSnapshot = olderTransient.persist();
-
 
     final var newTransient = senderSnapshotStore.newTransientSnapshot(index + 1, term, time);
     newTransient.take(this::takeSnapshot);
@@ -322,8 +320,8 @@ public class FileBasedReceivedSnapshotTest {
     verify(listener, times(0)).onNewSnapshot(eq(persistedSnapshot));
   }
 
-  private ReceivedSnapshot takeAndReceiveSnapshot(final long index, final long term,
-      final WallClockTimestamp time) throws IOException {
+  private ReceivedSnapshot takeAndReceiveSnapshot(
+      final long index, final long term, final WallClockTimestamp time) throws IOException {
     final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
     transientSnapshot.take(this::takeSnapshot);
     final var persistedSnapshot = transientSnapshot.persist();

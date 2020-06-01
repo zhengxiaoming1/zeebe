@@ -199,7 +199,8 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     } catch (final IOException e) {
       LOGGER.warn(
           "Failed to delete orphaned snapshots, could not list pending directory {}",
-          pendingDirectory, e);
+          pendingDirectory,
+          e);
     }
   }
 
@@ -213,7 +214,8 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       } catch (final IOException e) {
         LOGGER.warn(
             "Failed to delete orphaned snapshot {}, risk using unnecessary disk space",
-            pendingSnapshot, e);
+            pendingSnapshot,
+            e);
       }
     }
   }
