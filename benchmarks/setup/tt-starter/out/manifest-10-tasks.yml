@@ -22,8 +22,8 @@ data:
     replicationFactor = 1
 
     [threads]
-    cpuThreadCount = 6
-    ioThreadCount = 6
+    cpuThreadCount = 5
+    ioThreadCount = 2
 
     [gateway]
     enable = true
@@ -52,7 +52,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: tecnotree
-  name: broker-config-mg899hdhdk
+  name: broker-config-mhh7t8d99f
   namespace: tt-test-rc2
 ---
 apiVersion: v1
@@ -565,7 +565,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 484
-          name: broker-config-mg899hdhdk
+          name: broker-config-mhh7t8d99f
         name: configuration
       - configMap:
           defaultMode: 493
@@ -581,9 +581,9 @@ spec:
       - ReadWriteOnce
       resources:
         limits:
-          cpu: 8
+          cpu: 7
         requests:
-          cpu: 8
+          cpu: 7
           storage: 256Gi
       storageClassName: ssd
 ---

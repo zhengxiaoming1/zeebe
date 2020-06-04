@@ -3,8 +3,8 @@ partitionsCount = 25
 replicationFactor = 1
 
 [threads]
-cpuThreadCount = 6
-ioThreadCount = 6
+cpuThreadCount = 5
+ioThreadCount = 2
 
 [gateway]
 enable = true
