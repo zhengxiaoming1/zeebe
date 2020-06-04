@@ -1,26 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: starter
+  name: worker-5
 spec:
   replicas: 0
   template:
     spec:
       containers:
       - name: starter
-        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3-v4-timeout-metrics
+        image: gcr.io/zeebe-io/worker:zeebe
         imagePullPolicy: Always
         env:
           - name: JAVA_OPTIONS
             value: >-
               -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
-              -Dapp.ttstarter.threads=2
-              -Dapp.worker.jobType=benchmark-task-
-              -Dapp.ttstarter.numTasks=5
+              -Dapp.worker.capacity=16
+              -Dapp.worker.threads=16
+              -Dapp.worker.completionDelay=100ms
+              -Dapp.worker.pollingDelay=100ms
+              -Dapp.worker.jobType=benchmark-task-5
         resources:
           limits:
-            cpu: 2
+            cpu: 8
             memory: 512Mi
           requests:
-            cpu: 1
+            cpu: 3
             memory: 128Mi
