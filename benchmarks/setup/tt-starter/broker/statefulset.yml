@@ -16,6 +16,9 @@ spec:
        resources:
          requests:
            storage: 256Gi
+           cpu: 8
+         limits:
+           cpu: 8
   template:
     spec:
       volumes:

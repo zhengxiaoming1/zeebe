@@ -15,16 +15,22 @@
  */
 package io.zeebe;
 
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.prometheus.client.Counter;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.ZeebeFuture;
 import io.zeebe.client.api.response.WorkflowInstanceEvent;
 import io.zeebe.client.api.worker.JobWorker;
 import io.zeebe.config.AppCfg;
+import io.zeebe.config.StarterCfg;
 import io.zeebe.config.TTStarterCfg;
 import io.zeebe.config.WorkerCfg;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -38,10 +44,10 @@ import java.util.concurrent.TimeUnit;
 
 public class TTStarter extends App {
   private final AppCfg appCfg;
-  private BlockingQueue<ZeebeFuture<WorkflowInstanceEvent>> requestFutures;
+  private final BlockingQueue<ZeebeFuture<WorkflowInstanceEvent>> requestFutures;
   private ScheduledExecutorService executorService;
   private ScheduledExecutorService responseCheckExecutor;
-  private Map<Long, Long> runningWorkflows = new ConcurrentHashMap<>();
+  private final Map<Long, Long> runningWorkflows = new ConcurrentHashMap<>();
   private ZeebeClient client;
   private JobWorker worker;
   private TTStarterCfg ttCfg;
@@ -49,27 +55,28 @@ public class TTStarter extends App {
   private int numTasks;
   private ScheduledExecutorService timeoutExecutor;
 
-  private io.prometheus.client.Counter totalWorkflowsCompleted =
+  private final io.prometheus.client.Counter totalWorkflowsCompleted =
       Counter.build()
           .namespace("ttstarter")
           .name("workflows_completed")
           .help("Number of workflows completed")
           .register();
 
-  private io.prometheus.client.Counter totalWorkflowsStarted =
+  private final io.prometheus.client.Counter totalWorkflowsStarted =
       Counter.build()
           .namespace("ttstarter")
           .name("workflows_started")
           .help("Number of workflows started")
           .register();
 
-  private io.prometheus.client.Counter totalWorkflowsFailed =
+  private final io.prometheus.client.Counter totalWorkflowsFailed =
       Counter.build()
           .namespace("ttstarter")
           .name("workflows_failed")
           .help("Number of workflows failed")
           .labelNames("reason")
           .register();
+  private String variables;
 
   public TTStarter(final AppCfg appCfg) {
     this.appCfg = appCfg;
@@ -89,6 +96,9 @@ public class TTStarter extends App {
     executorService = Executors.newScheduledThreadPool(ttCfg.getThreads());
     responseCheckExecutor = Executors.newScheduledThreadPool(1);
     timeoutExecutor = Executors.newScheduledThreadPool(1);
+
+    final ClassLoader classLoader = getClass().getClassLoader();
+    variables = readVariables(appCfg.getStarter(), classLoader);
 
     final BpmnModelInstance workflow = createWorkflow();
     deployWorkflow(client, workflow);
@@ -118,10 +128,36 @@ public class TTStarter extends App {
                 }));
   }
 
+  private String readVariables(final StarterCfg starterCfg, final ClassLoader classLoader) {
+    try {
+      final StringBuilder stringBuilder = new StringBuilder();
+      try (final InputStream variablesStream =
+          classLoader.getResourceAsStream(starterCfg.getPayloadPath())) {
+        if (variablesStream == null) {
+          throw new IllegalStateException(
+              "Expected to access "
+                  + starterCfg.getPayloadPath()
+                  + ", but failed to open an input stream.");
+        }
+
+        try (final BufferedReader br = new BufferedReader(new InputStreamReader(variablesStream))) {
+          String line;
+          while ((line = br.readLine()) != null) {
+            stringBuilder.append(line).append("\n");
+          }
+        }
+      }
+
+      return stringBuilder.toString();
+    } catch (final IOException e) {
+      throw new UncheckedExecutionException(e);
+    }
+  }
+
   private void timeoutRunningInstances() {
-    long currentTime = System.currentTimeMillis();
-    long timeout = ttCfg.getInstanceTimeout().toMillis();
-    Set<Long> toRemove = new HashSet<>();
+    final long currentTime = System.currentTimeMillis();
+    final long timeout = ttCfg.getInstanceTimeout().toMillis();
+    final Set<Long> toRemove = new HashSet<>();
     runningWorkflows.forEach(
         (w, startTime) -> {
           if (currentTime - startTime > timeout) {
@@ -143,7 +179,7 @@ public class TTStarter extends App {
     client.newCancelInstanceCommand(w).send();
   }
 
-  private void startResponseWorker(final ZeebeClient client, WorkerCfg workerCfg) {
+  private void startResponseWorker(final ZeebeClient client, final WorkerCfg workerCfg) {
     final long completionDelay = workerCfg.getCompletionDelay().toMillis();
     worker =
         client
@@ -179,9 +215,9 @@ public class TTStarter extends App {
       final WorkflowInstanceEvent workflowInstanceEvent = requestFutures.take().get();
       runningWorkflows.put(
           workflowInstanceEvent.getWorkflowInstanceKey(), System.currentTimeMillis());
-    } catch (InterruptedException e) {
+    } catch (final InterruptedException e) {
       e.printStackTrace();
-    } catch (ExecutionException e) {
+    } catch (final ExecutionException e) {
       totalWorkflowsFailed.labels("error").inc();
       LOG.info("Failed to create workflow instance, creating a new one", e);
       createInstance();
@@ -270,10 +306,15 @@ public class TTStarter extends App {
         () -> {
           try {
             requestFutures.put(
-                client.newCreateInstanceCommand().bpmnProcessId(processId).latestVersion().send());
+                client
+                    .newCreateInstanceCommand()
+                    .bpmnProcessId(processId)
+                    .latestVersion()
+                    .variables(variables)
+                    .send());
             responseCheckExecutor.submit(this::checkResponse);
             totalWorkflowsStarted.inc();
-          } catch (Exception e) {
+          } catch (final Exception e) {
             LOG.error("Error on creating new workflow instance", e);
           }
         });
@@ -291,23 +332,23 @@ public class TTStarter extends App {
         .build();
   }
 
-  private void deployWorkflow(ZeebeClient client, BpmnModelInstance workflow) {
+  private void deployWorkflow(final ZeebeClient client, final BpmnModelInstance workflow) {
     while (true) {
       try {
         client.newDeployCommand().addWorkflowModel(workflow, "tt.bpmn").send().join();
         break;
-      } catch (Exception e) {
+      } catch (final Exception e) {
         LOG.warn("Failed to deploy workflow, retrying", e);
         try {
           Thread.sleep(200);
-        } catch (InterruptedException ex) {
+        } catch (final InterruptedException ex) {
           // ignore
         }
       }
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     createApp(TTStarter::new);
   }
 }

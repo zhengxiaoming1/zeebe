@@ -8,15 +8,15 @@ spec:
     spec:
       containers:
       - name: starter
-        image: gcr.io/zeebe-io/ttstarter:zeebe-0.20.3-v4-timeout-metrics
+        image: gcr.io/zeebe-io/ttstarter:variable-tasks
         imagePullPolicy: Always
         env:
           - name: JAVA_OPTIONS
             value: >-
               -Dapp.brokerUrl=$(BROKER_SERVICE_NAME):26500
-              -Dapp.ttstarter.threads=2
+              -Dapp.ttStarter.threads=2
               -Dapp.worker.jobType=benchmark-task-
-              -Dapp.ttstarter.numTasks=5
+              -Dapp.ttStarter.numTasks=10
         resources:
           limits:
             cpu: 2

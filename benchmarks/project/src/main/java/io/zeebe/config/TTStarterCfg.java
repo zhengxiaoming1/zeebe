@@ -26,12 +26,21 @@ public class TTStarterCfg {
   private WorkerCfg worker;
   private int numTasks;
   private Duration instanceTimeout;
+  private String payloadPath;
+
+  public String getPayloadPath() {
+    return payloadPath;
+  }
+
+  public void setPayloadPath(final String payloadPath) {
+    this.payloadPath = payloadPath;
+  }
 
   public String getProcessId() {
     return processId;
   }
 
-  public void setProcessId(String processId) {
+  public void setProcessId(final String processId) {
     this.processId = processId;
   }
 
@@ -39,7 +48,7 @@ public class TTStarterCfg {
     return rate;
   }
 
-  public void setRate(int rate) {
+  public void setRate(final int rate) {
     this.rate = rate;
   }
 
@@ -47,7 +56,7 @@ public class TTStarterCfg {
     return threads;
   }
 
-  public void setThreads(int threads) {
+  public void setThreads(final int threads) {
     this.threads = threads;
   }
 

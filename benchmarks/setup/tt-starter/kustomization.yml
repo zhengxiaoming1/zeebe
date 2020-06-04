@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Hard-code deploy everything into the tt namespace
-namespace: tt-test-rc2
+namespace: tt-baseline
 
 bases:
   - broker
@@ -15,6 +15,11 @@ resources:
   - worker3.yml
   - worker4.yml
   - worker5.yml
+  - worker6.yml
+  - worker7.yml
+  - worker8.yml
+  - worker9.yml
+  - worker10.yml
 
 configMapGenerator:
   - name: java-tool-options
@@ -32,8 +37,8 @@ commonLabels:
 
 images:
   - name: camunda/zeebe
-    # newName: gcr.io/zeebe-io/zeebe
-    newTag: 0.20.3-rc2
+    newName: gcr.io/zeebe-io/zeebe
+    newTag: v20-baseline
 
 vars:
   - name: BROKER_SERVICE_NAME
