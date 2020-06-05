@@ -34,6 +34,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 
 public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
@@ -49,7 +50,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   private final SnapshotMetrics snapshotMetrics;
 
-  private PersistedSnapshot currentPersistedSnapshot;
+  private final AtomicReference<PersistedSnapshot> currentPersistedSnapshotRef;
 
   public FileBasedSnapshotStore(
       final SnapshotMetrics snapshotMetrics,
@@ -62,7 +63,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     this.listeners = new CopyOnWriteArraySet<>();
 
     // load previous snapshots
-    currentPersistedSnapshot = loadLatestSnapshot(snapshotsDirectory);
+    currentPersistedSnapshotRef = new AtomicReference<>(loadLatestSnapshot(snapshotsDirectory));
   }
 
   private PersistedSnapshot loadLatestSnapshot(final Path snapshotDirectory) {
@@ -124,7 +125,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   @Override
   public Optional<PersistedSnapshot> getLatestSnapshot() {
-    return Optional.ofNullable(currentPersistedSnapshot);
+    return Optional.ofNullable(currentPersistedSnapshotRef.get());
   }
 
   @Override
@@ -151,7 +152,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   @Override
   public void delete() {
-    currentPersistedSnapshot = null;
+    currentPersistedSnapshotRef.set(null);
 
     try {
       LOGGER.error("DELETE FOLDER {}", snapshotsDirectory);
@@ -230,11 +231,13 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   }
 
   private boolean isCurrentSnapshotNewer(final FileBasedSnapshotMetadata metadata) {
-    return (currentPersistedSnapshot != null
-        && currentPersistedSnapshot.getId().compareTo(metadata) >= 0);
+    final var persistedSnapshot = currentPersistedSnapshotRef.get();
+    return (persistedSnapshot != null
+        && persistedSnapshot.getId().compareTo(metadata) >= 0);
   }
 
   PersistedSnapshot newSnapshot(final FileBasedSnapshotMetadata metadata, final Path directory) {
+    final var currentPersistedSnapshot = currentPersistedSnapshotRef.get();
 
     if (isCurrentSnapshotNewer(metadata)) {
       LOGGER.debug("Snapshot is older then {} already exists", currentPersistedSnapshot);
@@ -255,23 +258,22 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       throw new UncheckedIOException(e);
     }
 
-    final var previousSnapshot = currentPersistedSnapshot;
-
-    currentPersistedSnapshot = new FileBasedSnapshot(destination, metadata);
+    final var newPersistedSnapshot = new FileBasedSnapshot(destination, metadata);
+    currentPersistedSnapshotRef.set(newPersistedSnapshot);
     snapshotMetrics.incrementSnapshotCount();
-    observeSnapshotSize(currentPersistedSnapshot);
+    observeSnapshotSize(newPersistedSnapshot);
 
-    LOGGER.debug("Purging snapshots older than {}", currentPersistedSnapshot);
-    if (previousSnapshot != null) {
-      LOGGER.error("Deleting snapshot {}", previousSnapshot);
-      previousSnapshot.delete();
+    LOGGER.debug("Purging snapshots older than {}", newPersistedSnapshot);
+    if (currentPersistedSnapshot != null) {
+      LOGGER.error("Deleting snapshot {}", currentPersistedSnapshot);
+      currentPersistedSnapshot.delete();
     }
-    purgePendingSnapshots(currentPersistedSnapshot.getIndex());
+    purgePendingSnapshots(newPersistedSnapshot.getIndex());
 
-    listeners.forEach(listener -> listener.onNewSnapshot(currentPersistedSnapshot));
+    listeners.forEach(listener -> listener.onNewSnapshot(newPersistedSnapshot));
 
-    LOGGER.debug("Created new snapshot {}", currentPersistedSnapshot);
-    return currentPersistedSnapshot;
+    LOGGER.debug("Created new snapshot {}", newPersistedSnapshot);
+    return newPersistedSnapshot;
   }
 
   private void purgePendingSnapshot(final Path pendingSnapshot) {
