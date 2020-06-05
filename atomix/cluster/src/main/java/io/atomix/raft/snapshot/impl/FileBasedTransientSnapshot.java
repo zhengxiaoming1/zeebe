@@ -54,8 +54,7 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
       try {
         failed = !takeSnapshot.test(getPath());
       } catch (final Exception exception) {
-        LOGGER.warn(
-            "Catched unexpected exception on taking snapshot ({})", metadata, exception);
+        LOGGER.warn("Catched unexpected exception on taking snapshot ({})", metadata, exception);
         failed = true;
       }
     }
