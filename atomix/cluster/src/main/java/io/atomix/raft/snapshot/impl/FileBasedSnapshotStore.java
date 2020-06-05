@@ -155,14 +155,14 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     currentPersistedSnapshotRef.set(null);
 
     try {
-      LOGGER.error("DELETE FOLDER {}", snapshotsDirectory);
+      LOGGER.debug("DELETE FOLDER {}", snapshotsDirectory);
       FileUtil.deleteFolder(snapshotsDirectory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
 
     try {
-      LOGGER.error("DELETE FOLDER {}", snapshotsDirectory);
+      LOGGER.debug("DELETE FOLDER {}", pendingDirectory);
       FileUtil.deleteFolder(pendingDirectory);
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
@@ -264,7 +264,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
     LOGGER.debug("Purging snapshots older than {}", newPersistedSnapshot);
     if (currentPersistedSnapshot != null) {
-      LOGGER.error("Deleting snapshot {}", currentPersistedSnapshot);
+      LOGGER.debug("Deleting snapshot {}", currentPersistedSnapshot);
       currentPersistedSnapshot.delete();
     }
     purgePendingSnapshots(newPersistedSnapshot.getIndex());
@@ -278,7 +278,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   private void purgePendingSnapshot(final Path pendingSnapshot) {
     try {
       FileUtil.deleteFolder(pendingSnapshot);
-      LOGGER.error("Delete not completed (orphaned) snapshot {}", pendingSnapshot);
+      LOGGER.debug("Deleted not completed (orphaned) snapshot {}", pendingSnapshot);
     } catch (final IOException e) {
       LOGGER.error("Failed to delete not completed (orphaned) snapshot {}", pendingSnapshot, e);
     }
