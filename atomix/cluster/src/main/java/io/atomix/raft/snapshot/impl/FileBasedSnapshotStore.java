@@ -209,7 +209,6 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     final var optionalMetadata = FileBasedSnapshotMetadata.ofPath(pendingSnapshot);
     if (optionalMetadata.isPresent() && optionalMetadata.get().getIndex() < cutoffIndex) {
       try {
-        LOGGER.error("Deleted orphaned snapshot {}", pendingSnapshot);
         FileUtil.deleteFolder(pendingSnapshot);
         LOGGER.debug("Deleted orphaned snapshot {}", pendingSnapshot);
       } catch (final IOException e) {
