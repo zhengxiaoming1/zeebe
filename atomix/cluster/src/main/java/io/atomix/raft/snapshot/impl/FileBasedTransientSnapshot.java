@@ -48,25 +48,23 @@ public final class FileBasedTransientSnapshot implements TransientSnapshot {
   @Override
   public boolean take(final Predicate<Path> takeSnapshot) {
     final var snapshotMetrics = snapshotStore.getSnapshotMetrics();
+    boolean failed;
 
-    return snapshotMetrics.observeSnapshotOperation(
-        () -> {
-          boolean failed;
+    try (final var ignored = snapshotMetrics.startTimer()) {
+      try {
+        failed = !takeSnapshot.test(getPath());
+      } catch (final Exception exception) {
+        LOGGER.warn(
+            "Catched unexpected exception on taking snapshot ({})", metadata, exception);
+        failed = true;
+      }
+    }
 
-          try {
-            failed = !takeSnapshot.test(getPath());
-          } catch (final Exception exception) {
-            LOGGER.warn(
-                "Catched unexpected exception on taking snapshot ({})", metadata, exception);
-            failed = true;
-          }
+    if (failed) {
+      abort();
+    }
 
-          if (failed) {
-            abort();
-          }
-
-          return !failed;
-        });
+    return !failed;
   }
 
   @Override

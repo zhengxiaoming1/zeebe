@@ -19,7 +19,7 @@ package io.atomix.raft.snapshot.impl;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
-import java.util.concurrent.Callable;
+import io.prometheus.client.Histogram.Timer;
 
 public final class SnapshotMetrics {
   private static final String NAMESPACE = "zeebe";
@@ -73,7 +73,7 @@ public final class SnapshotMetrics {
     SNAPSHOT_FILE_SIZE.labels(partitionId).observe(sizeInBytes / 1_000_000f);
   }
 
-  boolean observeSnapshotOperation(final Callable<Boolean> snapshotTake) {
-    return SNAPSHOT_DURATION.labels(partitionId).time(snapshotTake);
+  Timer startTimer() {
+    return SNAPSHOT_DURATION.labels(partitionId).startTimer();
   }
 }
