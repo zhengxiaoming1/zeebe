@@ -36,7 +36,7 @@ public class PersistedSnapshotStoreTest {
     final var partitionName = "1";
     final var root = temporaryFolder.getRoot();
 
-    persistedSnapshotStore = factory.createSnapshotStore(root.toPath(), partitionName);
+    persistedSnapshotStore = factory.getWritableSnapshotStore(root.toPath(), partitionName);
   }
 
   @Test

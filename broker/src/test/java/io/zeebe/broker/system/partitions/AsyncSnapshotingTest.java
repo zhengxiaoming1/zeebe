@@ -69,7 +69,7 @@ public final class AsyncSnapshotingTest {
   public void setup() throws IOException {
     final var rootDirectory = tempFolderRule.getRoot().toPath();
     persistedSnapshotStore =
-        new FileBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
+        new FileBasedSnapshotStoreFactory().getWritableSnapshotStore(rootDirectory, "1");
 
     snapshotController =
         new StateControllerImpl(

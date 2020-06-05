@@ -199,7 +199,8 @@ public class RaftTest extends ConcurrentTestCase {
             .withDirectory(directory)
             .withMaxEntriesPerSegment(10)
             .withSnapshotStore(
-                new FileBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(), "1"))
+                new FileBasedSnapshotStoreFactory()
+                    .getWritableSnapshotStore(directory.toPath(), "1"))
             .withMaxSegmentSize(1024 * 10)
             .withNamespace(RaftNamespaces.RAFT_STORAGE);
     return configurator.apply(defaults).build();

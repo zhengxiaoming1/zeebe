@@ -18,9 +18,10 @@ package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
-import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.ReceivedSnapshot;
+import io.atomix.raft.snapshot.ReceiverSnapshotStore;
 import io.atomix.raft.snapshot.TransientSnapshot;
+import io.atomix.raft.snapshot.WritableSnapshotStore;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
 import io.zeebe.util.ZbLogger;
@@ -34,10 +35,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 
-public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
+public final class FileBasedSnapshotStore implements WritableSnapshotStore, ReceiverSnapshotStore {
 
   private static final Logger LOGGER = new ZbLogger(FileBasedSnapshotStore.class);
 

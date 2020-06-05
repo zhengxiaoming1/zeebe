@@ -18,6 +18,8 @@ package io.atomix.raft.snapshot.impl;
 
 import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.PersistedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.ReceiverSnapshotStore;
+import io.atomix.raft.snapshot.WritableSnapshotStore;
 import java.nio.file.Path;
 import org.agrona.IoUtil;
 
@@ -34,16 +36,43 @@ import org.agrona.IoUtil;
 public final class FileBasedSnapshotStoreFactory implements PersistedSnapshotStoreFactory {
   public static final String SNAPSHOTS_DIRECTORY = "snapshots";
   public static final String PENDING_DIRECTORY = "pending";
+  private FileBasedSnapshotStore fileBasedSnapshotStore;
 
   @Override
-  public PersistedSnapshotStore createSnapshotStore(final Path root, final String partitionName) {
-    final var snapshotDirectory = root.resolve(SNAPSHOTS_DIRECTORY);
-    final var pendingDirectory = root.resolve(PENDING_DIRECTORY);
+  public WritableSnapshotStore getWritableSnapshotStore(
+      final Path root, final String partitionName) {
+    return getPersistedSnapshotStore(root, partitionName);
+  }
 
-    IoUtil.ensureDirectoryExists(snapshotDirectory.toFile(), "Snapshot directory");
-    IoUtil.ensureDirectoryExists(pendingDirectory.toFile(), "Pending snapshot directory");
+  @Override
+  public ReceiverSnapshotStore getReceiverSnapshotStore(
+      final Path root, final String partitionName) {
+    return getPersistedSnapshotStore(root, partitionName);
+  }
 
-    return new FileBasedSnapshotStore(
-        new SnapshotMetrics(partitionName), snapshotDirectory, pendingDirectory);
+  @Override
+  public PersistedSnapshotStore getReadonlySnapshotStore(
+      final Path dataPath, final String partitionName) {
+    return getPersistedSnapshotStore(dataPath, partitionName);
+  }
+
+  private FileBasedSnapshotStore getPersistedSnapshotStore(
+      final Path dataPath, final String partitionName) {
+    ensureSnapshotStoreExists(dataPath, partitionName);
+    return fileBasedSnapshotStore;
+  }
+
+  private void ensureSnapshotStoreExists(final Path root, final String partitionName) {
+    if (fileBasedSnapshotStore == null) {
+      final var snapshotDirectory = root.resolve(SNAPSHOTS_DIRECTORY);
+      final var pendingDirectory = root.resolve(PENDING_DIRECTORY);
+
+      IoUtil.ensureDirectoryExists(snapshotDirectory.toFile(), "Snapshot directory");
+      IoUtil.ensureDirectoryExists(pendingDirectory.toFile(), "Pending snapshot directory");
+
+      fileBasedSnapshotStore =
+          new FileBasedSnapshotStore(
+              new SnapshotMetrics(partitionName), snapshotDirectory, pendingDirectory);
+    }
   }
 }

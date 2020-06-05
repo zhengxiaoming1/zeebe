@@ -44,7 +44,7 @@ public final class StateControllerImplTest {
   @Before
   public void setup() throws IOException {
     final var rootDirectory = tempFolderRule.newFolder("state").toPath();
-    store = new FileBasedSnapshotStoreFactory().createSnapshotStore(rootDirectory, "1");
+    store = new FileBasedSnapshotStoreFactory().getWritableSnapshotStore(rootDirectory, "1");
 
     snapshotController =
         new StateControllerImpl(

@@ -18,19 +18,28 @@ package io.atomix.raft.snapshot;
 
 import java.nio.file.Path;
 
-/**
- * Creates a snapshot store which should store its {@link PersistedSnapshot} and {@link
- * TransientSnapshot} instances in the given directory.
- */
-@FunctionalInterface
+/** Can return snapshot stores to persist a new snapshot or receive existing ones. */
 public interface PersistedSnapshotStoreFactory {
 
   /**
-   * Creates a snapshot store operating in the given {@code directory}.
+   * Creates a snapshot store, which can be used to write/persist snapshot to it, operating in the
+   * given {@code directory}.
    *
    * @param directory the root directory where snapshots should be stored
    * @param partitionName the partition name for this store
    * @return a new {@link PersistedSnapshotStore}
    */
-  PersistedSnapshotStore createSnapshotStore(Path directory, String partitionName);
+  WritableSnapshotStore getWritableSnapshotStore(Path directory, String partitionName);
+
+  /**
+   * Returns a snapshot store, which is used to receive snapshots, it operates in the given {@code
+   * directory}.
+   *
+   * @param directory the root directory where snapshots should be stored
+   * @param partitionName the partition name for this store
+   * @return a new {@link PersistedSnapshotStore}
+   */
+  ReceiverSnapshotStore getReceiverSnapshotStore(Path directory, String partitionName);
+
+  PersistedSnapshotStore getReadonlySnapshotStore(Path dataPath, String partitionName);
 }

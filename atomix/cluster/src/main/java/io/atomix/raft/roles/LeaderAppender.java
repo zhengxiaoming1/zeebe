@@ -276,6 +276,7 @@ final class LeaderAppender extends AbstractAppender {
     else if (member.getMember().getType() == RaftMember.Type.ACTIVE
         || member.getMember().getType() == RaftMember.Type.PROMOTABLE
         || member.getMember().getType() == RaftMember.Type.PASSIVE) {
+
       replicateSnapshot(member);
     }
     // If no AppendRequest is already being sent, send an AppendRequest.

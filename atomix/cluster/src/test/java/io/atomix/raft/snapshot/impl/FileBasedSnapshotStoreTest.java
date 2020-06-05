@@ -49,7 +49,7 @@ public class FileBasedSnapshotStoreTest {
     partitionName = "1";
     root = temporaryFolder.getRoot();
 
-    persistedSnapshotStore = factory.createSnapshotStore(root.toPath(), partitionName);
+    persistedSnapshotStore = factory.getWritableSnapshotStore(root.toPath(), partitionName);
 
     snapshotsDir =
         temporaryFolder
@@ -92,7 +92,7 @@ public class FileBasedSnapshotStoreTest {
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var snapshotStore = factory.createSnapshotStore(root.toPath(), partitionName);
+    final var snapshotStore = factory.getWritableSnapshotStore(root.toPath(), partitionName);
 
     // then
     final var currentSnapshotIndex = snapshotStore.getCurrentSnapshotIndex();

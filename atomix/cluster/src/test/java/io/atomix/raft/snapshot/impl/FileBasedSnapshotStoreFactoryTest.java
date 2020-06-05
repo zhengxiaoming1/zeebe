@@ -23,7 +23,7 @@ public final class FileBasedSnapshotStoreFactoryTest {
     final var factory = new FileBasedSnapshotStoreFactory();
 
     // when
-    final var store = factory.createSnapshotStore(root, "ignored");
+    final var store = factory.getWritableSnapshotStore(root, "ignored");
 
     // then
     assertThat(root.resolve(FileBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY))

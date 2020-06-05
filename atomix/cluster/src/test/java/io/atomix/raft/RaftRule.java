@@ -459,7 +459,7 @@ public final class RaftRule extends ExternalResource {
             .withMaxSegmentSize(1024 * 10)
             .withSnapshotStore(
                 new FileBasedSnapshotStoreFactory()
-                    .createSnapshotStore(memberDirectory.toPath(), "1"))
+                    .getWritableSnapshotStore(memberDirectory.toPath(), "1"))
             .withNamespace(RaftNamespaces.RAFT_STORAGE);
     return configurator.apply(defaults).build();
   }

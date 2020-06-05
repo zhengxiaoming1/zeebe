@@ -32,6 +32,7 @@ import io.atomix.raft.partition.RaftPartitionGroupConfig;
 import io.atomix.raft.partition.RaftStorageConfig;
 import io.atomix.raft.roles.RaftRole;
 import io.atomix.raft.snapshot.PersistedSnapshotStore;
+import io.atomix.raft.snapshot.ReceiverSnapshotStore;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.zeebe.ZeebeLogAppender;
@@ -72,8 +73,9 @@ public class RaftPartitionServer implements Managed<RaftPartitionServer> {
   private final Set<Runnable> deferredFailureListeners = new CopyOnWriteArraySet<>();
 
   private RaftServer server;
-  private PersistedSnapshotStore persistedSnapshotStore;
+  private ReceiverSnapshotStore receiverSnapshotStore;
   private final Supplier<JournalIndex> journalIndexFactory;
+  private PersistedSnapshotStore readonlySnapshotStore;
 
   public RaftPartitionServer(
       final RaftPartition partition,
@@ -147,14 +149,18 @@ public class RaftPartitionServer implements Managed<RaftPartitionServer> {
   }
 
   private RaftServer buildServer() {
-    persistedSnapshotStore =
-        config
-            .getStorageConfig()
-            .getPersistedSnapshotStoreFactory()
-            .createSnapshotStore(partition.dataDirectory().toPath(), partition.name());
+    final var dataPath = partition.dataDirectory().toPath();
+    final var partitionName = partition.name();
+    final var persistedSnapshotStoreFactory =
+        config.getStorageConfig().getPersistedSnapshotStoreFactory();
+
+    receiverSnapshotStore =
+        persistedSnapshotStoreFactory.getReceiverSnapshotStore(dataPath, partitionName);
+    readonlySnapshotStore =
+        persistedSnapshotStoreFactory.getReadonlySnapshotStore(dataPath, partitionName);
 
     return RaftServer.builder(localMemberId)
-        .withName(partition.name())
+        .withName(partitionName)
         .withMembershipService(membershipService)
         .withProtocol(createServerProtocol())
         .withHeartbeatInterval(config.getHeartbeatInterval())
@@ -227,8 +233,8 @@ public class RaftPartitionServer implements Managed<RaftPartitionServer> {
     server.getContext().removeCommitListener(commitListener);
   }
 
-  public PersistedSnapshotStore getPersistedSnapshotStore() {
-    return persistedSnapshotStore;
+  public PersistedSnapshotStore getReceiverSnapshotStore() {
+    return receiverSnapshotStore;
   }
 
   /** Deletes the server. */
@@ -304,7 +310,8 @@ public class RaftPartitionServer implements Managed<RaftPartitionServer> {
         .withFreeDiskBuffer(compactionConfig.getFreeDiskBuffer())
         .withFreeMemoryBuffer(compactionConfig.getFreeMemoryBuffer())
         .withNamespace(RaftNamespaces.RAFT_STORAGE)
-        .withSnapshotStore(persistedSnapshotStore)
+        .withSnapshotStore(receiverSnapshotStore)
+        .withReadonlyStore(readonlySnapshotStore)
         .withJournalIndexFactory(journalIndexFactory)
         .build();
   }

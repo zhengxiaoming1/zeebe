@@ -403,7 +403,7 @@ public final class ZeebePartition extends Actor
       return CompletableActorFuture.completedExceptionally(e);
     }
 
-    persistedSnapshotStore = atomixRaftPartition.getServer().getPersistedSnapshotStore();
+    persistedSnapshotStore = atomixRaftPartition.getServer().getReceiverSnapshotStore();
     snapshotController = createSnapshotController();
 
     final LogCompactor logCompactor = new AtomixLogCompactor(atomixRaftPartition.getServer());

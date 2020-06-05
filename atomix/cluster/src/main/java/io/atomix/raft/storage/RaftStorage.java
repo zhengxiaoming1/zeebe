@@ -699,7 +699,8 @@ public final class RaftStorage {
     public RaftStorage build() {
       if (persistedSnapshotStore == null) {
         persistedSnapshotStore =
-            new FileBasedSnapshotStoreFactory().createSnapshotStore(directory.toPath(), prefix);
+            new FileBasedSnapshotStoreFactory()
+                .getWritableSnapshotStore(directory.toPath(), prefix);
       }
 
       return new RaftStorage(

@@ -54,10 +54,10 @@ public class FileBasedReceivedSnapshotTest {
     final String partitionName = "1";
     final File senderRoot = temporaryFolder.newFolder("sender");
 
-    senderSnapshotStore = factory.createSnapshotStore(senderRoot.toPath(), partitionName);
+    senderSnapshotStore = factory.getWritableSnapshotStore(senderRoot.toPath(), partitionName);
 
     final var receiverRoot = temporaryFolder.newFolder("received");
-    receiverSnapshotStore = factory.createSnapshotStore(receiverRoot.toPath(), partitionName);
+    receiverSnapshotStore = factory.getWritableSnapshotStore(receiverRoot.toPath(), partitionName);
 
     receiverSnapshotsDir =
         receiverRoot.toPath().resolve(FileBasedSnapshotStoreFactory.SNAPSHOTS_DIRECTORY);
@@ -251,7 +251,7 @@ public class FileBasedReceivedSnapshotTest {
     final var time = WallClockTimestamp.from(123);
 
     final var otherStore =
-        factory.createSnapshotStore(temporaryFolder.newFolder("other").toPath(), "1");
+        factory.getWritableSnapshotStore(temporaryFolder.newFolder("other").toPath(), "1");
     final var olderTransient = otherStore.newTransientSnapshot(index, term, time);
     olderTransient.take(this::takeSnapshot);
     final var olderPersistedSnapshot = olderTransient.persist();

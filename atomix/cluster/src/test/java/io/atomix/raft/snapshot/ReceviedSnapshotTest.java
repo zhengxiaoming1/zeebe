@@ -46,9 +46,11 @@ public class ReceviedSnapshotTest {
     final String partitionName = "1";
 
     senderSnapshotStore =
-        factory.createSnapshotStore(temporaryFolder.newFolder("sender").toPath(), partitionName);
+        factory.getWritableSnapshotStore(
+            temporaryFolder.newFolder("sender").toPath(), partitionName);
     receiverSnapshotStore =
-        factory.createSnapshotStore(temporaryFolder.newFolder("received").toPath(), partitionName);
+        factory.getWritableSnapshotStore(
+            temporaryFolder.newFolder("received").toPath(), partitionName);
   }
 
   @Test

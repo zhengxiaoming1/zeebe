@@ -51,7 +51,7 @@ public class TransientSnapshotTest {
     final String partitionName = "1";
     final File root = temporaryFolder.getRoot();
 
-    persistedSnapshotStore = factory.createSnapshotStore(root.toPath(), partitionName);
+    persistedSnapshotStore = factory.getWritableSnapshotStore(root.toPath(), partitionName);
   }
 
   @Test
@@ -70,6 +70,7 @@ public class TransientSnapshotTest {
           return true;
         });
 
+    //    persistedSnapshotStore.persist(transientSnapshot);
     // then
     assertThat(transientPath.get()).doesNotExist();
   }

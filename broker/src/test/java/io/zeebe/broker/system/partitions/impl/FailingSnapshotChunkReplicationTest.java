@@ -40,10 +40,10 @@ public final class FailingSnapshotChunkReplicationTest {
 
   public void setup(final SnapshotReplication replicator) throws IOException {
     final var senderRoot = tempFolderRule.newFolder("sender").toPath();
-    senderStore = new FileBasedSnapshotStoreFactory().createSnapshotStore(senderRoot, "1");
+    senderStore = new FileBasedSnapshotStoreFactory().getWritableSnapshotStore(senderRoot, "1");
 
     final var receiverRoot = tempFolderRule.newFolder("receiver").toPath();
-    receiverStore = new FileBasedSnapshotStoreFactory().createSnapshotStore(receiverRoot, "1");
+    receiverStore = new FileBasedSnapshotStoreFactory().getWritableSnapshotStore(receiverRoot, "1");
 
     replicatorSnapshotController =
         new StateControllerImpl(
