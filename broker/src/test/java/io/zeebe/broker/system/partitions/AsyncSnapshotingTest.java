@@ -40,7 +40,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,7 +64,6 @@ public final class AsyncSnapshotingTest {
   private StreamProcessor mockStreamProcessor;
   private List<ActorCondition> conditionList;
   private PersistedSnapshotStore persistedSnapshotStore;
-  private final AtomicReference<Indexed> indexedAtomicReference = new AtomicReference<>();
 
   @Before
   public void setup() throws IOException {
