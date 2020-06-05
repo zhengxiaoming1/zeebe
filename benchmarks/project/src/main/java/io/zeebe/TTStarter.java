@@ -22,7 +22,6 @@ import io.zeebe.client.api.ZeebeFuture;
 import io.zeebe.client.api.response.WorkflowInstanceEvent;
 import io.zeebe.client.api.worker.JobWorker;
 import io.zeebe.config.AppCfg;
-import io.zeebe.config.StarterCfg;
 import io.zeebe.config.TTStarterCfg;
 import io.zeebe.config.WorkerCfg;
 import io.zeebe.model.bpmn.Bpmn;
@@ -98,7 +97,7 @@ public class TTStarter extends App {
     timeoutExecutor = Executors.newScheduledThreadPool(1);
 
     final ClassLoader classLoader = getClass().getClassLoader();
-    variables = readVariables(appCfg.getStarter(), classLoader);
+    variables = readVariables(appCfg.getTtStarter(), classLoader);
 
     final BpmnModelInstance workflow = createWorkflow();
     deployWorkflow(client, workflow);
@@ -128,7 +127,7 @@ public class TTStarter extends App {
                 }));
   }
 
-  private String readVariables(final StarterCfg starterCfg, final ClassLoader classLoader) {
+  private String readVariables(final TTStarterCfg starterCfg, final ClassLoader classLoader) {
     try {
       final StringBuilder stringBuilder = new StringBuilder();
       try (final InputStream variablesStream =
