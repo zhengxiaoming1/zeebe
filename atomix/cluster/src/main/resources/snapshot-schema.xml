@@ -23,14 +23,4 @@
     <data name="chunkName" id="3" type="varDataEncoding"/>
     <data name="content" id="4" type="blob"/>
   </sbe:message>
-
-<!--  <sbe:message name="SnapshotRestoreRequest" id="9">-->
-<!--    <field name="snapshotId" id="0" type="uint64"/>-->
-<!--    <field name="chunkIdx" id="1" type="uint16"/>-->
-<!--  </sbe:message>-->
-
-<!--  <sbe:message name="SnapshotRestoreResponse" id="10">-->
-<!--    <field name="success" id="0" type="BooleanType"/>-->
-<!--    <data name="snapshotChunk" id="1" type="blob"/>-->
-<!--  </sbe:message>-->
 </sbe:messageSchema>
