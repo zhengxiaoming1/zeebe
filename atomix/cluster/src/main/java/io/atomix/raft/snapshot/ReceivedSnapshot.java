@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * An received volatile snapshot, which consist of several {@link SnapshotChunk}'s. It can be
+ * A received volatile snapshot, which consist of several {@link SnapshotChunk}'s. It can be
  * persisted after all chunks have been received and consumed.
  */
 public interface ReceivedSnapshot extends PersistableSnapshot {

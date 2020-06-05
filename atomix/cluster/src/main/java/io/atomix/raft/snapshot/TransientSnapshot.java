@@ -20,7 +20,7 @@ package io.atomix.raft.snapshot;
 import java.nio.file.Path;
 import java.util.function.Predicate;
 
-/** An transient snapshot which can be persisted after taking a snapshot. */
+/** A transient snapshot which can be persisted after taking a snapshot. */
 public interface TransientSnapshot extends PersistableSnapshot {
 
   /**

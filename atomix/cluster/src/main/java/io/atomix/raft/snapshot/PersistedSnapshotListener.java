@@ -18,7 +18,7 @@
 package io.atomix.raft.snapshot;
 
 /**
- * Represents an listener which can be added to the {@link PersistedSnapshotStore} to be notified
+ * Represents a listener which can be added to the {@link PersistedSnapshotStore} to be notified
  * when a new {@link PersistedSnapshot} is persisted at this store.
  */
 public interface PersistedSnapshotListener {

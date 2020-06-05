@@ -22,7 +22,7 @@ import io.zeebe.util.CloseableSilently;
 import java.nio.file.Path;
 import java.util.Comparator;
 
-/** Represents an snapshot, which was persisted at the {@link PersistedSnapshotStore}. */
+/** Represents a snapshot, which was persisted at the {@link PersistedSnapshotStore}. */
 public interface PersistedSnapshot extends CloseableSilently, Comparable<PersistedSnapshot> {
 
   /**
@@ -46,7 +46,7 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
    * Returns the snapshot index.
    *
    * <p>The snapshot index is the index of the state machine at the point at which the snapshot was
-   * written.
+   * persisted.
    *
    * @return The snapshot index.
    */
@@ -56,7 +56,7 @@ public interface PersistedSnapshot extends CloseableSilently, Comparable<Persist
    * Returns the snapshot term.
    *
    * <p>The snapshot term is the term of the state machine at the point at which the snapshot was
-   * written.
+   * persisted.
    *
    * @return The snapshot term.
    */

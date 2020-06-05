@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 /**
- * Represents an store, which allows to persist snapshots on a storage, which is implementation
+ * Represents a store, which allows to persist snapshots on a storage, which is implementation
  * dependent. It is possible to take a transient snapshot, which means you can start taking an
  * snapshot and can persist it later or abort it. Furthermore it is possible to persist/receive
  * {@link SnapshotChunk}'s from an already {@link PersistedSnapshot} and persist them in this

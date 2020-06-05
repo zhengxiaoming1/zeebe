@@ -15,7 +15,7 @@
  */
 package io.atomix.raft.snapshot;
 
-/** An volatile snapshot which can be persisted. */
+/** A volatile snapshot which can be persisted. */
 public interface PersistableSnapshot {
 
   /** Aborts the not yet persisted snapshot and removes all related data. */

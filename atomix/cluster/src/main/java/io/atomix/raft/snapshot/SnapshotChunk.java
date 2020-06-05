@@ -17,7 +17,7 @@
 
 package io.atomix.raft.snapshot;
 
-/** An chunk of an already persisted Snapshot. */
+/** A chunk of an already persisted Snapshot. */
 public interface SnapshotChunk {
 
   /** @return a unique snapshot identifier * */
