@@ -86,6 +86,19 @@ public class RaftError {
       }
     },
 
+    /** Node is leader but currently didn't accept joins, because of init phase. */
+    INIT_PHASE {
+      @Override
+      PrimitiveException createException() {
+        return createException("Currently in init phase, not accepting joins yet.");
+      }
+
+      @Override
+      PrimitiveException createException(final String message) {
+        return message != null ? new PrimitiveException.Unavailable(message) : createException();
+      }
+    },
+
     /** Read application error. */
     QUERY_FAILURE {
       @Override

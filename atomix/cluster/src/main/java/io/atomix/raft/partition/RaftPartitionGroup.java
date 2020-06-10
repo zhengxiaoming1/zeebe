@@ -262,6 +262,7 @@ public class RaftPartitionGroup implements ManagedPartitionGroup {
       }
       metadata.add(new PartitionMetadata(partitionId, membersForPartition));
     }
+    LOGGER.error("{}", metadata);
     return metadata;
   }
 
