@@ -489,11 +489,11 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
                 } else {
                   // If the response error was non-null, attempt to join via the next server in
                   // the members list.
-                  log.debug("Failed to join {}", member.getMember().memberId());
+                  log.debug("Failed to join {}, response was {}.", member.getMember().memberId(), response);
                   join(iterator);
                 }
               } else {
-                log.debug("Failed to join {}", member.getMember().memberId(), error);
+                log.debug("Failed to join {}, response was {}.", member.getMember().memberId(), response, error);
                 join(iterator);
               }
             },
