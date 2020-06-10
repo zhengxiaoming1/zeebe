@@ -398,7 +398,7 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
               if (!activeMembers.isEmpty()) {
                 join(getActiveMemberStates().iterator());
               } else {
-                joinFuture.complete(null);
+                completeJoinFuture();
               }
             });
 
@@ -407,7 +407,7 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
 
   /** Recursively attempts to join the cluster. */
   private void join(final Iterator<RaftMemberContext> iterator) {
-    if (joinFuture.isDone()) {
+    if (joinFuture == null || joinFuture.isDone()) {
       // nothing to do here
       return;
     }
