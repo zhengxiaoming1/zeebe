@@ -414,13 +414,13 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
 
     if (iterator.hasNext()) {
       cancelJoinTimer();
-      joinTimeout =
-          raft.getThreadContext()
-              .schedule(
-                  raft.getElectionTimeout().multipliedBy(2),
-                  () -> {
-                    join(iterator);
-                  });
+      //      joinTimeout =
+      //          raft.getThreadContext()
+      //              .schedule(
+      //                  raft.getElectionTimeout().multipliedBy(2),
+      //                  () -> {
+      //                    join(iterator);
+      //                  });
 
       final RaftMemberContext member = iterator.next();
       joinMember(iterator, member);
@@ -445,7 +445,7 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
                     getMember().memberId(), getMember().getType(), getMember().getLastUpdated()))
             .build();
     raft.getProtocol()
-        .join(member.getMember().memberId(), request)
+        .join(member.getMember().memberId(), request, raft.getElectionTimeout().multipliedBy(2))
         .whenCompleteAsync(
             (response, error) -> {
               // Cancel the join timer.
@@ -493,7 +493,7 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
                   join(iterator);
                 }
               } else {
-                log.debug("Failed to join {}", member.getMember().memberId());
+                log.debug("Failed to join {}", member.getMember().memberId(), error);
                 join(iterator);
               }
             },
