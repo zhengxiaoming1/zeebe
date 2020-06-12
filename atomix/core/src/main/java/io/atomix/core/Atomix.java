@@ -501,6 +501,7 @@ public class Atomix extends AtomixCluster {
     }
 
     LOGGER.info(BUILD);
+    LOGGER.error("Start {}", this);
     return super.start()
         .thenRun(
             () -> {

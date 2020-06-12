@@ -166,6 +166,13 @@ public class SwimMembershipProtocol
       members.put(localMember.id(), localMember);
       post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, localMember));
 
+      discoveryService
+          .getNodes()
+          .forEach(
+              n ->
+                  discoveryEventListener.event(
+                      new NodeDiscoveryEvent(NodeDiscoveryEvent.Type.JOIN, n)));
+
       registerHandlers();
       gossipFuture =
           swimScheduler.scheduleAtFixedRate(
