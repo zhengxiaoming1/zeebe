@@ -173,6 +173,9 @@ public class SwimMembershipProtocol
               n -> {
                 final SwimMember newMember =
                     new SwimMember(MemberId.from(n.id().id()), n.address());
+                randomMembers.add(newMember);
+                Collections.shuffle(randomMembers);
+                newMember.setState(State.ALIVE);
                 members.put(member.id(), newMember);
                 post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, member));
               });
