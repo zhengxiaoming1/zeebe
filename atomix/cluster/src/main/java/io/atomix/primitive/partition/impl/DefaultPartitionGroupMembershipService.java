@@ -320,7 +320,7 @@ public class DefaultPartitionGroupMembershipService
     return bootstrap()
         .thenApply(
             v -> {
-              LOGGER.info("Started");
+              LOGGER.error("Started {}", this.getClass());
               started.set(true);
               return this;
             });

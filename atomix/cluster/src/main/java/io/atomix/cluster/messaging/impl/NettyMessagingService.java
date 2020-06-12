@@ -261,7 +261,7 @@ public class NettyMessagingService implements ManagedMessagingService {
                       4, namedThreads("netty-messaging-timeout-%d", log));
               localConnection = new LocalClientConnection(timeoutExecutor, handlers);
               started.set(true);
-              log.info("Started");
+              log.error("Started {}", this.getClass());
             })
         .thenApply(v -> this);
   }

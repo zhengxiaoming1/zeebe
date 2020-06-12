@@ -212,7 +212,7 @@ public class RaftPartitionGroup implements ManagedPartitionGroup {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
         .thenApply(
             v -> {
-              LOGGER.info("Started");
+              LOGGER.error("Started {}", this.getClass());
               return this;
             });
   }

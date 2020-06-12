@@ -80,6 +80,7 @@ public class DefaultPartitionService implements ManagedPartitionService {
   @SuppressWarnings("unchecked")
   private void handleMembershipChange(final PartitionGroupMembershipEvent event) {
     if (partitionManagementService == null) {
+      LOGGER.error("Missed event {}", event);
       return;
     }
 
@@ -145,7 +146,7 @@ public class DefaultPartitionService implements ManagedPartitionService {
               return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
                   .thenApply(
                       v -> {
-                        LOGGER.info("Started");
+                        LOGGER.error("Started {}", this.getClass());
                         started.set(true);
                         return this;
                       });

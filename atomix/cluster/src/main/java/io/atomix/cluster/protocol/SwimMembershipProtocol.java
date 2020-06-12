@@ -184,7 +184,7 @@ public class SwimMembershipProtocol
       syncFuture =
           swimScheduler.scheduleAtFixedRate(
               this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
-      LOGGER.info("Started");
+      LOGGER.error("Started {}", this.getClass());
     }
     return CompletableFuture.completedFuture(null);
   }
