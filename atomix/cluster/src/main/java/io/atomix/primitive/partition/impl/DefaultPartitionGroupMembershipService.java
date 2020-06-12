@@ -170,6 +170,13 @@ public class DefaultPartitionGroupMembershipService
    */
   private CompletableFuture<Void> bootstrap(
       final int attempt, final CompletableFuture<Void> future) {
+
+    LOGGER.error("Bootstrap - {} attempt {}", this.getClass(), attempt);
+
+    LOGGER.error("Local member: {}", membershipService.getLocalMember());
+    LOGGER.error("Known members: {}", membershipService.getMembers());
+    LOGGER.error("Known  reachable members: {}", membershipService.getReachableMembers());
+
     Futures.allOf(
             membershipService.getMembers().stream()
                 .filter(node -> !node.id().equals(membershipService.getLocalMember().id()))
@@ -205,7 +212,7 @@ public class DefaultPartitionGroupMembershipService
   @SuppressWarnings("unchecked")
   private CompletableFuture<Void> bootstrap(
       final Member member, final CompletableFuture<Void> future) {
-    LOGGER.debug(
+    LOGGER.error(
         "{} - Bootstrapping from member {}", membershipService.getLocalMember().id(), member);
     messagingService
         .<PartitionGroupInfo, PartitionGroupInfo>send(
