@@ -166,6 +166,7 @@ public class SwimMembershipProtocol
       members.put(localMember.id(), localMember);
       post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, localMember));
 
+      LOGGER.error("Nodes from discovery service {}", discoveryService.getNodes());
       discoveryService
           .getNodes()
           .forEach(
