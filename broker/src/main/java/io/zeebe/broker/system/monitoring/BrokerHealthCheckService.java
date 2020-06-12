@@ -85,7 +85,12 @@ public final class BrokerHealthCheckService extends Actor implements PartitionLi
 
             if (brokerStarted) {
               LOG.debug("All partitions are installed. Broker is ready!");
+            } else {
+              LOG.error("some partition is missing {}", partitionInstallStatus);
             }
+          } else {
+
+            LOG.error("already started");
           }
         });
   }
@@ -100,6 +105,8 @@ public final class BrokerHealthCheckService extends Actor implements PartitionLi
             .filter(partition -> partition.members().contains(nodeId))
             .map(partition -> partition.id().id())
             .collect(Collectors.toMap(Function.identity(), p -> false));
+
+    LOG.error("Partition install status {}", partitionInstallStatus);
   }
 
   @Override
