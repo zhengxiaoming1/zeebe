@@ -170,9 +170,12 @@ public class SwimMembershipProtocol
       discoveryService
           .getNodes()
           .forEach(
-              n ->
-                  discoveryEventListener.event(
-                      new NodeDiscoveryEvent(NodeDiscoveryEvent.Type.JOIN, n)));
+              n -> {
+                final SwimMember newMember =
+                    new SwimMember(MemberId.from(n.id().id()), n.address());
+                members.put(member.id(), newMember);
+                post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, member));
+              });
 
       registerHandlers();
       gossipFuture =
