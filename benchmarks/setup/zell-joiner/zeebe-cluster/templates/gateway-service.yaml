@@ -1,0 +1,22 @@
+---
+# Source: zeebe-cluster/templates/gateway-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: "zell-joiner-zeebe-gateway"
+  labels:
+    app.kubernetes.io/name: zeebe-cluster
+    app.kubernetes.io/instance: zell-joiner
+    app: zell-joiner-zeebe-gateway
+  annotations:
+    null   
+spec:
+  selector:
+    app: zell-joiner-zeebe-gateway 
+  ports:
+    - port: 9600
+      protocol: TCP
+      name: http
+    - port: 26500
+      protocol: TCP
+      name: gateway

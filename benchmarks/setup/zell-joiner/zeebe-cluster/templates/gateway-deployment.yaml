@@ -1,0 +1,73 @@
+---
+# Source: zeebe-cluster/templates/gateway-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "zell-joiner-zeebe-gateway"
+  labels:
+    app.kubernetes.io/name: zeebe-cluster
+    app.kubernetes.io/instance: zell-joiner
+    app: "zell-joiner-zeebe-gateway"
+  annotations:
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "zell-joiner-zeebe-gateway"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zeebe-cluster
+        app.kubernetes.io/instance: zell-joiner
+        app: "zell-joiner-zeebe-gateway"
+      annotations:
+    spec:
+      containers:
+        - name: zeebe-cluster-gateway
+          image: "gcr.io/zeebe-io/zeebe:zell-joiner"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9600
+              name: http
+            - containerPort: 26500
+              name: gateway
+            - containerPort: 26502
+              name: internal
+          env:
+            - name: ZEEBE_STANDALONE_GATEWAY
+              value: "true"
+            - name: ZEEBE_GATEWAY_CLUSTER_CLUSTERNAME
+              value: zell-joiner-zeebe
+            - name: ZEEBE_GATEWAY_CLUSTER_MEMBERID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ZEEBE_LOG_LEVEL
+              value: "debug"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseParallelGC  -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 -XX:MaxRAMPercentage=25.0  -XX:GCTimeRatio=4  -XX:AdaptiveSizePolicyWeight=90 -XX:+PrintFlagsFinal -Xmx4g -Xms4g -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/usr/local/zeebe/data -XX:ErrorFile=/usr/local/zeebe/data/zeebe_error%p.log\n"
+            - name: ZEEBE_GATEWAY_CLUSTER_CONTACTPOINT
+              value: zell-joiner-zeebe:26502
+            - name: ZEEBE_GATEWAY_NETWORK_HOST
+              value: 0.0.0.0
+            - name: ZEEBE_GATEWAY_NETWORK_PORT
+              value: "26500"
+            - name: ZEEBE_GATEWAY_CLUSTER_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ZEEBE_GATEWAY_CLUSTER_PORT
+              value: "26502"
+            - name: ZEEBE_GATEWAY_MONITORING_HOST
+              value: 0.0.0.0
+            - name: ZEEBE_GATEWAY_MONITORING_PORT
+              value: "9600"
+          securityContext:
+            capabilities:
+              add:
+              - NET_ADMIN
+          readinessProbe:
+            tcpSocket:
+              port: gateway
+            initialDelaySeconds: 20
+            periodSeconds: 5
