@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 /** Cluster communication service implementation. */
 public class DefaultClusterCommunicationService implements ManagedClusterCommunicationService {
 
-  private static final Exception CONNECT_EXCEPTION = new ConnectException();
+  private static final Exception CONNECT_EXCEPTION = new ConnectException("Member is not known!");
 
   static {
     CONNECT_EXCEPTION.setStackTrace(new StackTraceElement[0]);
@@ -225,6 +225,11 @@ public class DefaultClusterCommunicationService implements ManagedClusterCommuni
       final boolean reliable) {
     final Member member = membershipService.getMember(toMemberId);
     if (member == null) {
+
+      log.error(
+          "Member {} is not known in the membershipService, known members {}!",
+          toMemberId,
+          membershipService.getMembers());
       return Futures.exceptionalFuture(CONNECT_EXCEPTION);
     }
     if (reliable) {
@@ -250,7 +255,7 @@ public class DefaultClusterCommunicationService implements ManagedClusterCommuni
   @Override
   public CompletableFuture<ClusterCommunicationService> start() {
     if (started.compareAndSet(false, true)) {
-      log.info("Started");
+      log.error("Started {}", this.getClass());
     }
     return CompletableFuture.completedFuture(this);
   }
