@@ -19,6 +19,7 @@ import org.springframework.util.unit.DataSize;
 public final class DataCfg implements ConfigurationEntry {
   public static final String DEFAULT_DIRECTORY = "data";
   private static final DataSize DEFAULT_DATA_SIZE = DataSize.ofMegabytes(512);
+  private static final boolean DEFAULT_USE_MMAP = true;
 
   // Hint: do not use Collections.singletonList as this does not support replaceAll
   private List<String> directories = Arrays.asList(DEFAULT_DIRECTORY);
@@ -29,7 +30,7 @@ public final class DataCfg implements ConfigurationEntry {
 
   private int logIndexDensity = 100;
 
-  private boolean useMmap = false;
+  private boolean useMmap = DEFAULT_USE_MMAP;
 
   @Override
   public void init(final BrokerCfg globalConfig, final String brokerBase) {
