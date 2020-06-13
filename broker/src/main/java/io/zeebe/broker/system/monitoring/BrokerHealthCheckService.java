@@ -67,18 +67,22 @@ public final class BrokerHealthCheckService extends Actor implements PartitionLi
 
   @Override
   public ActorFuture<Void> onBecomingFollower(final int partitionId, final long term) {
+    LOG.error("BrokerHealthCheckService#onBecomingFollower {} {}", partitionId, term);
     return updateBrokerReadyStatus(partitionId);
   }
 
   @Override
   public ActorFuture<Void> onBecomingLeader(
       final int partitionId, final long term, final LogStream logStream) {
+    LOG.error("BrokerHealthCheckService#onBecomingLeader {} {} {}", partitionId, term, logStream);
     return updateBrokerReadyStatus(partitionId);
   }
 
   private ActorFuture<Void> updateBrokerReadyStatus(final int partitionId) {
+    LOG.error("BrokerHealthCheckService#updateBrokerReadyStatus");
     return actor.call(
         () -> {
+          LOG.error("BrokerHealthCheckService#updateBrokerReadyStatus - call");
           if (!brokerStarted) {
             partitionInstallStatus.put(partitionId, true);
             brokerStarted = !partitionInstallStatus.containsValue(false);
@@ -92,6 +96,9 @@ public final class BrokerHealthCheckService extends Actor implements PartitionLi
 
             LOG.error("already started");
           }
+
+          LOG.error(
+              "BrokerHealthCheckService#updateBrokerReadyStatus - end {}", partitionInstallStatus);
         });
   }
 
