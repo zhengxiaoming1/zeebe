@@ -85,6 +85,7 @@ final class LeaderAppender extends AbstractAppender {
     if (raft.getCluster().getActiveMemberStates().isEmpty()) {
       final long previousCommitIndex = raft.getCommitIndex();
       raft.setCommitIndex(index);
+      raft.getLog().writer().flush();
       completeCommits(previousCommitIndex, index);
       return CompletableFuture.completedFuture(index);
     }

@@ -412,6 +412,7 @@ public class PassiveRole extends InactiveRole {
 
     // Append the entries to the log.
     appendEntries(request, future);
+    raft.getLog().writer().flush();
     return future;
   }
 
