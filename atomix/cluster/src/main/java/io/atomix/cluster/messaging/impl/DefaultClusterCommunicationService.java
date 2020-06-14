@@ -247,7 +247,11 @@ public class DefaultClusterCommunicationService implements ManagedClusterCommuni
       final Duration timeout) {
     final Member member = membershipService.getMember(toMemberId);
     if (member == null) {
-      return Futures.exceptionalFuture(CONNECT_EXCEPTION);
+      final var errorMessage =
+          String.format(
+              "Member %s is not known, known members are '{}'.",
+              toMemberId, membershipService.getMembers());
+      return Futures.exceptionalFuture(new ConnectException(errorMessage));
     }
     return messagingService.sendAndReceive(member.address(), subject, payload, timeout);
   }
