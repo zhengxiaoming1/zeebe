@@ -161,11 +161,13 @@ public class SwimMembershipProtocol
       this.localProperties.putAll(localMember.properties());
       discoveryService.addListener(discoveryEventListener);
 
-      LOGGER.info("{} - Member activated: {}", localMember.id(), localMember);
+      // we need to add our local node to the member list,
+      // to share the mapping between node id and address in the cluster
       localMember.setState(State.ALIVE);
       members.put(localMember.id(), localMember);
       post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, localMember));
 
+      LOGGER.error("Nodes from discovery service {}", discoveryService.getNodes());
       registerHandlers();
       gossipFuture =
           swimScheduler.scheduleAtFixedRate(
@@ -177,7 +179,7 @@ public class SwimMembershipProtocol
       syncFuture =
           swimScheduler.scheduleAtFixedRate(
               this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
-      LOGGER.info("Started");
+      LOGGER.error("Started {}", this.getClass());
     }
     return CompletableFuture.completedFuture(null);
   }
@@ -225,7 +227,7 @@ public class SwimMembershipProtocol
    */
   private boolean updateState(final ImmutableMember member) {
     // If the member matches the local member, ignore the update.
-    if (member.id().equals(localMember.id())) {
+    if (member.id().equals(localMember.id()) || member.address().equals(localMember.address())) {
       return false;
     }
 
@@ -233,6 +235,7 @@ public class SwimMembershipProtocol
 
     // If the local member is not present, add the member in the ALIVE state.
     if (swimMember == null) {
+      LOGGER.trace("Member not exist yet {}", member);
       if (member.state() == State.ALIVE) {
         swimMember = new SwimMember(member);
         members.put(swimMember.id(), swimMember);
@@ -313,15 +316,12 @@ public class SwimMembershipProtocol
       // MEMBER_REMOVED
       // event and record an update.
       else if (member.state() == State.DEAD) {
-        members.remove(swimMember.id());
-        randomMembers.remove(swimMember);
-        Collections.shuffle(randomMembers);
-        LOGGER.debug("{} - Member removed {}", this.localMember.id(), swimMember);
-        post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_REMOVED, swimMember.copy()));
+        tryRemoveMember(swimMember);
       }
       recordUpdate(swimMember.copy());
       return true;
     }
+
     return false;
   }
 
@@ -334,11 +334,7 @@ public class SwimMembershipProtocol
               GroupMembershipEvent.Type.REACHABILITY_CHANGED, swimMember.copy()));
     }
     swimMember.setState(State.DEAD);
-    members.remove(swimMember.id());
-    randomMembers.remove(swimMember);
-    Collections.shuffle(randomMembers);
-    LOGGER.debug("{} - Member removed {}", this.localMember.id(), swimMember);
-    post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_REMOVED, swimMember.copy()));
+    tryRemoveMember(swimMember);
   }
 
   private void triggerReachibilityEventOnSuspect(
@@ -388,13 +384,20 @@ public class SwimMembershipProtocol
           && System.currentTimeMillis() - member.getUpdated()
               > config.getFailureTimeout().toMillis()) {
         member.setState(State.DEAD);
-        members.remove(member.id());
-        randomMembers.remove(member);
-        Collections.shuffle(randomMembers);
-        LOGGER.debug("{} - Member removed {}", this.localMember.id(), member);
-        post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_REMOVED, member.copy()));
+
+        tryRemoveMember(member);
         recordUpdate(member.copy());
       }
+    }
+  }
+
+  private void tryRemoveMember(final SwimMember member) {
+    final var deadMember = members.remove(member.id());
+    if (deadMember != null) {
+      randomMembers.remove(member);
+      Collections.shuffle(randomMembers);
+      LOGGER.debug("{} - Member removed {}", this.localMember.id(), member);
+      post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_REMOVED, member.copy()));
     }
   }
 
@@ -404,6 +407,7 @@ public class SwimMembershipProtocol
         discoveryService.getNodes().stream()
             .map(node -> new SwimMember(MemberId.from(node.id().id()), node.address()))
             .filter(member -> !member.id().equals(localMember.id()))
+            .filter(member -> !member.address().equals(localMember.address()))
             .collect(Collectors.toList());
     for (final SwimMember member : syncMembers) {
       sync(member.copy());
@@ -416,7 +420,7 @@ public class SwimMembershipProtocol
    * @param member the peer with which to synchronize the node state
    */
   private void sync(final ImmutableMember member) {
-    LOGGER.debug("{} - Synchronizing membership with {}", localMember.id(), member);
+    LOGGER.debug("{} - Start synchronizing membership with {}", localMember.id(), member);
     bootstrapService
         .getMessagingService()
         .sendAndReceive(
@@ -430,14 +434,17 @@ public class SwimMembershipProtocol
               if (error == null) {
                 final Collection<ImmutableMember> members = SERIALIZER.decode(response);
                 LOGGER.debug(
-                    "{} - Synchronized membership with {}, received: {}",
+                    "{} - Synchronized membership with {}, received: '{}'",
                     localMember.id(),
                     member,
                     members);
                 members.forEach(this::updateState);
               } else {
                 LOGGER.debug(
-                    "{} - Failed to synchronize membership with {}", localMember.id(), member);
+                    "{} - Failed to synchronize membership with {}",
+                    localMember.id(),
+                    member,
+                    error);
               }
             },
             swimScheduler);
@@ -480,6 +487,7 @@ public class SwimMembershipProtocol
                 .map(node -> new SwimMember(MemberId.from(node.id().id()), node.address()))
                 .filter(member -> !members.containsKey(member.id()))
                 .filter(member -> !member.id().equals(localMember.id()))
+                .filter(member -> !member.address().equals(localMember.address()))
                 .sorted(Comparator.comparing(Member::id))
                 .collect(Collectors.toList()));
 
@@ -489,6 +497,7 @@ public class SwimMembershipProtocol
     // If there are members to probe, select the next member to probe using a counter for round
     // robin probes.
     if (!probeMembers.isEmpty()) {
+      LOGGER.trace("Possible members to probe '{}'", probeMembers);
       final SwimMember probeMember =
           probeMembers.get(Math.abs(probeCounter.incrementAndGet() % probeMembers.size()));
       probe(probeMember.copy());
