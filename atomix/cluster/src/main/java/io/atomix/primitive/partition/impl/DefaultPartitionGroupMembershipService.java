@@ -19,7 +19,6 @@ package io.atomix.primitive.partition.impl;
 import static io.atomix.primitive.partition.PartitionGroupMembershipEvent.Type.MEMBERS_CHANGED;
 import static io.atomix.utils.concurrent.Threads.namedThreads;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -30,7 +29,6 @@ import io.atomix.cluster.ClusterMembershipService;
 import io.atomix.cluster.Member;
 import io.atomix.cluster.MemberId;
 import io.atomix.cluster.messaging.ClusterCommunicationService;
-import io.atomix.cluster.messaging.MessagingException;
 import io.atomix.primitive.partition.ManagedPartitionGroup;
 import io.atomix.primitive.partition.ManagedPartitionGroupMembershipService;
 import io.atomix.primitive.partition.MemberGroupStrategy;
@@ -48,15 +46,12 @@ import io.atomix.utils.config.ConfigurationException;
 import io.atomix.utils.event.AbstractListenerManager;
 import io.atomix.utils.serializer.Namespace;
 import io.atomix.utils.serializer.Namespaces;
-import io.atomix.utils.serializer.Serializer;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -71,12 +66,12 @@ public class DefaultPartitionGroupMembershipService
   private static final Logger LOGGER =
       LoggerFactory.getLogger(DefaultPartitionGroupMembershipService.class);
   private static final String BOOTSTRAP_SUBJECT = "partition-group-bootstrap";
-  private static final int[] FIBONACCI_NUMBERS = new int[] {1, 1, 2, 3, 5};
-  private static final int MAX_PARTITION_GROUP_ATTEMPTS = 5;
+  //  private static final int[] FIBONACCI_NUMBERS = new int[] {1, 1, 2, 3, 5};
+  //  private static final int MAX_PARTITION_GROUP_ATTEMPTS = 5;
 
   private final ClusterMembershipService membershipService;
   private final ClusterCommunicationService messagingService;
-  private final Serializer serializer;
+  //  private final Serializer serializer;
   private final Map<String, PartitionGroupMembership> groups = Maps.newConcurrentMap();
   private final AtomicBoolean started = new AtomicBoolean();
   private volatile ThreadContext threadContext;
@@ -118,7 +113,7 @@ public class DefaultPartitionGroupMembershipService
       namespaceBuilder.register(groupType.namespace());
     }
 
-    serializer = Serializer.using(namespaceBuilder.build());
+    //    serializer = Serializer.using(namespaceBuilder.build());
   }
 
   @Override
@@ -161,45 +156,14 @@ public class DefaultPartitionGroupMembershipService
 
   /** Bootstraps the service. */
   private CompletableFuture<Void> bootstrap() {
-    return bootstrap(0, new CompletableFuture<>());
-  }
-
-  /**
-   * Recursively bootstraps the service, retrying if necessary until a system partition group is
-   * found.
-   */
-  private CompletableFuture<Void> bootstrap(
-      final int attempt, final CompletableFuture<Void> future) {
-
-    LOGGER.error("Bootstrap - {} attempt {}", this.getClass(), attempt);
-
-    LOGGER.error("Local member: {}", membershipService.getLocalMember());
-    LOGGER.error("Known members: {}", membershipService.getMembers());
-    LOGGER.error("Known  reachable members: {}", membershipService.getReachableMembers());
-
-    Futures.allOf(
+    // try to bootstrap with known members
+    // it is very likely that the known member on bootstrap are empty
+    return Futures.allOf(
             membershipService.getMembers().stream()
                 .filter(node -> !node.id().equals(membershipService.getLocalMember().id()))
-                .map(node -> bootstrap(node))
+                .map(this::bootstrap)
                 .collect(Collectors.toList()))
-        .whenComplete(
-            (result, error) -> {
-              if (error == null) {
-                if (groups.isEmpty() && attempt < MAX_PARTITION_GROUP_ATTEMPTS) {
-                  LOGGER.warn(
-                      "Failed to locate partition group(s) via bootstrap nodes. Please ensure partition "
-                          + "groups are configured either locally or remotely and the node is able to reach partition group members.");
-                  threadContext.schedule(
-                      Duration.ofSeconds(FIBONACCI_NUMBERS[Math.min(attempt, 4)]),
-                      () -> bootstrap(attempt + 1, future));
-                } else {
-                  future.complete(null);
-                }
-              } else {
-                future.completeExceptionally(error);
-              }
-            });
-    return future;
+        .thenApply(list -> null);
   }
 
   /** Bootstraps the service from the given node. */
@@ -214,39 +178,43 @@ public class DefaultPartitionGroupMembershipService
       final Member member, final CompletableFuture<Void> future) {
     LOGGER.error(
         "{} - Bootstrapping from member {}", membershipService.getLocalMember().id(), member);
-    messagingService
-        .<PartitionGroupInfo, PartitionGroupInfo>send(
-            BOOTSTRAP_SUBJECT,
-            new PartitionGroupInfo(
-                membershipService.getLocalMember().id(), Lists.newArrayList(groups.values())),
-            serializer::encode,
-            serializer::decode,
-            member.id())
-        .whenCompleteAsync(
-            (info, error) -> {
-              if (error == null) {
-                try {
-                  updatePartitionGroups(info);
-                  future.complete(null);
-                } catch (final Exception e) {
-                  future.completeExceptionally(e);
-                }
-              } else {
-                error = Throwables.getRootCause(error);
-                if (error instanceof MessagingException.NoRemoteHandler
-                    || error instanceof TimeoutException) {
-                  threadContext.schedule(Duration.ofSeconds(1), () -> bootstrap(member, future));
-                } else {
-                  LOGGER.debug(
-                      "{} - Failed to bootstrap from member {}",
-                      membershipService.getLocalMember().id(),
-                      member,
-                      error);
-                  future.complete(null);
-                }
-              }
-            },
-            threadContext);
+    final var partitionGroupInfo =
+        new PartitionGroupInfo(
+            membershipService.getLocalMember().id(), Lists.newArrayList(groups.values()));
+    //    messagingService
+    //        .<PartitionGroupInfo, PartitionGroupInfo>send(
+    //            BOOTSTRAP_SUBJECT,
+    //            new PartitionGroupInfo(
+    //                membershipService.getLocalMember().id(), Lists.newArrayList(groups.values())),
+    //            serializer::encode,
+    //            serializer::decode,
+    //            member.id())
+    //        .whenCompleteAsync(
+    //            (info, error) -> {
+    //              if (error == null) {
+    try {
+      updatePartitionGroups(partitionGroupInfo);
+      future.complete(null);
+    } catch (final Exception e) {
+      future.completeExceptionally(e);
+    }
+    //              } else {
+    //                error = Throwables.getRootCause(error);
+    //                if (error instanceof MessagingException.NoRemoteHandler
+    //                    || error instanceof TimeoutException) {
+    //                  threadContext.schedule(Duration.ofSeconds(1), () -> bootstrap(member,
+    // future));
+    //                } else {
+    //                  LOGGER.debug(
+    //                      "{} - Failed to bootstrap from member {}",
+    //                      membershipService.getLocalMember().id(),
+    //                      member,
+    //                      error);
+    //                  future.complete(null);
+    //                }
+    //              }
+    //            },
+    //            threadContext);
     return future;
   }
 
@@ -293,17 +261,17 @@ public class DefaultPartitionGroupMembershipService
       }
     }
   }
-
-  private PartitionGroupInfo handleBootstrap(final PartitionGroupInfo info) {
-    try {
-      updatePartitionGroups(info);
-    } catch (final Exception e) {
-      // Log the exception
-      LOGGER.warn("{}", e.getMessage());
-    }
-    return new PartitionGroupInfo(
-        membershipService.getLocalMember().id(), Lists.newArrayList(groups.values()));
-  }
+  //
+  //  private PartitionGroupInfo handleBootstrap(final PartitionGroupInfo info) {
+  //    try {
+  //      updatePartitionGroups(info);
+  //    } catch (final Exception e) {
+  //      // Log the exception
+  //      LOGGER.warn("{}", e.getMessage());
+  //    }
+  //    return new PartitionGroupInfo(
+  //        membershipService.getLocalMember().id(), Lists.newArrayList(groups.values()));
+  //  }
 
   @Override
   public CompletableFuture<PartitionGroupMembershipService> start() {
@@ -311,12 +279,12 @@ public class DefaultPartitionGroupMembershipService
         new SingleThreadContext(
             namedThreads("atomix-partition-group-membership-service-%d", LOGGER));
     membershipService.addListener(membershipEventListener);
-    messagingService.subscribe(
-        BOOTSTRAP_SUBJECT,
-        serializer::decode,
-        this::handleBootstrap,
-        serializer::encode,
-        threadContext);
+    //    messagingService.subscribe(
+    //        BOOTSTRAP_SUBJECT,
+    //        serializer::decode,
+    //        this::handleBootstrap,
+    //        serializer::encode,
+    //        threadContext);
     return bootstrap()
         .thenApply(
             v -> {
