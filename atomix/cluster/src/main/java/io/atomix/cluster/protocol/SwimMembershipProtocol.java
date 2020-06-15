@@ -246,6 +246,12 @@ public class SwimMembershipProtocol
       return false;
     }
 
+    // If the member matches the local member, ignore the update.
+    if (member.address().equals(localMember.address())) {
+      LOGGER.info("before it was removed here {}", member);
+      return false;
+    }
+
     SwimMember swimMember = members.get(member.id());
 
     // If the local member is not present, add the member in the ALIVE state.
@@ -343,7 +349,7 @@ public class SwimMembershipProtocol
       return true;
     }
 
-    LOGGER.info("Not consumed member {}", member);
+    LOGGER.info("Not consumed member {}, probably state hasnt changed '{}'", member, members);
     return false;
   }
 
@@ -429,6 +435,7 @@ public class SwimMembershipProtocol
         discoveryService.getNodes().stream()
             .map(node -> new SwimMember(MemberId.from(node.id().id()), node.address()))
             .filter(member -> !member.id().equals(localMember.id()))
+            .filter(member -> !member.address().equals(localMember.address()))
             .collect(Collectors.toList());
     for (final SwimMember member : syncMembers) {
       sync(member.copy());
@@ -508,6 +515,7 @@ public class SwimMembershipProtocol
                 .map(node -> new SwimMember(MemberId.from(node.id().id()), node.address()))
                 .filter(member -> !members.containsKey(member.id()))
                 .filter(member -> !member.id().equals(localMember.id()))
+                .filter(member -> !member.address().equals(localMember.address()))
                 .sorted(Comparator.comparing(Member::id))
                 .collect(Collectors.toList()));
 
