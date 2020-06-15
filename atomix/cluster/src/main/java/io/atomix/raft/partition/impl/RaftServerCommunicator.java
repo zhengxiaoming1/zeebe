@@ -41,6 +41,7 @@ import io.atomix.raft.protocol.TransferResponse;
 import io.atomix.raft.protocol.VoteRequest;
 import io.atomix.raft.protocol.VoteResponse;
 import io.atomix.utils.serializer.Serializer;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -68,6 +69,12 @@ public class RaftServerCommunicator implements RaftServerProtocol {
   @Override
   public CompletableFuture<JoinResponse> join(final MemberId memberId, final JoinRequest request) {
     return sendAndReceive(context.joinSubject, request, memberId);
+  }
+
+  @Override
+  public CompletableFuture<JoinResponse> join(
+      final MemberId memberId, final JoinRequest request, final Duration duration) {
+    return sendAndReceive(context.joinSubject, request, memberId, duration);
   }
 
   @Override
@@ -256,6 +263,18 @@ public class RaftServerCommunicator implements RaftServerProtocol {
     metrics.sendMessage(memberId.id(), request.getClass().getSimpleName());
     return clusterCommunicator.send(
         subject, request, serializer::encode, serializer::decode, MemberId.from(memberId.id()));
+  }
+
+  private <T, U> CompletableFuture<U> sendAndReceive(
+      final String subject, final T request, final MemberId memberId, final Duration duration) {
+    metrics.sendMessage(memberId.id(), request.getClass().getSimpleName());
+    return clusterCommunicator.send(
+        subject,
+        request,
+        serializer::encode,
+        serializer::decode,
+        MemberId.from(memberId.id()),
+        duration);
   }
 
   private <T extends RaftMessage> T recordReceivedMetrics(final T m) {
