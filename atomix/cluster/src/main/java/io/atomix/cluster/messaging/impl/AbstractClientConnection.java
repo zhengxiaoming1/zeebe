@@ -35,6 +35,9 @@ import org.slf4j.LoggerFactory;
 
 /** Base class for client-side connections. Manages request futures and timeouts. */
 abstract class AbstractClientConnection implements ClientConnection {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractClientConnection.class);
+
   private static final int WINDOW_SIZE = 10;
   private static final int MIN_SAMPLES = 50;
   private static final int TIMEOUT_FACTOR = 5;
@@ -164,6 +167,12 @@ abstract class AbstractClientConnection implements ClientConnection {
           new TimeoutException(
               "Request type " + type + " timed out in " + timeout + " milliseconds"));
       callbacks.remove(id);
+
+      LOG.error(
+          "Request with type '{}'  timed out in '{}' ms. Remove callback with id {}.",
+          type,
+          timeout,
+          id);
     }
 
     /**
