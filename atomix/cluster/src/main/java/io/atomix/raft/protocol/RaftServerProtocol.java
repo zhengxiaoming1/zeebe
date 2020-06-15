@@ -17,6 +17,7 @@
 package io.atomix.raft.protocol;
 
 import io.atomix.cluster.MemberId;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -31,6 +32,15 @@ public interface RaftServerProtocol {
    * @return a future to be completed with the response
    */
   CompletableFuture<JoinResponse> join(MemberId memberId, JoinRequest request);
+
+  /**
+   * Sends a join request to the given node with duration.
+   *
+   * @param memberId the node to which to send the request
+   * @param request the request to send
+   * @return a future to be completed with the response
+   */
+  CompletableFuture<JoinResponse> join(MemberId memberId, JoinRequest request, Duration duration);
 
   /**
    * Sends a leave request to the given node.

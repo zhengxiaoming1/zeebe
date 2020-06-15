@@ -21,6 +21,7 @@ import io.atomix.cluster.MemberId;
 import io.atomix.utils.concurrent.Futures;
 import io.atomix.utils.concurrent.ThreadContext;
 import java.net.ConnectException;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -66,6 +67,12 @@ public class TestRaftServerProtocol extends TestRaftProtocol implements RaftServ
 
   @Override
   public CompletableFuture<JoinResponse> join(final MemberId memberId, final JoinRequest request) {
+    return scheduleTimeout(getServer(memberId).thenCompose(listener -> listener.join(request)));
+  }
+
+  @Override
+  public CompletableFuture<JoinResponse> join(
+      final MemberId memberId, final JoinRequest request, final Duration duration) {
     return scheduleTimeout(getServer(memberId).thenCompose(listener -> listener.join(request)));
   }
 
