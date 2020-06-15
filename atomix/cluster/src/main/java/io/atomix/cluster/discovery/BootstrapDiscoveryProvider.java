@@ -96,6 +96,7 @@ public class BootstrapDiscoveryProvider
   @Override
   public CompletableFuture<Void> join(final BootstrapService bootstrap, final Node localNode) {
     LOGGER.info("Joined");
+    // TODO WE GAIN NOTHING WITH THIS
     getNodes().forEach(n -> post(new NodeDiscoveryEvent(NodeDiscoveryEvent.Type.JOIN, n)));
     return CompletableFuture.completedFuture(null);
   }

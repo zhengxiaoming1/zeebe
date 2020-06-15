@@ -250,6 +250,7 @@ public class SwimMembershipProtocol
 
     // If the local member is not present, add the member in the ALIVE state.
     if (swimMember == null) {
+      LOGGER.info("Member not exist yet {}", member);
       if (member.state() == State.ALIVE) {
         swimMember = new SwimMember(member);
         members.put(swimMember.id(), swimMember);
@@ -265,6 +266,9 @@ public class SwimMembershipProtocol
     }
     // If the term has been increased, update the member and record a gossip event.
     else if (member.incarnationNumber() > swimMember.getIncarnationNumber()) {
+
+      LOGGER.info("Update member {}", member);
+
       // If the member's version has changed, remove the old member and add the new member.
       if (!Objects.equals(member.version(), swimMember.version())) {
         members.remove(member.id());
@@ -281,6 +285,8 @@ public class SwimMembershipProtocol
       } else {
         // Update the term for the local member.
         swimMember.setIncarnationNumber(member.incarnationNumber());
+
+        LOGGER.info("Update existing member {}", member);
 
         // If the state has been changed to ALIVE, trigger a REACHABILITY_CHANGED event and then
         // update metadata.
@@ -316,6 +322,7 @@ public class SwimMembershipProtocol
         && member.state().ordinal() > swimMember.getState().ordinal()) {
       swimMember.setState(member.state());
 
+      LOGGER.info("Update existing member {}", member);
       // If the updated state is SUSPECT, post a REACHABILITY_CHANGED event and record an update.
       if (member.state() == State.SUSPECT) {
         LOGGER.debug("{} - Member unreachable {}", this.localMember.id(), swimMember);
@@ -335,6 +342,8 @@ public class SwimMembershipProtocol
       recordUpdate(swimMember.copy());
       return true;
     }
+
+    LOGGER.info("Not consumed member {}", member);
     return false;
   }
 
@@ -508,6 +517,7 @@ public class SwimMembershipProtocol
     // If there are members to probe, select the next member to probe using a counter for round
     // robin probes.
     if (!probeMembers.isEmpty()) {
+      LOGGER.info("Possible members to probe '{}'", probeMembers);
       final SwimMember probeMember =
           probeMembers.get(Math.abs(probeCounter.incrementAndGet() % probeMembers.size()));
       probe(probeMember.copy());
@@ -520,7 +530,7 @@ public class SwimMembershipProtocol
    * @param member the member to probe
    */
   private void probe(final ImmutableMember member) {
-    LOGGER.trace("{} - Probing {}", localMember.id(), member);
+    LOGGER.info("{} - Probing {}", localMember.id(), member);
     bootstrapService
         .getMessagingService()
         .sendAndReceive(
