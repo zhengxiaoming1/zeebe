@@ -1,6 +1,6 @@
 image:
   repository: gcr.io/zeebe-io/zeebe
-  tag: zell-joiner
+  tag: zell-joiner-2020-06-15-e8e5efa3 
   pullPolicy: Always
 
 # ZEEBE CFG
