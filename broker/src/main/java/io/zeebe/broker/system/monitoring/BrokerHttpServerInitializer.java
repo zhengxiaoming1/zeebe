@@ -14,20 +14,20 @@ import io.prometheus.client.CollectorRegistry;
 
 public final class BrokerHttpServerInitializer extends ChannelInitializer<SocketChannel> {
 
-  private final CollectorRegistry metricsRegistry;
-  private final BrokerHealthCheckService brokerHealthCheckService;
+  private static final HttpServerCodec HTTP_SERVER_CODEC = new HttpServerCodec();
+  private final BrokerHttpServerHandler channelHandler;
 
   public BrokerHttpServerInitializer(
       final CollectorRegistry metricsRegistry,
       final BrokerHealthCheckService brokerHealthCheckService) {
-    this.metricsRegistry = metricsRegistry;
-    this.brokerHealthCheckService = brokerHealthCheckService;
+    this.channelHandler = new BrokerHttpServerHandler(metricsRegistry,
+        brokerHealthCheckService);
   }
 
   @Override
   protected void initChannel(final SocketChannel ch) {
     ch.pipeline()
-        .addLast("codec", new HttpServerCodec())
-        .addLast("request", new BrokerHttpServerHandler(metricsRegistry, brokerHealthCheckService));
+        .addLast("codec", HTTP_SERVER_CODEC)
+        .addLast("request", channelHandler);
   }
 }
