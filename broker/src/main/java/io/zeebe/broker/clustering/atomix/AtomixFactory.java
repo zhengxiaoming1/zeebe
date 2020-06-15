@@ -73,6 +73,7 @@ public final class AtomixFactory {
     final RaftPartitionGroup partitionGroup =
         createRaftPartitionGroup(configuration, rootDirectory);
 
+    Loggers.SYSTEM_LOGGER.error("created {}", partitionGroup);
     return atomixBuilder.withPartitionGroups(partitionGroup).build();
   }
 

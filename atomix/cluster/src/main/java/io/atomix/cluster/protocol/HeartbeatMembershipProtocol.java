@@ -148,7 +148,7 @@ public class HeartbeatMembershipProtocol
               0,
               config.getHeartbeatInterval().toMillis(),
               TimeUnit.MILLISECONDS);
-      LOGGER.info("Started");
+      LOGGER.error("Started {}", this.getClass());
     }
     return CompletableFuture.completedFuture(null);
   }

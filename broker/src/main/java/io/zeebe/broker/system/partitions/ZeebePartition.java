@@ -156,6 +156,7 @@ public final class ZeebePartition extends Actor
   }
 
   private void onRoleChange(final Role newRole, final long newTerm) {
+    LOG.error("ZeebePartition#onRoleChange - role {} term {}", newRole, newTerm);
     this.term = newTerm;
     switch (newRole) {
       case LEADER:
@@ -188,7 +189,11 @@ public final class ZeebePartition extends Actor
               if (error == null) {
                 final List<ActorFuture<Void>> listenerFutures =
                     partitionListeners.stream()
-                        .map(l -> l.onBecomingLeader(partitionId, newTerm, logStream))
+                        .map(
+                            l -> {
+                              LOG.error("ZeebePartition#followerTransition call {}", l);
+                              return l.onBecomingLeader(partitionId, newTerm, logStream);
+                            })
                         .collect(Collectors.toList());
                 actor.runOnCompletion(
                     listenerFutures,
@@ -214,7 +219,11 @@ public final class ZeebePartition extends Actor
               if (error == null) {
                 final List<ActorFuture<Void>> listenerFutures =
                     partitionListeners.stream()
-                        .map(l -> l.onBecomingFollower(partitionId, newTerm))
+                        .map(
+                            l -> {
+                              LOG.error("ZeebePartition#followerTransition call {}", l);
+                              return l.onBecomingFollower(partitionId, newTerm);
+                            })
                         .collect(Collectors.toList());
                 actor.runOnCompletion(
                     listenerFutures,
@@ -665,6 +674,8 @@ public final class ZeebePartition extends Actor
     atomixLogStorage = AtomixLogStorage.ofPartition(zeebeIndexMapping, atomixRaftPartition);
     atomixRaftPartition.getServer().addCommitListener(this);
     atomixRaftPartition.addRoleChangeListener(this);
+
+    LOG.error("ZeebePartition#onActorStarting - listeners {}", partitionListeners);
     onRoleChange(atomixRaftPartition.getRole(), atomixRaftPartition.term());
     onRecoveredInternal();
   }

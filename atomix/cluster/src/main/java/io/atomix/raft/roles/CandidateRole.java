@@ -81,7 +81,7 @@ public final class CandidateRole extends ActiveRole {
 
   /** Starts the election. */
   void startElection() {
-    log.info("Starting election");
+    log.error("Starting election {}", this.getClass());
     sendVoteRequests();
   }
 

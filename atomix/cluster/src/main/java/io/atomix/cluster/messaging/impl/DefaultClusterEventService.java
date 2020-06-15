@@ -194,7 +194,7 @@ public class DefaultClusterEventService
       membershipService
           .getMembers()
           .forEach(m -> event(new ClusterMembershipEvent(Type.MEMBER_ADDED, m)));
-      LOGGER.info("Started");
+      LOGGER.error("Started {}", this.getClass());
     }
     return CompletableFuture.completedFuture(this);
   }

@@ -110,7 +110,7 @@ public class DefaultClusterMembershipService
               })
           .thenApply(
               v -> {
-                LOGGER.info("Started");
+                LOGGER.error("Started {}", this.getClass());
                 return this;
               });
     }
