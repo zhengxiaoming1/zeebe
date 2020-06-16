@@ -515,7 +515,7 @@ public class Atomix extends AtomixCluster {
   @Override
   protected CompletableFuture<Void> startServices() {
     return super.startServices()
-        .thenComposeAsync(v -> partitions.start(), threadContext)
+        //        .thenComposeAsync(v -> partitions.start(), threadContext)
         .thenApply(v -> null);
   }
 
