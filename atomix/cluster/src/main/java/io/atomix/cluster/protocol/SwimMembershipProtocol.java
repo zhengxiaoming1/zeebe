@@ -160,11 +160,12 @@ public class SwimMembershipProtocol
               System.currentTimeMillis());
       this.localProperties.putAll(localMember.properties());
       discoveryService.addListener(discoveryEventListener);
-//
-//      LOGGER.info("{} - Member activated: {}", localMember.id(), localMember);
-//      localMember.setState(State.ALIVE);
-//      members.put(localMember.id(), localMember);
-//      post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, localMember));
+
+      // we need to add our local node to the member list,
+      // to share the mapping between node id and address in the cluster
+      localMember.setState(State.ALIVE);
+      members.put(localMember.id(), localMember);
+      post(new GroupMembershipEvent(GroupMembershipEvent.Type.MEMBER_ADDED, localMember));
 
       LOGGER.error("Nodes from discovery service {}", discoveryService.getNodes());
       registerHandlers();
