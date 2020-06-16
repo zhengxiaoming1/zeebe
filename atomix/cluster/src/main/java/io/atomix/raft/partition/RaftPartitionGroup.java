@@ -212,6 +212,12 @@ public class RaftPartitionGroup implements ManagedPartitionGroup {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
         .thenApply(
             v -> {
+              LOGGER.info("Sleep after partition open");
+              try {
+                Thread.sleep(15 * 1000L);
+              } catch (final InterruptedException e) {
+                e.printStackTrace();
+              }
               LOGGER.info("Started");
               return this;
             });
@@ -245,6 +251,7 @@ public class RaftPartitionGroup implements ManagedPartitionGroup {
             config.getMembers().stream().map(MemberId::from).collect(Collectors.toSet()));
     Collections.sort(sorted);
 
+    LOGGER.error("Members for partition {}", sorted);
     int partitionSize = this.partitionSize;
     if (partitionSize == 0) {
       partitionSize = sorted.size();
@@ -252,6 +259,8 @@ public class RaftPartitionGroup implements ManagedPartitionGroup {
 
     final int length = sorted.size();
     final int count = Math.min(partitionSize, length);
+
+    LOGGER.error("Partition size / replication factor {}", count);
 
     final Set<PartitionMetadata> metadata = Sets.newHashSet();
     for (int i = 0; i < partitions.size(); i++) {
@@ -262,6 +271,8 @@ public class RaftPartitionGroup implements ManagedPartitionGroup {
       }
       metadata.add(new PartitionMetadata(partitionId, membersForPartition));
     }
+
+    LOGGER.error("Partition Matrix {}", metadata);
     return metadata;
   }
 

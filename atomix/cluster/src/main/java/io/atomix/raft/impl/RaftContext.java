@@ -286,6 +286,7 @@ public class RaftContext implements AutoCloseable {
           new Consumer<State>() {
             @Override
             public void accept(final State state) {
+
               listener.accept(state);
               removeStateChangeListener(this);
             }

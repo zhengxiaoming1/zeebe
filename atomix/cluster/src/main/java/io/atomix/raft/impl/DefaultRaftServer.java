@@ -248,6 +248,7 @@ public class DefaultRaftServer implements RaftServer {
                   context.awaitState(
                       RaftContext.State.READY,
                       state -> {
+                        log.error("Raft server is ready");
                         started = true;
                         openFutureRef.get().complete(this);
                       });
