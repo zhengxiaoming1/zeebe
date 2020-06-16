@@ -113,7 +113,7 @@ public final class BrokerHealthCheckService extends Actor implements PartitionLi
   }
 
   private void registerComponent(final String componentName, final HealthMonitorable component) {
-    actor.run(() -> healthMonitor.registerComponent(componentName, component));
+    actor.call(() -> healthMonitor.registerComponent(componentName, component));
   }
 
   public void registerMonitoredPartition(final int partitionId, final HealthMonitorable partition) {
