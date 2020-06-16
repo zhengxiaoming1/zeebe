@@ -174,7 +174,7 @@ public final class Broker implements AutoCloseable {
             return embeddedGatewayService;
           });
     }
-    //    startContext.addStep("cluster services", () -> atomix.start().join());
+    startContext.addStep("cluster services", () -> atomix.start().join());
     startContext.addStep("topology manager", () -> topologyManagerStep(clusterCfg, localBroker));
     startContext.addStep("metric's server", () -> monitoringServerStep(networkCfg, localBroker));
     startContext.addStep(
