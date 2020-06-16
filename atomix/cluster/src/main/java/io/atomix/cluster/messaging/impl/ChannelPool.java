@@ -89,7 +89,7 @@ class ChannelPool {
       synchronized (channelPool) {
         channelFuture = channelPool.get(offset);
         if (channelFuture == null || channelFuture.isCompletedExceptionally()) {
-          LOGGER.debug("Connecting to {}", address);
+          LOGGER.trace("Connecting to {}", address);
           channelFuture = factory.apply(address);
           channelFuture.whenComplete(
               (channel, error) -> {
