@@ -90,7 +90,7 @@ public final class LeaderRole extends ActiveRole implements ZeebeLogAppender {
 
     return super.start()
         .thenRun(this::startTimers)
-        .thenRun(() -> raft.getCluster().completeJoinFuture())
+        //        .thenRun(() -> raft.getCluster().completeJoinFuture())
         .thenApply(v -> this);
   }
 
