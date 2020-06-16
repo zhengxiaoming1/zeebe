@@ -837,7 +837,7 @@ public class NettyMessagingService implements ManagedMessagingService {
 
     @Override
     public void channelActive(final ChannelHandlerContext context) throws Exception {
-      log.debug(
+      log.trace(
           "Writing client protocol version {} for connection to {}",
           protocolVersion,
           context.channel().remoteAddress());
@@ -876,7 +876,7 @@ public class NettyMessagingService implements ManagedMessagingService {
         final ChannelHandlerContext context,
         final Connection<ProtocolReply> connection,
         final ProtocolVersion protocolVersion) {
-      log.debug(
+      log.trace(
           "Activating client protocol version {} for connection to {}",
           protocolVersion,
           context.channel().remoteAddress());
@@ -913,7 +913,7 @@ public class NettyMessagingService implements ManagedMessagingService {
         final ChannelHandlerContext context,
         final Connection<ProtocolRequest> connection,
         final ProtocolVersion protocolVersion) {
-      log.debug(
+      log.trace(
           "Activating server protocol version {} for connection to {}",
           protocolVersion,
           context.channel().remoteAddress());
