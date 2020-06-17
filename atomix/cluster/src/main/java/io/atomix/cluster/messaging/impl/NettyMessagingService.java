@@ -923,10 +923,11 @@ public class NettyMessagingService implements ManagedMessagingService {
 
   /** Connection message dispatcher. */
   private class MessageDispatcher<M extends ProtocolMessage>
-      extends SimpleChannelInboundHandler<Object> {
+      extends SimpleChannelInboundHandler<M> {
     private final Connection<M> connection;
 
     MessageDispatcher(final Connection<M> connection) {
+      super((Class<? extends M>)ProtocolMessage.class, true);
       this.connection = connection;
     }
 
@@ -944,18 +945,13 @@ public class NettyMessagingService implements ManagedMessagingService {
     }
 
     @Override
-    public boolean acceptInboundMessage(final Object msg) {
-      return msg instanceof ProtocolMessage;
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
-    protected void channelRead0(final ChannelHandlerContext ctx, final Object message)
-        throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final M message) throws Exception {
       try {
-        connection.dispatch((M) message);
+        connection.dispatch(message);
+//        ReferenceCountUtil.release(message);
       } catch (final RejectedExecutionException e) {
-        log.warn("Unable to dispatch message due to {}", e.getMessage());
+        log.warn("Unable to dispatch message due to {}", e.getMessage(), e);
       }
     }
   }
