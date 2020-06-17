@@ -168,15 +168,17 @@ public class SwimMembershipProtocol
 
       registerHandlers();
       gossipFuture =
-          swimScheduler.scheduleWithFixedDelay(
-              this::gossip, 0, config.getGossipInterval().toMillis(), TimeUnit.MILLISECONDS);
+          swimScheduler.schedule(
+              (Runnable) this::gossip,
+              config.getGossipInterval().toMillis(),
+              TimeUnit.MILLISECONDS);
       probeFuture =
-          swimScheduler.scheduleWithFixedDelay(
-              this::probe, 0, config.getProbeInterval().toMillis(), TimeUnit.MILLISECONDS);
+          swimScheduler.schedule(
+              (Runnable) this::probe, config.getProbeInterval().toMillis(), TimeUnit.MILLISECONDS);
       //      swimScheduler.execute(this::syncAll);
       syncFuture =
-          swimScheduler.scheduleWithFixedDelay(
-              this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
+          swimScheduler.schedule(
+              (Runnable) this::sync, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
       LOGGER.info("Started");
     }
     return CompletableFuture.completedFuture(null);
