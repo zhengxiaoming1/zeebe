@@ -168,14 +168,14 @@ public class SwimMembershipProtocol
 
       registerHandlers();
       gossipFuture =
-          swimScheduler.scheduleAtFixedRate(
+          swimScheduler.scheduleWithFixedDelay(
               this::gossip, 0, config.getGossipInterval().toMillis(), TimeUnit.MILLISECONDS);
       probeFuture =
-          swimScheduler.scheduleAtFixedRate(
+          swimScheduler.scheduleWithFixedDelay(
               this::probe, 0, config.getProbeInterval().toMillis(), TimeUnit.MILLISECONDS);
       swimScheduler.execute(this::syncAll);
       syncFuture =
-          swimScheduler.scheduleAtFixedRate(
+          swimScheduler.scheduleWithFixedDelay(
               this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
       LOGGER.info("Started");
     }
@@ -439,6 +439,8 @@ public class SwimMembershipProtocol
                 LOGGER.debug(
                     "{} - Failed to synchronize membership with {}", localMember.id(), member);
               }
+              swimScheduler.scheduleWithFixedDelay(
+                  this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
             },
             swimScheduler);
   }
@@ -455,6 +457,9 @@ public class SwimMembershipProtocol
       if (member != null) {
         sync(member.copy());
       }
+    } else {
+      swimScheduler.scheduleWithFixedDelay(
+          this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 
@@ -523,6 +528,8 @@ public class SwimMembershipProtocol
                   requestProbes(swimMember.copy());
                 }
               }
+              swimScheduler.scheduleWithFixedDelay(
+                  this::probe, 0, config.getProbeInterval().toMillis(), TimeUnit.MILLISECONDS);
             },
             swimScheduler);
   }
@@ -723,6 +730,9 @@ public class SwimMembershipProtocol
       // Gossip the pending updates to peers.
       gossip(updates);
     }
+
+    swimScheduler.scheduleWithFixedDelay(
+        this::gossip, 0, config.getGossipInterval().toMillis(), TimeUnit.MILLISECONDS);
   }
 
   /**
