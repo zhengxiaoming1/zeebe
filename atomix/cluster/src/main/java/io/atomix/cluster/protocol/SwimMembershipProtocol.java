@@ -173,7 +173,7 @@ public class SwimMembershipProtocol
       probeFuture =
           swimScheduler.scheduleWithFixedDelay(
               this::probe, 0, config.getProbeInterval().toMillis(), TimeUnit.MILLISECONDS);
-      swimScheduler.execute(this::syncAll);
+      //      swimScheduler.execute(this::syncAll);
       syncFuture =
           swimScheduler.scheduleWithFixedDelay(
               this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
@@ -398,18 +398,6 @@ public class SwimMembershipProtocol
     }
   }
 
-  /** Synchronizes the node state with peers. */
-  private void syncAll() {
-    final List<SwimMember> syncMembers =
-        discoveryService.getNodes().stream()
-            .map(node -> new SwimMember(MemberId.from(node.id().id()), node.address()))
-            .filter(member -> !member.id().equals(localMember.id()))
-            .collect(Collectors.toList());
-    for (final SwimMember member : syncMembers) {
-      sync(member.copy());
-    }
-  }
-
   /**
    * Synchronizes the node state with the given peer.
    *
@@ -439,8 +427,10 @@ public class SwimMembershipProtocol
                 LOGGER.debug(
                     "{} - Failed to synchronize membership with {}", localMember.id(), member);
               }
-              swimScheduler.scheduleWithFixedDelay(
-                  this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
+              swimScheduler.schedule(
+                  (Runnable) this::sync,
+                  config.getSyncInterval().toMillis(),
+                  TimeUnit.MILLISECONDS);
             },
             swimScheduler);
   }
@@ -458,8 +448,8 @@ public class SwimMembershipProtocol
         sync(member.copy());
       }
     } else {
-      swimScheduler.scheduleWithFixedDelay(
-          this::sync, 0, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
+      swimScheduler.schedule(
+          (Runnable) this::sync, config.getSyncInterval().toMillis(), TimeUnit.MILLISECONDS);
     }
   }
 
@@ -528,8 +518,10 @@ public class SwimMembershipProtocol
                   requestProbes(swimMember.copy());
                 }
               }
-              swimScheduler.scheduleWithFixedDelay(
-                  this::probe, 0, config.getProbeInterval().toMillis(), TimeUnit.MILLISECONDS);
+              swimScheduler.schedule(
+                  (Runnable) this::probe,
+                  config.getProbeInterval().toMillis(),
+                  TimeUnit.MILLISECONDS);
             },
             swimScheduler);
   }
@@ -731,8 +723,8 @@ public class SwimMembershipProtocol
       gossip(updates);
     }
 
-    swimScheduler.scheduleWithFixedDelay(
-        this::gossip, 0, config.getGossipInterval().toMillis(), TimeUnit.MILLISECONDS);
+    swimScheduler.schedule(
+        (Runnable) this::gossip, config.getGossipInterval().toMillis(), TimeUnit.MILLISECONDS);
   }
 
   /**
