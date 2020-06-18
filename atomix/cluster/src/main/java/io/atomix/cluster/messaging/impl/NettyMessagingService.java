@@ -927,7 +927,7 @@ public class NettyMessagingService implements ManagedMessagingService {
     private final Connection<M> connection;
 
     MessageDispatcher(final Connection<M> connection) {
-      super((Class<? extends M>)ProtocolMessage.class, true);
+      super((Class<? extends M>) ProtocolMessage.class, true);
       this.connection = connection;
     }
 
@@ -949,7 +949,7 @@ public class NettyMessagingService implements ManagedMessagingService {
     protected void channelRead0(final ChannelHandlerContext ctx, final M message) throws Exception {
       try {
         connection.dispatch(message);
-//        ReferenceCountUtil.release(message);
+        //        ReferenceCountUtil.release(message);
       } catch (final RejectedExecutionException e) {
         log.warn("Unable to dispatch message due to {}", e.getMessage(), e);
       }
