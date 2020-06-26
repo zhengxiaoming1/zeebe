@@ -112,7 +112,7 @@ public final class DefaultSnapshotFile {
   /** Creates a temporary file for writing snapshots. */
   public static File createTemporaryFile(final File base) {
     try {
-      final File file = File.createTempFile(base.getName(), null);
+      final File file = File.createTempFile(base.getName(), null, new File("."));
       file.deleteOnExit();
       return file;
     } catch (final IOException e) {
