@@ -176,6 +176,44 @@ public class FailOverReplicationTest {
     clusteringRule.waitForSnapshotAtBroker(previousLeader);
   }
 
+  // regression test for https://github.com/zeebe-io/zeebe/issues/4810
+  @Test
+  public void shouldFormClusterEvenWhenMissingEventsDisconnectFollower() {
+    // given
+    final var leaderId = clusteringRule.getLeaderForPartition(1).getNodeId();
+    final var leader = clusteringRule.getBroker(leaderId);
+    final var followers = clusteringRule.getOtherBrokerObjects(leaderId);
+    client.newDeployCommand().addWorkflowModel(WORKFLOW, WORKFLOW_RESOURCE_NAME).send().join();
+
+    // disconnect leader - becomes follower
+    final var followerB = followers.get(1);
+    clusteringRule.disconnect(followerB);
+    //
+    //    final var newLeaderInfo = clusteringRule.awaitOtherLeader(1, leaderId);
+    //    final var newLeaderId = newLeaderInfo.getNodeId();
+    //    assertThat(newLeaderId).isNotEqualTo(leaderId);
+    //    final var newLeader = clusteringRule.getBroker(newLeaderId);
+
+    //    final List<Broker> followers = clusteringRule.getOtherBrokerObjects(newLeaderId);
+    final var followerA = followers.get(0);
+
+    // Leader and Follower A have new entries
+    // which Follower B - old leader hasn't
+    awaitFilledSegmentsOnBrokers(List.of(leader, followerA), 2);
+    awaitSnapshot(leader);
+    clusteringRule.waitForSnapshotAtBroker(followerA);
+
+    // when shutdown current leader and connect follower (old leader with old log)
+    clusteringRule.stopBroker(leaderId);
+    clusteringRule.connect(followerB);
+
+    // then
+    // we should be able to form a cluster via replicating snapshot etc.
+    clusteringRule.waitForSnapshotAtBroker(followerB);
+    final var nextLeader = clusteringRule.awaitOtherLeader(1, leaderId);
+    assertThat(nextLeader.getNodeId()).isEqualTo(getNodeId(followerA));
+  }
+
   private int getNodeId(final Broker broker) {
     return broker.getConfig().getCluster().getNodeId();
   }

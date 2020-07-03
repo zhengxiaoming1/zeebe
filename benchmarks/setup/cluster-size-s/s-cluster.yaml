@@ -1,0 +1,1035 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    action_file.yml: |-
+      ---
+      # Remember, leave a key empty if there is no value.  None will be a string,
+      # not a Python "NoneType"
+      actions:
+        #https://github.com/camunda-cloud/zeebe-controller-k8s/issues/92
+        #currently zeebe is zeebe-<blah>-YYYY-MM-DD
+        #and operate is operate-<blah>-YYYYMMDD
+        #so for now we just have two policies here
+        1:
+          action: delete_indices
+          description: "Clean up ES by deleting old operate indices"
+          options:
+            timeout_override:
+            continue_if_exception: False
+            disable_action: False
+            ignore_empty_list: True
+          filters:
+          - filtertype: age
+            source: name
+            direction: older
+            unit: days
+            unit_count: 5
+            timestring: '%Y%m%d'
+            field:
+            stats_result:
+            epoch:
+            exclude: False
+        2:
+          action: delete_indices
+          description: "Clean up ES by deleting old zeebe indices"
+          options:
+            timeout_override:
+            continue_if_exception: False
+            disable_action: False
+            ignore_empty_list: True
+          filters:
+          - filtertype: age
+            source: name
+            direction: older
+            unit: days
+            unit_count: 2
+            timestring: '%Y-%m-%d'
+            field:
+            stats_result:
+            epoch:
+            exclude: False
+    config.yml: |-
+      ---
+      # Remember, leave a key empty if there is no value.  None will be a string,
+      # not a Python "NoneType"
+      client:
+        hosts:
+          - elasticsearch
+        port: 9200
+        url_prefix:
+        use_ssl: False
+        certificate:
+        client_cert:
+        client_key:
+        ssl_no_validate: False
+        http_auth:
+        timeout: 30
+        master_only: False
+      logging:
+        loglevel: INFO
+        logfile:
+        logformat: default
+        blacklist: ['elasticsearch', 'urllib3']
+  kind: ConfigMap
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: elasticsearch-curator-configmap
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+- apiVersion: v1
+  data:
+    init-migration.sh: |
+      #!/usr/bin/env bash
+
+      # wrapper script to continue without effect if the migration script doesn't exist
+      # (pre 0.23.0)
+      # https://github.com/camunda-cloud/zeebe-controller-k8s/issues/250
+      # @afirth 2020-03-31
+      # Delete after no older clusters, and change init command to originally suggested:
+      # ['/bin/bash','/usr/local/operate/migration/migrate.sh','http://elasticsearch:9200']
+
+      set -eux -o pipefail
+
+      SCRIPT=/usr/local/operate/migration/migrate.sh
+      ES_HOST=http://elasticsearch:9200
+
+      if [[ -e "$SCRIPT" ]]; then
+        exec "$SCRIPT" "$ES_HOST"
+      else
+        echo "Skipping migration initialization - no migration script found at $SCRIPT"
+      fi
+    operate.yaml: |
+      camunda.operate:
+        # ELS instance to store Operate data
+        elasticsearch:
+          # Cluster name
+          clusterName: elasticsearch
+          # Host
+          host: elasticsearch
+          # Transport port
+          port: 9200
+        # Zeebe instance
+        zeebe:
+          # Broker contact point
+          brokerContactPoint: zeebe-service:26500
+        # ELS instance to export Zeebe data to
+        zeebeElasticsearch:
+          # Cluster name
+          clusterName: elasticsearch
+          # Host
+          host: elasticsearch
+          # Transport port
+          port: 9200
+          # Index prefix, configured in Zeebe Elasticsearch exporter
+          prefix: zeebe-record
+      logging:
+        level:
+          ROOT: INFO
+          org.camunda.operate: DEBUG
+      management:
+        endpoints.web.exposure.include: health,info,conditions,configprops,prometheus #Spring Boot Actuator endpoints to be exposed
+        health.elasticsearch.enabled: false    #if true, ElasticsearchHealthIndicator will be enabled and can fail the health check for Importer
+  kind: ConfigMap
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: operate-configmap
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+- apiVersion: v1
+  data:
+    startup.sh: |
+      #!/usr/bin/env bash
+
+      set -eux -o pipefail
+
+      # environment variables for zeebe broker < 0.23.0-alpha2
+      export ZEEBE_HOST=$(hostname -f)
+      export ZEEBE_CLUSTER_NAME=$K8S_NAMESPACE
+
+      #e.g. zeebe-0.zeebe-broker-service.customer-1-zeebe.svc.cluster.local:26502,zeebe-1.zeebe-broker-service.customer-1-zeebe.svc.cluster.local:26502,zeebe-2.zeebe-broker-service.customer-1-zeebe.svc.cluster.local:26502,
+      export ZEEBE_CONTACT_POINTS=$(for ((i=0; i<${ZEEBE_CLUSTER_SIZE}; i++ )); do echo -n "zeebe-$i.$(hostname -d):26502,"; done)
+      # e.g. "1"
+      export ZEEBE_NODE_ID=$(echo $K8S_POD_NAME | tr -d "[:alpha:]-")
+      export ZEEBE_GATEWAY_CLUSTER_HOST=${ZEEBE_GATEWAY_CLUSTER_HOST:-${ZEEBE_HOST}}
+
+      # environment variables for zeebe-broker >= 0.23.0-alpha2
+      export SPRING_CONFIG_LOCATION='file:./config/zeebe.cfg.yaml'
+
+      export ZEEBE_BROKER_NETWORK_HOST=$(hostname -f)
+      export ZEEBE_BROKER_CLUSTER_CLUSTERNAME=$K8S_NAMESPACE
+
+      #e.g. zeebe-0.zeebe-broker-service.customer-1-zeebe.svc.cluster.local:26502,zeebe-1.zeebe-broker-service.customer-1-zeebe.svc.cluster.local:26502,zeebe-2.zeebe-broker-service.customer-1-zeebe.svc.cluster.local:26502,
+      export ZEEBE_BROKER_CLUSTER_INITIALCONTACTPOINTS=$(for ((i=0; i<${ZEEBE_BROKER_CLUSTER_CLUSTERSIZE}; i++ )); do echo -n "zeebe-$i.$(hostname -d):26502,"; done)
+      # e.g. "1"
+      export ZEEBE_BROKER_CLUSTER_NODEID=$(echo $K8S_POD_NAME | tr -d "[:alpha:]-")
+      export ZEEBE_BROKER_GATEWAY_CLUSTER_HOST=${ZEEBE_BROKER_GATEWAY_CLUSTER_HOST:-${ZEEBE_HOST}}
+
+      # append datestamped heapdump path
+      export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS} -XX:HeapDumpPath=/usr/local/zeebe/data/java_started_$(date +%s).hprof"
+
+      env
+      exec /usr/local/zeebe/bin/broker
+
+      # Cleanup data #TODO? AF-2019-06-10
+      #rm -rf /usr/local/zeebe/data/*
+      #echo "Done cleaning up"
+    zeebe.cfg.toml: |
+      [threads]
+      cpuThreadCount = 1
+
+      [[exporters]]
+      id = "elasticsearch"
+      className = "io.zeebe.exporter.ElasticsearchExporter"
+
+      [exporters.args]
+      url = "http://elasticsearch:9200"
+
+      [exporters.args.bulk]
+      delay = 5
+      size = 1_000
+
+      #[exporters.args.authentication]
+      #username = elastic
+      #password = changeme
+
+      [exporters.args.index]
+      prefix = "zeebe-record"
+      createTemplate = true
+      command = false
+      event = true
+      rejection = false
+      deployment = true
+      incident = true
+      job = true
+      message = false
+      messageSubscription = false
+      raft = false
+      workflowInstance = true
+      workflowInstanceSubscription = false
+    zeebe.cfg.yaml: |
+      zeebe:
+        broker:
+          threads:
+            cpuThreadCount: 1
+          exporters:
+            elasticsearch:
+              className: io.zeebe.exporter.ElasticsearchExporter
+              args:
+                url: http://elasticsearch:9200
+                bulk:
+                  delay: 5
+                  size:  1000
+
+                #authentication:
+                  #username: elastic
+                  #password: changeme
+
+                index:
+                  prefix: zeebe-record
+                  createTemplate: true
+                  command: false
+                  event: true
+                  rejection: false
+                  deployment: true
+                  incident: true
+                  job: true
+                  message: false
+                  messageSubscription: false
+                  raft: false
+                  workflowInstance: true
+                  workflowInstanceSubscription: false
+  kind: ConfigMap
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: zeebe-configmap
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: elasticsearch
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    clusterIP: 10.93.4.218
+    ports:
+    - name: http
+      port: 9200
+      protocol: TCP
+      targetPort: 9200
+    selector:
+      app.kubernetes.io/component: elasticsearch
+    sessionAffinity: None
+    type: ClusterIP
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: operate-service
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    clusterIP: 10.93.13.31
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: metrics
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+    selector:
+      app.kubernetes.io/component: operate
+    sessionAffinity: None
+    type: ClusterIP
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app.kubernetes.io/app: zeebe
+      app.kubernetes.io/component: broker
+      app.kubernetes.io/service: zeebe-broker
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: zeebe-broker-service
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    clusterIP: None
+    ports:
+    - name: metrics
+      port: 9600
+      protocol: TCP
+      targetPort: 9600
+    publishNotReadyAddresses: true
+    selector:
+      app.kubernetes.io/app: zeebe
+      app.kubernetes.io/component: gateway
+    sessionAffinity: None
+    type: ClusterIP
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: zeebe-service
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    clusterIP: 10.93.5.80
+    ports:
+    - name: gateway
+      port: 26500
+      protocol: TCP
+      targetPort: 26500
+    selector:
+      app.kubernetes.io/app: zeebe
+      app.kubernetes.io/component: gateway
+    sessionAffinity: None
+    type: ClusterIP
+    loadBalancer: {}
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    generation: 1
+    labels:
+      app.kubernetes.io/component: zeebe-http-connector
+      app.kubernetes.io/name: connector
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: connector-deployment
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 0
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: zeebe-http-connector
+        app.kubernetes.io/name: connector
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/component: zeebe-http-connector
+          app.kubernetes.io/name: connector
+      spec:
+        containers:
+        - env:
+          - name: DEBUG
+            value: express:*
+          - name: ZEEBE_CLIENT_BROKER_CONTACTPOINT
+            value: zeebe-service:26500
+          - name: ZEEBE_WORKER_DEFAULTNAME
+            value: CAMUNDA-HTTP-WORKER
+          - name: ZEEBE_WORKER_DEFAULTTYPE
+            value: CAMUNDA-HTTP
+          - name: ZEEBE_CLIENT_SECURITY_PLAINTEXT
+            value: "true"
+          - name: CLUSTER_NAME
+            value: cluster-size-s
+          - name: ENV_VARS_URL
+          - name: ENV_VARS_M2M_BASE_URL
+          - name: ENV_VARS_M2M_CLIENT_ID
+          - name: ENV_VARS_M2M_CLIENT_SECRET
+          - name: ENV_VARS_M2M_AUDIENCE
+          image: gcr.io/camunda-cloud-240911/zeebe-http-worker:7463e8b
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: zeebe-http-connector
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 400m
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 500Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    conditions:
+    - lastTransitionTime: "2020-07-02T12:57:32Z"
+      lastUpdateTime: "2020-07-02T12:57:32Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      type: Available
+    - lastTransitionTime: "2020-07-02T12:57:32Z"
+      lastUpdateTime: "2020-07-02T12:57:32Z"
+      message: ReplicaSet "connector-deployment-6c7559c7ff" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      type: Progressing
+    observedGeneration: 1
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    generation: 1
+    labels:
+      app.kubernetes.io/component: operate
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: operate-deployment
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: operate
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/component: operate
+      spec:
+        containers:
+        - env:
+          - name: SPRING_PROFILES_ACTIVE
+            value: sso-auth
+          - name: OPERATE_LOG_APPENDER
+            value: Stackdriver
+          - name: CAMUNDA_CLOUD_APPLICATION
+            value: operate
+          - name: MANAGEMENT_SERVER_PORT
+            value: "8081"
+          - name: CAMUNDA_OPERATE_AUTH0_CLIENTSECRET
+            valueFrom:
+              secretKeyRef:
+                key: operate-client-secret
+                name: operate-auth0-secret
+          - name: CAMUNDA_OPERATE_AUTH0_DOMAIN
+            value: weblogin.cloud.ultrawombat.com
+          - name: CAMUNDA_OPERATE_AUTH0_BACKENDDOMAIN
+            value: camunda-dev.eu.auth0.com
+          - name: CAMUNDA_OPERATE_AUTH0_CLIENTID
+            value: tgbfvBTrXZroWWap8DgtTIOKGn1Vq9F6
+          - name: CAMUNDA_OPERATE_AUTH0_CLAIMNAME
+            value: https://camunda.com/orgs
+          - name: CAMUNDA_OPERATE_AUTH0_ORGANIZATION
+            value: 5a6c22cc-8005-4bec-8bfa-b5bc08c8ec86
+          image: camunda/operate:0.23.2
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: metrics
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: operate
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          - containerPort: 8081
+            name: metrics
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/check
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 250Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /usr/local/operate/config/application.yml
+            name: config
+            subPath: operate.yaml
+        dnsPolicy: ClusterFirst
+        initContainers:
+        - command:
+          - /bin/bash
+          - /usr/local/operate/init-migration.sh
+          image: camunda/operate:0.23.2
+          imagePullPolicy: IfNotPresent
+          name: migration
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 250Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /usr/local/operate/init-migration.sh
+            name: config
+            subPath: init-migration.sh
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 484
+            name: operate-configmap
+          name: config
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2020-07-02T12:59:25Z"
+      lastUpdateTime: "2020-07-02T12:59:25Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      type: Available
+    - lastTransitionTime: "2020-07-02T12:57:32Z"
+      lastUpdateTime: "2020-07-02T12:59:25Z"
+      message: ReplicaSet "operate-deployment-7d6c5499cd" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    generation: 1
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: elasticsearch-statefulset
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: elasticsearch
+    serviceName: elasticsearch
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/component: elasticsearch
+      spec:
+        containers:
+        - env:
+          - name: discovery.type
+            value: single-node
+          - name: cluster.name
+            value: elasticsearch
+          - name: ES_JAVA_OPTS
+            value: -Xms512m -Xmx512m
+          image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.8
+          imagePullPolicy: IfNotPresent
+          name: elasticsearch
+          ports:
+          - containerPort: 9600
+            protocol: TCP
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 1Gi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /usr/share/elasticsearch/data
+            name: elasticsearch-data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 1000
+          runAsGroup: 1000
+          runAsUser: 1000
+        terminationGracePeriodSeconds: 30
+    updateStrategy:
+      type: RollingUpdate
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 64Gi
+        storageClassName: standard-v2
+        volumeMode: Filesystem
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: elasticsearch-statefulset-c5db668fb
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: elasticsearch-statefulset-c5db668fb
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    generation: 1
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: zeebe
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    podManagementPolicy: Parallel
+    replicas: 3
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/app: zeebe
+        app.kubernetes.io/component: gateway
+    serviceName: zeebe-broker-service
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/app: zeebe
+          app.kubernetes.io/component: gateway
+      spec:
+        containers:
+        - env:
+          - name: JAVA_TOOL_OPTIONS
+            value: -XX:MaxRAMPercentage=50.0 -XX:InitialRAMPercentage=25.0 -XX:+ExitOnOutOfMemoryError
+              -XX:+HeapDumpOnOutOfMemoryError
+          - name: K8S_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: ZEEBE_BROKER_CLUSTER_CLUSTERSIZE
+            value: "3"
+          - name: ZEEBE_BROKER_CLUSTER_PARTITIONSCOUNT
+            value: "1"
+          - name: ZEEBE_BROKER_CLUSTER_REPLICATIONFACTOR
+            value: "3"
+          - name: ZEEBE_BROKER_DATA_SNAPSHOTPERIOD
+            value: 5m
+          - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
+            value: "true"
+          - name: ZEEBE_BROKER_THREADS_CPUTHREADCOUNT
+            value: "1"
+          - name: ZEEBE_BROKER_THREADS_IOTHREADCOUNT
+            value: "2"
+          - name: ZEEBE_CLUSTER_SIZE
+            value: "3"
+          - name: ZEEBE_GATEWAY_MONITORING_ENABLED
+            value: "true"
+          - name: ZEEBE_LOG_APPENDER
+            value: Stackdriver
+          - name: ZEEBE_LOG_LEVEL
+            value: debug
+          - name: ZEEBE_LOG_STACKDRIVER_SERVICENAME
+            value: zeebe
+          - name: ZEEBE_LOG_STACKDRIVER_SERVICEVERSION
+            value: 0.23.3
+          - name: ZEEBE_PARTITIONS_COUNT
+            value: "1"
+          - name: ZEEBE_REPLICATION_FACTOR
+            value: "3"
+          image: camunda/zeebe:0.23.3
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: 9600
+              scheme: HTTP
+            initialDelaySeconds: 900
+            periodSeconds: 15
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: zeebe
+          ports:
+          - containerPort: 9600
+            name: metrics
+            protocol: TCP
+          - containerPort: 26500
+            name: gateway
+            protocol: TCP
+          - containerPort: 26501
+            name: client
+            protocol: TCP
+          - containerPort: 26502
+            name: management
+            protocol: TCP
+          - containerPort: 26503
+            name: replication
+            protocol: TCP
+          - containerPort: 26504
+            name: subscription
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: 9600
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 250Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /usr/local/zeebe/config/zeebe.cfg.yaml
+            name: config
+            subPath: zeebe.cfg.yaml
+          - mountPath: /usr/local/zeebe/conf/zeebe.cfg.toml
+            name: config
+            subPath: zeebe.cfg.toml
+          - mountPath: /usr/local/bin/startup.sh
+            name: config
+            subPath: startup.sh
+          - mountPath: /usr/local/zeebe/data
+            name: data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 484
+            name: zeebe-configmap
+          name: config
+    updateStrategy:
+      type: RollingUpdate
+    volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 16Gi
+        storageClassName: fast-v2
+        volumeMode: Filesystem
+    collisionCount: 0
+    currentReplicas: 3
+    currentRevision: zeebe-55bbf56546
+    observedGeneration: 1
+    readyReplicas: 3
+    replicas: 3
+    updateRevision: zeebe-55bbf56546
+    updatedReplicas: 3
+- apiVersion: batch/v1beta1
+  kind: CronJob
+  metadata:
+    labels:
+      cloud.camunda.io/channel: Internal_Dev
+      cloud.camunda.io/clusterPlan: Production_S_v1
+      cloud.camunda.io/clusterPlanType: Production_S
+      cloud.camunda.io/generation: Zeebe_0_23_3_with_new_operate
+      cloud.camunda.io/internalSalesPlan: "false"
+    name: elasticsearch-curator
+    namespace: cluster-size-s
+    ownerReferences:
+    - apiVersion: cloud.camunda.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ZeebeCluster
+      name: cluster-size-s
+  spec:
+    concurrencyPolicy: Replace
+    failedJobsHistoryLimit: 1
+    jobTemplate:
+      metadata:
+      spec:
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/app: elasticsearch
+              app.kubernetes.io/component: elasticsearch-curator
+          spec:
+            containers:
+            - args:
+              - --config
+              - /etc/config/config.yml
+              - /etc/config/action_file.yml
+              image: quay.io/pires/docker-elasticsearch-curator:5.5.1
+              imagePullPolicy: IfNotPresent
+              name: curator
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+              - mountPath: /etc/config
+                name: config-volume
+            dnsPolicy: ClusterFirst
+            restartPolicy: OnFailure
+            schedulerName: default-scheduler
+            securityContext: {}
+            terminationGracePeriodSeconds: 30
+            volumes:
+            - configMap:
+                defaultMode: 420
+                name: elasticsearch-curator-configmap
+              name: config-volume
+    schedule: 37 */3 * * *
+    startingDeadlineSeconds: 200
+    successfulJobsHistoryLimit: 3
+    suspend: false
+- apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    annotations:
+      camunda-cloud/owned-by-repo: camunda-cloud/zeebe-controller-k8s
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"storage.k8s.io/v1","kind":"StorageClass","metadata":{"annotations":{"camunda-cloud/owned-by-repo":"camunda-cloud/zeebe-controller-k8s"},"name":"fast"},"parameters":{"type":"pd-ssd"},"provisioner":"kubernetes.io/gce-pd"}
+    name: fast
+  parameters:
+    type: pd-ssd
+  provisioner: kubernetes.io/gce-pd
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+- apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    annotations:
+      camunda-cloud/owned-by-repo: camunda-cloud/zeebe-controller-k8s
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"storage.k8s.io/v1","kind":"StorageClass","metadata":{"annotations":{"camunda-cloud/owned-by-repo":"camunda-cloud/zeebe-controller-k8s"},"name":"fast-v2"},"parameters":{"type":"pd-ssd"},"provisioner":"kubernetes.io/gce-pd","volumeBindingMode":"WaitForFirstConsumer"}
+    name: fast-v2
+  parameters:
+    type: pd-ssd
+  provisioner: kubernetes.io/gce-pd
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+- apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    annotations:
+      storageclass.kubernetes.io/is-default-class: "true"
+    labels:
+      addonmanager.kubernetes.io/mode: EnsureExists
+      kubernetes.io/cluster-service: "true"
+    name: standard
+  parameters:
+    type: pd-standard
+  provisioner: kubernetes.io/gce-pd
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+- apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    annotations:
+      camunda-cloud/owned-by-repo: camunda-cloud/zeebe-controller-k8s
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"storage.k8s.io/v1","kind":"StorageClass","metadata":{"annotations":{"camunda-cloud/owned-by-repo":"camunda-cloud/zeebe-controller-k8s"},"name":"standard-v2"},"parameters":{"type":"pd-standard"},"provisioner":"kubernetes.io/gce-pd","reclaimPolicy":"Delete","volumeBindingMode":"WaitForFirstConsumer"}
+    name: standard-v2
+  parameters:
+    type: pd-standard
+  provisioner: kubernetes.io/gce-pd
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

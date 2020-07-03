@@ -135,6 +135,11 @@ public class NettyMessagingService implements ManagedMessagingService {
   @Override
   public CompletableFuture<Void> sendAsync(
       final Address address, final String type, final byte[] payload, final boolean keepAlive) {
+    if (!started.get()) {
+      return CompletableFuture.failedFuture(
+          new IllegalStateException("MessagingService was not started."));
+    }
+
     final long messageId = messageIdGenerator.incrementAndGet();
     final ProtocolRequest message = new ProtocolRequest(messageId, returnAddress, type, payload);
     return executeOnPooledConnection(
@@ -176,6 +181,11 @@ public class NettyMessagingService implements ManagedMessagingService {
       final boolean keepAlive,
       final Duration timeout,
       final Executor executor) {
+    if (!started.get()) {
+      return CompletableFuture.failedFuture(
+          new IllegalStateException("MessagingService was not started."));
+    }
+
     final long messageId = messageIdGenerator.incrementAndGet();
     final ProtocolRequest message = new ProtocolRequest(messageId, returnAddress, type, payload);
     if (keepAlive) {
