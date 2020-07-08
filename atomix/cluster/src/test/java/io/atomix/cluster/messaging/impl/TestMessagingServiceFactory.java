@@ -57,6 +57,18 @@ public class TestMessagingServiceFactory {
             });
   }
 
+  public void healExcept(final Address address, final Address except) {
+    final TestMessagingService service = services.get(address);
+    services.values().stream()
+        .filter(s -> !s.address().equals(address))
+        .filter(s -> !s.address().equals(except))
+        .forEach(
+            s -> {
+              service.heal(s.address());
+              s.heal(service.address());
+            });
+  }
+
   /**
    * Creates a bi-directional partition between two services.
    *

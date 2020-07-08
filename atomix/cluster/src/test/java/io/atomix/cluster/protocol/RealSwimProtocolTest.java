@@ -30,12 +30,17 @@ import com.google.common.collect.Sets;
 import io.atomix.cluster.BootstrapService;
 import io.atomix.cluster.Member;
 import io.atomix.cluster.MemberId;
+import io.atomix.cluster.MulticastConfig;
 import io.atomix.cluster.Node;
 import io.atomix.cluster.TestBootstrapService;
 import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
 import io.atomix.cluster.discovery.NodeDiscoveryProvider;
 import io.atomix.cluster.discovery.NodeDiscoveryService;
 import io.atomix.cluster.impl.DefaultNodeDiscoveryService;
+import io.atomix.cluster.messaging.MessagingConfig;
+import io.atomix.cluster.messaging.impl.NettyBroadcastService;
+import io.atomix.cluster.messaging.impl.NettyMessagingService;
+import io.atomix.cluster.messaging.impl.NettyUnicastService;
 import io.atomix.cluster.messaging.impl.TestBroadcastServiceFactory;
 import io.atomix.cluster.messaging.impl.TestMessagingServiceFactory;
 import io.atomix.cluster.messaging.impl.TestUnicastServiceFactory;
@@ -44,6 +49,7 @@ import io.atomix.utils.net.Address;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.BlockingDeque;
@@ -52,11 +58,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 import net.jodah.concurrentunit.ConcurrentTestCase;
 import org.awaitility.Awaitility;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 /** SWIM membership protocol test. */
-public class SwimProtocolTest extends ConcurrentTestCase {
+public class RealSwimProtocolTest extends ConcurrentTestCase {
 
   private static final Duration GOSSIP_INTERVAL = Duration.ofMillis(25);
   private static final Duration PROBE_INTERVAL = Duration.ofMillis(100);
@@ -75,6 +82,7 @@ public class SwimProtocolTest extends ConcurrentTestCase {
   private Collection<Member> members;
   private Collection<Node> nodes;
   private Map<MemberId, TestGroupMembershipEventListener> listeners = Maps.newConcurrentMap();
+  private final Map<MemberId, BootstrapService> memberBootstrap = new HashMap<>();
 
   private Member member(final String id, final String host, final int port, final Version version) {
     return new SwimMembershipProtocol.SwimMember(
@@ -101,6 +109,32 @@ public class SwimProtocolTest extends ConcurrentTestCase {
     members = Arrays.asList(member1, member2, member3);
     nodes = (Collection) members;
     listeners = Maps.newConcurrentMap();
+  }
+
+  @After
+  public void teardown() {
+    memberBootstrap
+        .values()
+        .forEach(
+            b -> {
+              try {
+                ((NettyUnicastService) b.getUnicastService()).stop().join();
+              } catch (final Exception e) {
+                // meh
+              }
+              try {
+                ((NettyBroadcastService) b.getBroadcastService()).stop().join();
+              } catch (final Exception e) {
+                // meh
+              }
+
+              try {
+                ((NettyMessagingService) b.getMessagingService()).stop().join();
+
+              } catch (final Exception e) {
+                // meh
+              }
+            });
   }
 
   @Test
@@ -226,7 +260,7 @@ public class SwimProtocolTest extends ConcurrentTestCase {
     //    checkMembers(member3, member3);
     //
     //    // Heal the partition.
-    healExcept(member3, member1);
+    heal(member3);
     //
     //    // Verify that the nodes discovery each other again.
 
@@ -278,12 +312,6 @@ public class SwimProtocolTest extends ConcurrentTestCase {
         member3,
         new GroupMembershipEvent(MEMBER_ADDED, member1),
         new GroupMembershipEvent(MEMBER_ADDED, member2));
-
-    // Partition node 1 from node 2.
-    partition(member1, member2);
-
-    // Heal the partition.
-    heal(member1, member2);
 
     // Update node 1's metadata.
     member1.properties().put("foo", "bar");
@@ -367,9 +395,10 @@ public class SwimProtocolTest extends ConcurrentTestCase {
     // not send it probe requests - the only way for member3 to receive the new property is for it
     // to sync with member2
     Thread.sleep(GOSSIP_INTERVAL.toMillis());
-    heal(member2, member3);
-    checkEvent(member2, MEMBER_ADDED, member3);
-    checkEvents(member3, new GroupMembershipEvent(MEMBER_ADDED, member2));
+    heal(member3);
+    awaitMembers(member2, member1, member3, member2);
+    awaitMembers(member1, member2, member3, member1);
+    awaitMembers(member3, member1, member2, member3);
 
     // then
     // wait until member3 has tried to sync
@@ -392,6 +421,7 @@ public class SwimProtocolTest extends ConcurrentTestCase {
 
   private SwimMembershipProtocol startProtocol(
       final Member member, final UnaryOperator<SwimMembershipProtocolConfig> configurator) {
+
     final SwimMembershipProtocol protocol =
         new SwimMembershipProtocol(
             configurator.apply(
@@ -404,50 +434,69 @@ public class SwimProtocolTest extends ConcurrentTestCase {
     final TestGroupMembershipEventListener listener = new TestGroupMembershipEventListener();
     listeners.put(member.id(), listener);
     protocol.addListener(listener);
-    final BootstrapService bootstrap =
-        new TestBootstrapService(
-            messagingServiceFactory.newMessagingService(member.address()).start().join(),
-            unicastServiceFactory.newUnicastService(member.address()).start().join(),
-            broadcastServiceFactory.newBroadcastService().start().join());
+
+    BootstrapService bootstrap = memberBootstrap.get(member.id());
+    if (bootstrap == null) {
+      final var multicastConfig = new MulticastConfig();
+
+      final var messagingService =
+          new NettyMessagingService("cluster", member.address(), new MessagingConfig())
+              .start()
+              .join();
+      final var unicastService =
+          new NettyUnicastService(member.address(), new MessagingConfig()).start().join();
+      final var broadcastService =
+          NettyBroadcastService.builder()
+              .withLocalAddress(member.address())
+              .withGroupAddress(
+                  new Address(
+                      multicastConfig.getGroup().getHostAddress(),
+                      multicastConfig.getPort(),
+                      multicastConfig.getGroup()))
+              .withEnabled(multicastConfig.isEnabled())
+              .build()
+              .start()
+              .join();
+
+      bootstrap = new TestBootstrapService(messagingService, unicastService, broadcastService);
+
+      memberBootstrap.put(member.id(), bootstrap);
+    }
+
     final NodeDiscoveryProvider provider = new BootstrapDiscoveryProvider(nodes);
     provider.join(bootstrap, member).join();
     final NodeDiscoveryService discovery =
         new DefaultNodeDiscoveryService(bootstrap, member, provider).start().join();
     protocol.join(bootstrap, discovery, member).join();
     protocols.put(member.id(), protocol);
+
     return protocol;
   }
 
-  private void stopProtocol(final Member member) {
-    final SwimMembershipProtocol protocol = protocols.remove(member.id());
-    if (protocol != null) {
-      protocol.leave(member).join();
-    }
-  }
-
   private void partition(final Member member) {
-    unicastServiceFactory.partition(member.address());
-    messagingServiceFactory.partition(member.address());
+    final var bootstrapService = memberBootstrap.get(member.id());
+
+    ((NettyUnicastService) bootstrapService.getUnicastService()).stop().join();
+    ((NettyMessagingService) bootstrapService.getMessagingService()).stop().join();
+    ((NettyBroadcastService) bootstrapService.getBroadcastService()).stop().join();
   }
 
   private void partition(final Member member1, final Member member2) {
-    unicastServiceFactory.partition(member1.address(), member2.address());
-    messagingServiceFactory.partition(member1.address(), member2.address());
+    partition(member1);
+    partition(member2);
   }
 
   private void heal(final Member member) {
-    unicastServiceFactory.heal(member.address());
-    messagingServiceFactory.heal(member.address());
-  }
+    final var bootstrapService = memberBootstrap.get(member.id());
 
-  private void healExcept(final Member member, final Member except) {
-    unicastServiceFactory.healExcept(member.address(), except.address());
-    messagingServiceFactory.healExcept(member.address(), except.address());
+    ((NettyMessagingService) bootstrapService.getMessagingService()).start().join();
+    ((NettyUnicastService) bootstrapService.getUnicastService()).start().join();
+    ((NettyBroadcastService) bootstrapService.getBroadcastService()).start().join();
   }
 
   private void heal(final Member member1, final Member member2) {
-    unicastServiceFactory.heal(member1.address(), member2.address());
-    messagingServiceFactory.heal(member1.address(), member2.address());
+    heal(member1);
+    heal(member2);
   }
 
   private void checkMembers(final Member member, final Member... members) {
@@ -503,6 +552,7 @@ public class SwimProtocolTest extends ConcurrentTestCase {
   }
 
   private class TestGroupMembershipEventListener implements GroupMembershipEventListener {
+
     private final BlockingDeque<GroupMembershipEvent> queue = new LinkedBlockingDeque<>(100);
 
     @Override

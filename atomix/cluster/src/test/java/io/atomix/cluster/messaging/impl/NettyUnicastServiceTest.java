@@ -18,6 +18,7 @@ package io.atomix.cluster.messaging.impl;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import io.atomix.cluster.messaging.ManagedUnicastService;
@@ -53,6 +54,18 @@ public class NettyUnicastServiceTest extends ConcurrentTestCase {
 
     service2.unicast(address1, "test", "Hello world!".getBytes());
     await(5000);
+  }
+
+  @Test
+  public void shouldNotThrowExceptionWhenServiceStopped() throws Exception {
+    // given
+    service2.stop();
+
+    // when
+    service2.unicast(address1, "test", "Hello world!".getBytes());
+
+    // then
+    assertTrue(true);
   }
 
   @Before
