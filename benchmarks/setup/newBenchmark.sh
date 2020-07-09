@@ -37,7 +37,6 @@ fi
 
 namespace=$1
 
-kubectl create namespace $namespace
 kubens $namespace
 cp -rv default/ $namespace
 cd $namespace
