@@ -8,7 +8,7 @@ spec:
   selector:
     matchLabels:
       app: starter
-  replicas: 1
+  replicas: 5
   template:
     metadata:
       labels:
@@ -16,13 +16,13 @@ spec:
     spec:
       containers:
       - name: starter
-        image: gcr.io/zeebe-io/starter:zeebe
+        image: gcr.io/zeebe-io/starter:zeebe-chaos
         imagePullPolicy: Always
         env:
           - name: JAVA_OPTIONS
             value: >-
               -Dapp.brokerUrl=ebb14880-485a-4d0d-bf48-425ce506c0e3.zeebe.ultrawombat.com:443
-              -Dapp.starter.rate=300
+              -Dapp.starter.rate=500
               -Dapp.tls=true
               -Dzeebe.client.requestTimeout=62000
               -XX:+HeapDumpOnOutOfMemoryError
