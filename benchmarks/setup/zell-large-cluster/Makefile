@@ -3,7 +3,7 @@ all: zeebe starter timer simpleStarter worker
 
 .PHONY: zeebe
 zeebe:
-	-helm install zell-large-cluster zeebe/zeebe-cluster -f zeebe-values.yaml --skip-crds
+	-helm template zell-large-cluster zeebe/zeebe-cluster -f zeebe-values.yaml --skip-crds
 	-kubectl apply -f curator-cronjob.yaml
 	-kubectl apply -f curator-configmap.yaml
 

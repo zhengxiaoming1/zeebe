@@ -8,7 +8,7 @@ spec:
   selector:
     matchLabels:
       app: starter
-  replicas: 5
+  replicas: 8
   template:
     metadata:
       labels:
@@ -38,9 +38,6 @@ spec:
             value: "https://login.cloud.ultrawombat.com/oauth/token"
 
         resources:
-          limits:
-            cpu: 2
-            memory: 2Gi
           requests:
             cpu: 2
             memory: 512Mi
