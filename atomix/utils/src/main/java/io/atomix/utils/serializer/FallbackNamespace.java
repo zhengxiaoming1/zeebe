@@ -15,19 +15,30 @@
  */
 package io.atomix.utils.serializer;
 
+import com.esotericsoftware.kryo.KryoException;
 import java.nio.ByteBuffer;
 
-public interface Namespace {
+public class FallbackNamespace implements Namespace {
+
+  private final Namespace legacy;
+  private final Namespace compatible;
+
+  public FallbackNamespace(final Namespace legacy, final Namespace compatible) {
+    this.legacy = legacy;
+    this.compatible = compatible;
+  }
 
   /**
    * Serializes given object to byte array using Kryo instance in pool.
    *
-   * <p>Note: Serialized bytes must be smaller than {@link #MAX_BUFFER_SIZE}.
+   * <p>Note: Serialized bytes must be smaller than {@link NamespaceImpl#MAX_BUFFER_SIZE}.
    *
    * @param obj Object to serialize
    * @return serialized bytes
    */
-  byte[] serialize(final Object obj);
+  public byte[] serialize(final Object obj) {
+    return compatible.serialize(obj);
+  }
 
   /**
    * Serializes given object to byte array using Kryo instance in pool.
@@ -36,7 +47,9 @@ public interface Namespace {
    * @param bufferSize maximum size of serialized bytes
    * @return serialized bytes
    */
-  byte[] serialize(final Object obj, final int bufferSize);
+  public byte[] serialize(final Object obj, final int bufferSize) {
+    return compatible.serialize(obj, bufferSize);
+  }
 
   /**
    * Serializes given object to byte buffer using Kryo instance in pool.
@@ -44,7 +57,9 @@ public interface Namespace {
    * @param obj Object to serialize
    * @param buffer to write to
    */
-  void serialize(final Object obj, final ByteBuffer buffer);
+  public void serialize(final Object obj, final ByteBuffer buffer) {
+    compatible.serialize(obj, buffer);
+  }
 
   /**
    * Deserializes given byte array to Object using Kryo instance in pool.
@@ -53,7 +68,13 @@ public interface Namespace {
    * @param <T> deserialized Object type
    * @return deserialized Object
    */
-  <T> T deserialize(final byte[] bytes);
+  public <T> T deserialize(final byte[] bytes) {
+    try {
+      return compatible.deserialize(bytes);
+    } catch (final KryoException | StringIndexOutOfBoundsException e) {
+      return legacy.deserialize(bytes);
+    }
+  }
 
   /**
    * Deserializes given byte buffer to Object using Kryo instance in pool.
@@ -62,14 +83,15 @@ public interface Namespace {
    * @param <T> deserialized Object type
    * @return deserialized Object
    */
-  <T> T deserialize(final ByteBuffer buffer);
+  public <T> T deserialize(final ByteBuffer buffer) {
+    final int position = buffer.position();
+    final int limit = buffer.limit();
 
-  /**
-   * Creates a new {@link Namespace} builder.
-   *
-   * @return builder
-   */
-  static NamespaceImpl.Builder builder() {
-    return new NamespaceImpl.Builder();
+    try {
+      return compatible.deserialize(buffer);
+    } catch (final KryoException | StringIndexOutOfBoundsException e) {
+      buffer.position(position).limit(limit);
+      return legacy.deserialize(buffer);
+    }
   }
 }

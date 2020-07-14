@@ -54,9 +54,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class Namespaces {
   public static final int BASIC_MAX_SIZE = 50;
-  public static final Namespace BASIC =
+  public static final NamespaceImpl BASIC =
       Namespace.builder()
-          .nextId(Namespace.FLOATING_ID)
+          .nextId(NamespaceImpl.FLOATING_ID)
           .register(byte[].class)
           .register(new AtomicBooleanSerializer(), AtomicBoolean.class)
           .register(new AtomicIntegerSerializer(), AtomicInteger.class)
