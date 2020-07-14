@@ -16,21 +16,27 @@ spec:
     spec:
       containers:
       - name: starter
-        image: gcr.io/zeebe-io/starter:zeebe
+        image: gcr.io/zeebe-io/starter:zeebe-chaos
         imagePullPolicy: Always
         env:
           - name: JAVA_OPTIONS
             value: >-
-              -Dapp.brokerUrl=zell-chaos-large-zeebe-gateway:26500
-              -Dapp.starter.rate=300
+              -Dapp.brokerUrl=6b02c07f-4f23-4b53-bed5-3b7d802e5996.zeebe.ultrawombat.com:443
+              -Dapp.starter.rate=1
+              -Dapp.tls=true
               -Dzeebe.client.requestTimeout=62000
               -XX:+HeapDumpOnOutOfMemoryError
           - name: LOG_LEVEL
-            value: "warn"
+            value: "debug"
+          - name: ZEEBE_ADDRESS
+            value: "022f5efe-5213-461d-8891-e3674979043e.zeebe.ultrawombat.com:443"
+          - name: ZEEBE_CLIENT_ID
+            value: "QKy9yicK75idLZO_Lu4-b4QfMYe5wyF8"
+          - name: ZEEBE_CLIENT_SECRET
+            value: "16nS.2qF2Ku53~Ik1PanqZ475paqcGoGNUBreu1zfUoUhBehI0~07.ZbBTaZYBFf"
+          - name: ZEEBE_AUTHORIZATION_SERVER_URL
+            value: "https://login.cloud.ultrawombat.com/oauth/token"
         resources:
-          limits:
-            cpu: 2
-            memory: 2Gi
           requests:
             cpu: 2
             memory: 512Mi
@@ -40,7 +46,7 @@ kind: Service
 metadata:
   labels:
     app: zeebe
-    app.kubernetes.io/instance: zell-chaos-large
+    app.kubernetes.io/instance: zell-large-cluster
     app.kubernetes.io/name: zeebe-cluster
   name: starter
 spec:
