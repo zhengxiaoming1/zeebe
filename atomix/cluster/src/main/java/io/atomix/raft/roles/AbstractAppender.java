@@ -482,6 +482,9 @@ abstract class AbstractAppender implements AutoCloseable {
               .withComplete(!reader.hasNext())
               .withNextChunkId(reader.nextId())
               .build();
+      if (reader.hasNext()) {
+        member.setNextSnapshotChunk(reader.nextId());
+      }
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
@@ -561,10 +564,10 @@ abstract class AbstractAppender implements AutoCloseable {
         member.setSnapshotIndex(request.index());
         resetNextIndex(member, request.index() + 1);
       }
-      // If more install requests remain, increment the member's snapshot offset.
+      /* // If more install requests remain, increment the member's snapshot offset.
       else {
         member.setNextSnapshotChunk(request.nextChunkId());
-      }
+      }*/
     } else {
       member.setNextSnapshotChunk(response.getNextChunkId());
     }

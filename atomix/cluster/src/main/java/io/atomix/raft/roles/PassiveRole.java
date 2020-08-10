@@ -46,6 +46,7 @@ import io.atomix.storage.StorageException;
 import io.atomix.storage.journal.Indexed;
 import io.atomix.utils.concurrent.ThreadContext;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.concurrent.CompletableFuture;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
@@ -128,7 +129,11 @@ public class PassiveRole extends InactiveRole {
     logRequest(request);
     updateTermAndLeader(request.currentTerm(), request.leader());
 
-    log.debug("Received snapshot {} chunk from {}", request.index(), request.leader());
+    try {
+      log.debug("Received snapshot {} chunk  {} from {}", request.index(), new String(request.chunkId().array(), "UTF-8"), request.leader());
+    } catch (final UnsupportedEncodingException e) {
+      e.printStackTrace();
+    }
 
     // If the request is for a lesser term, reject the request.
     if (request.currentTerm() < raft.getTerm()) {
@@ -174,7 +179,7 @@ public class PassiveRole extends InactiveRole {
         abortPendingSnapshots();
 
         return CompletableFuture.completedFuture(
-            logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).build()));
+            logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).withSucceeded(true).build()));
       }
     }
 
@@ -200,7 +205,7 @@ public class PassiveRole extends InactiveRole {
         return CompletableFuture.completedFuture(
             logResponse(
                 InstallResponse.builder()
-                    .withStatus(RaftResponse.Status.OK)
+                    .withStatus(RaftResponse.Status.ERROR)
                     .withError(
                         RaftError.Type.ILLEGAL_MEMBER_STATE, "Request chunk offset is invalid")
                     .build()));
@@ -214,7 +219,7 @@ public class PassiveRole extends InactiveRole {
       // skip if we already have this chunk
       if (pendingSnapshot.containsChunk(request.chunkId())) {
         return CompletableFuture.completedFuture(
-            logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).build()));
+            logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).withSucceeded(true).build()));
       }
 
       // fail the request if this is not the expected next chunk
