@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 public final class RaftMemberContext {
 
   private static final int MAX_APPENDS = 2;
+  private static final int MAX_INSTALL_CHUNKS = 5;
   private static final int APPEND_WINDOW_SIZE = 8;
   private final DefaultRaftMember member;
   private final DescriptiveStatistics timeStats = new DescriptiveStatistics(APPEND_WINDOW_SIZE);
@@ -46,7 +47,7 @@ public final class RaftMemberContext {
   private boolean appendSucceeded;
   private long appendTime;
   private boolean configuring;
-  private boolean installing;
+  private int installing;
   private int failures;
   private long failureTime;
   private volatile RaftLogReader reader;
@@ -66,7 +67,7 @@ public final class RaftMemberContext {
     appending = 0;
     timeStats.clear();
     configuring = false;
-    installing = false;
+    installing = 0;
     appendSucceeded = false;
     failures = 0;
     failureTime = 0;
@@ -172,17 +173,17 @@ public final class RaftMemberContext {
    * @return Indicates whether an install request can be sent to the member.
    */
   public boolean canInstall() {
-    return !installing;
+    return installing < MAX_INSTALL_CHUNKS;
   }
 
   /** Starts an install request to the member. */
   public void startInstall() {
-    installing = true;
+    installing++;
   }
 
   /** Completes an install request to the member. */
   public void completeInstall() {
-    installing = false;
+    installing--;
   }
 
   /**

@@ -24,6 +24,15 @@ import java.nio.ByteBuffer;
  */
 public interface ReceivedSnapshot extends PersistableSnapshot {
 
+  ByteBuffer getNextExpected();
+
+  /**
+   * Sets that the next expected chunk ID is the one with the given {@code nextChunkId}.
+   *
+   * @param nextChunkId the next expected chunk ID
+   */
+  void setNextExpected(ByteBuffer nextChunkId);
+
   /**
    * The index of the current receiving snapshot.
    *
@@ -46,13 +55,6 @@ public interface ReceivedSnapshot extends PersistableSnapshot {
    * @return true if is expected, false otherwise
    */
   boolean isExpectedChunk(ByteBuffer chunkId);
-
-  /**
-   * Sets that the next expected chunk ID is the one with the given {@code nextChunkId}.
-   *
-   * @param nextChunkId the next expected chunk ID
-   */
-  void setNextExpected(ByteBuffer nextChunkId);
 
   /**
    * Applies the next {@link SnapshotChunk} to the snapshot. Based on the implementation the chunk

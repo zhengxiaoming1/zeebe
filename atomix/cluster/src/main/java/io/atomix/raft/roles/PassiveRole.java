@@ -147,7 +147,11 @@ public class PassiveRole extends InactiveRole {
     // Skip the snapshot and response successfully.
     if (raft.getCommitIndex() > request.index()) {
       return CompletableFuture.completedFuture(
-          logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).build()));
+          logResponse(
+              InstallResponse.builder()
+                  .withStatus(RaftResponse.Status.OK)
+                  .withSucceeded(true)
+                  .build()));
     }
 
     // If a snapshot is currently being received and the snapshot versions don't match, simply
@@ -196,7 +200,7 @@ public class PassiveRole extends InactiveRole {
         return CompletableFuture.completedFuture(
             logResponse(
                 InstallResponse.builder()
-                    .withStatus(RaftResponse.Status.ERROR)
+                    .withStatus(RaftResponse.Status.OK)
                     .withError(
                         RaftError.Type.ILLEGAL_MEMBER_STATE, "Request chunk offset is invalid")
                     .build()));
@@ -218,10 +222,9 @@ public class PassiveRole extends InactiveRole {
         return CompletableFuture.completedFuture(
             logResponse(
                 InstallResponse.builder()
-                    .withStatus(RaftResponse.Status.ERROR)
-                    .withError(
-                        RaftError.Type.ILLEGAL_MEMBER_STATE,
-                        "Request chunk is was received out of order")
+                    .withStatus(RaftResponse.Status.OK)
+                    .withSucceeded(false)
+                    .withNextChunkId(pendingSnapshot.getNextExpected())
                     .build()));
       }
     }
@@ -274,7 +277,11 @@ public class PassiveRole extends InactiveRole {
     }
 
     return CompletableFuture.completedFuture(
-        logResponse(InstallResponse.builder().withStatus(RaftResponse.Status.OK).build()));
+        logResponse(
+            InstallResponse.builder()
+                .withStatus(RaftResponse.Status.OK)
+                .withSucceeded(true)
+                .build()));
   }
 
   @Override

@@ -548,22 +548,26 @@ abstract class AbstractAppender implements AutoCloseable {
       final RaftMemberContext member,
       final InstallRequest request,
       final InstallResponse response) {
-    // Reset the member failure count and update the member's status if necessary.
-    succeedAttempt(member);
 
-    // If the install request was completed successfully, set the member's snapshotIndex and reset
-    // the next snapshot index/offset.
-    if (request.complete()) {
-      member.setNextSnapshotIndex(0);
-      member.setNextSnapshotChunk(null);
-      member.setSnapshotIndex(request.index());
-      resetNextIndex(member, request.index() + 1);
-    }
-    // If more install requests remain, increment the member's snapshot offset.
-    else {
-      member.setNextSnapshotChunk(request.nextChunkId());
-    }
+    if (response.isSucceeded()) {
+      // Reset the member failure count and update the member's status if necessary.
+      succeedAttempt(member);
 
+      // If the install request was completed successfully, set the member's snapshotIndex and reset
+      // the next snapshot index/offset.
+      if (request.complete()) {
+        member.setNextSnapshotIndex(0);
+        member.setNextSnapshotChunk(null);
+        member.setSnapshotIndex(request.index());
+        resetNextIndex(member, request.index() + 1);
+      }
+      // If more install requests remain, increment the member's snapshot offset.
+      else {
+        member.setNextSnapshotChunk(request.nextChunkId());
+      }
+    } else {
+      member.setNextSnapshotChunk(response.getNextChunkId());
+    }
     // Recursively append entries to the member.
     appendEntries(member);
   }

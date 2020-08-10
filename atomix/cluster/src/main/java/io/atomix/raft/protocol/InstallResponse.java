@@ -16,7 +16,10 @@
  */
 package io.atomix.raft.protocol;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import io.atomix.raft.RaftError;
+import java.nio.ByteBuffer;
 
 /**
  * Snapshot installation response.
@@ -27,8 +30,19 @@ import io.atomix.raft.RaftError;
  */
 public class InstallResponse extends AbstractRaftResponse {
 
-  public InstallResponse(final Status status, final RaftError error) {
+  // TODO: This is NOT backward compatible !!!!
+  private final ByteBuffer nextChunkId;
+
+  private final boolean succeeded;
+
+  public InstallResponse(
+      final Status status,
+      final RaftError error,
+      final ByteBuffer nextChunkId,
+      final boolean succeeded) {
     super(status, error);
+    this.nextChunkId = nextChunkId;
+    this.succeeded = succeeded;
   }
 
   /**
@@ -40,13 +54,44 @@ public class InstallResponse extends AbstractRaftResponse {
     return new Builder();
   }
 
+  public ByteBuffer getNextChunkId() {
+    return nextChunkId;
+  }
+
+  public boolean isSucceeded() {
+    return succeeded;
+  }
+
   /** Install response builder. */
   public static class Builder extends AbstractRaftResponse.Builder<Builder, InstallResponse> {
+
+    private ByteBuffer nextChunkId;
+    private boolean succeeded;
+
+    public Builder withSucceeded(final boolean succeeded) {
+      this.succeeded = succeeded;
+      return this;
+    }
+
+    public Builder withNextChunkId(final ByteBuffer nextChunkId) {
+      this.nextChunkId = nextChunkId;
+      return this;
+    }
 
     @Override
     public InstallResponse build() {
       validate();
-      return new InstallResponse(status, error);
+      return new InstallResponse(status, error, nextChunkId, succeeded);
+    }
+
+    @Override
+    protected void validate() {
+      super.validate();
+      if (status == Status.OK) {
+        if (!succeeded) {
+          checkNotNull(nextChunkId);
+        }
+      }
     }
   }
 }

@@ -45,7 +45,6 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
 
   private final Path directory;
   private final FileBasedSnapshotStore snapshotStore;
-
   private ByteBuffer expectedId;
   private final FileBasedSnapshotMetadata metadata;
   private long expectedSnapshotChecksum;
@@ -60,6 +59,16 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
     this.directory = directory;
     this.expectedSnapshotChecksum = Long.MIN_VALUE;
     this.expectedTotalCount = Integer.MIN_VALUE;
+  }
+
+  @Override
+  public ByteBuffer getNextExpected() {
+    return expectedId;
+  }
+
+  @Override
+  public void setNextExpected(final ByteBuffer nextChunkId) {
+    expectedId = nextChunkId;
   }
 
   @Override
@@ -178,8 +187,18 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
   }
 
   @Override
-  public void setNextExpected(final ByteBuffer nextChunkId) {
-    expectedId = nextChunkId;
+  public void abort() {
+    try {
+      LOGGER.debug("DELETE dir {}", directory);
+      FileUtil.deleteFolder(directory);
+    } catch (final NoSuchFileException nsfe) {
+      LOGGER.debug(
+          "Tried to delete pending dir {}, but doesn't exist. Either was already removed or no chunk was applied until now.",
+          directory,
+          nsfe);
+    } catch (final IOException e) {
+      LOGGER.warn("Failed to delete pending snapshot {}", this, e);
+    }
   }
 
   @Override
@@ -216,21 +235,6 @@ public class FileBasedReceivedSnapshot implements ReceivedSnapshot {
     }
 
     return snapshotStore.newSnapshot(metadata, directory);
-  }
-
-  @Override
-  public void abort() {
-    try {
-      LOGGER.debug("DELETE dir {}", directory);
-      FileUtil.deleteFolder(directory);
-    } catch (final NoSuchFileException nsfe) {
-      LOGGER.debug(
-          "Tried to delete pending dir {}, but doesn't exist. Either was already removed or no chunk was applied until now.",
-          directory,
-          nsfe);
-    } catch (final IOException e) {
-      LOGGER.warn("Failed to delete pending snapshot {}", this, e);
-    }
   }
 
   public Path getPath() {

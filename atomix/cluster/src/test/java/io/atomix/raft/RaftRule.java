@@ -326,17 +326,19 @@ public final class RaftRule extends ExternalResource {
         persistedSnapshotStore.newTransientSnapshot(index, term, new WallClockTimestamp());
     transientSnapshot.take(
         path -> {
-          IoUtil.ensureDirectoryExists(path.toFile(), "snapshot dir should exist");
-          final var snapshotFile = path.resolve("snapshot.file");
-          try {
-            Files.write(
-                snapshotFile,
-                RandomStringUtils.random(128).getBytes(),
-                StandardOpenOption.CREATE_NEW,
-                StandardOpenOption.WRITE);
-          } catch (final IOException e) {
-            e.printStackTrace();
-            return false;
+          for (int i = 0; i < 10; i++) {
+            IoUtil.ensureDirectoryExists(path.toFile(), "snapshot dir should exist");
+            final var snapshotFile = path.resolve("snapshot-" + i + ".file");
+            try {
+              Files.write(
+                  snapshotFile,
+                  RandomStringUtils.random(128).getBytes(),
+                  StandardOpenOption.CREATE_NEW,
+                  StandardOpenOption.WRITE);
+            } catch (final IOException e) {
+              e.printStackTrace();
+              return false;
+            }
           }
           // do something
           return true;

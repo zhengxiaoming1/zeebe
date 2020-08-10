@@ -168,6 +168,7 @@ public class RaftFailOverTest {
 
     assertThat(snapshot.getIndex()).isEqualTo(leaderSnapshot.getIndex()).isEqualTo(100);
     assertThat(snapshot.getTerm()).isEqualTo(snapshot.getTerm());
+    assertThat(snapshot.getPath().toFile().listFiles().length).isEqualTo(leaderSnapshot.getPath().toFile().listFiles().length);
   }
 
   @Test
