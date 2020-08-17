@@ -28,6 +28,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 public class RaftFailOverTest {
@@ -160,7 +161,10 @@ public class RaftFailOverTest {
     final var leaderSnapshot = raftRule.getSnapshotFromLeader();
 
     // when
+    final long startTime = System.currentTimeMillis();
     raftRule.joinCluster(follower);
+    LoggerFactory.getLogger("TEST")
+        .info("Joining took {}ms", System.currentTimeMillis() - startTime);
 
     // then
     assertThat(raftRule.allNodesHaveSnapshotWithIndex(100)).isTrue();
@@ -168,7 +172,8 @@ public class RaftFailOverTest {
 
     assertThat(snapshot.getIndex()).isEqualTo(leaderSnapshot.getIndex()).isEqualTo(100);
     assertThat(snapshot.getTerm()).isEqualTo(snapshot.getTerm());
-    assertThat(snapshot.getPath().toFile().listFiles().length).isEqualTo(leaderSnapshot.getPath().toFile().listFiles().length);
+    assertThat(snapshot.getPath().toFile().listFiles().length)
+        .isEqualTo(leaderSnapshot.getPath().toFile().listFiles().length);
   }
 
   @Test
