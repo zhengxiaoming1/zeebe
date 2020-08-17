@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 public final class RaftMemberContext {
 
   private static final int MAX_APPENDS = 2;
-  private static final int MAX_INSTALL_CHUNKS = 10;
+  private static final int MAX_INSTALL_CHUNKS = 100;
   private static final int APPEND_WINDOW_SIZE = 8;
   private final DefaultRaftMember member;
   private final DescriptiveStatistics timeStats = new DescriptiveStatistics(APPEND_WINDOW_SIZE);

@@ -518,6 +518,9 @@ abstract class AbstractAppender implements AutoCloseable {
               }
             },
             raft.getThreadContext());
+    if (!request.complete()) {
+      raft.getThreadContext().execute(() -> appendEntries(member));
+    }
   }
 
   /** Handles an install response failure. */
