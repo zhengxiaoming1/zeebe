@@ -44,6 +44,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 
 /** Abstract appender. */
@@ -55,6 +56,7 @@ abstract class AbstractAppender implements AutoCloseable {
   protected boolean open = true;
 
   private final LeaderMetrics metrics;
+  private SnapshotChunkReader snapshotReader;
 
   AbstractAppender(final RaftContext raft) {
     this.raft = checkNotNull(raft, "context cannot be null");
@@ -179,7 +181,7 @@ abstract class AbstractAppender implements AutoCloseable {
 
     final long timestamp = System.currentTimeMillis();
 
-    log.trace("Sending {} to {}", request, member.getMember().memberId());
+    log.debug("Sending {} to {}", request, member.getMember().memberId());
     raft.getProtocol()
         .append(member.getMember().memberId(), request)
         .whenCompleteAsync(
@@ -456,35 +458,44 @@ abstract class AbstractAppender implements AutoCloseable {
     if (member.getNextSnapshotIndex() != persistedSnapshot.getIndex()) {
       member.setNextSnapshotIndex(persistedSnapshot.getIndex());
       member.setNextSnapshotChunk(null);
+      snapshotReader = persistedSnapshot.newChunkReader();
     }
 
     final InstallRequest request;
     // Open a new snapshot reader.
-    try (final SnapshotChunkReader reader = persistedSnapshot.newChunkReader()) {
-      reader.seek(member.getNextSnapshotChunk());
-      final SnapshotChunk chunk = reader.next();
+    try {
+      // snapshotReader.seek(member.getNextSnapshotChunk());
+      if (snapshotReader.hasNext()) {
+        final SnapshotChunk chunk = snapshotReader.next();
 
-      // Create the install request, indicating whether this is the last chunk of data based on
-      // the number
-      // of bytes remaining in the buffer.
-      final DefaultRaftMember leader = raft.getLeader();
-      request =
-          InstallRequest.builder()
-              .withCurrentTerm(raft.getTerm())
-              .withLeader(leader.memberId())
-              .withIndex(persistedSnapshot.getIndex())
-              .withTerm(persistedSnapshot.getTerm())
-              .withTimestamp(persistedSnapshot.getTimestamp().unixTimestamp())
-              .withVersion(persistedSnapshot.version())
-              .withData(new SnapshotChunkImpl(chunk).toByteBuffer())
-              .withChunkId(ByteBuffer.wrap(chunk.getChunkName().getBytes()))
-              .withInitial(member.getNextSnapshotChunk() == null)
-              .withComplete(!reader.hasNext())
-              .withNextChunkId(reader.nextId())
-              .build();
-      if (reader.hasNext()) {
-        member.setNextSnapshotChunk(reader.nextId());
+        // Create the install request, indicating whether this is the last chunk of data based on
+        // the number
+        // of bytes remaining in the buffer.
+        final DefaultRaftMember leader = raft.getLeader();
+        request =
+            InstallRequest.builder()
+                .withCurrentTerm(raft.getTerm())
+                .withLeader(leader.memberId())
+                .withIndex(persistedSnapshot.getIndex())
+                .withTerm(persistedSnapshot.getTerm())
+                .withTimestamp(persistedSnapshot.getTimestamp().unixTimestamp())
+                .withVersion(persistedSnapshot.version())
+                .withData(new SnapshotChunkImpl(chunk).toByteBuffer())
+                .withChunkId(ByteBuffer.wrap(chunk.getChunkName().getBytes()))
+                .withInitial(member.getNextSnapshotChunk() == null)
+                .withComplete(!snapshotReader.hasNext())
+                .withNextChunkId(snapshotReader.nextId())
+                .build();
+        if (snapshotReader.hasNext()) {
+          member.setNextSnapshotChunk(snapshotReader.nextId());
+        } else {
+          member.setNextSnapshotChunk(null);
+        }
+      } else {
+        return null;
       }
+    } catch (final NoSuchElementException e) {
+      return null;
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
@@ -495,7 +506,11 @@ abstract class AbstractAppender implements AutoCloseable {
   /** Connects to the member and sends a snapshot request. */
   protected void sendInstallRequest(final RaftMemberContext member, final InstallRequest request) {
     // Start the install to the member.
-    member.startInstall();
+    if (request == null) {
+      return;
+    }
+    final int size = request.data().capacity();
+    member.startInstall(size);
 
     final long timestamp = System.currentTimeMillis();
 
@@ -505,7 +520,7 @@ abstract class AbstractAppender implements AutoCloseable {
         .whenCompleteAsync(
             (response, error) -> {
               // Complete the install to the member.
-              member.completeInstall();
+              member.completeInstall(size);
 
               if (open) {
                 if (error == null) {
@@ -573,6 +588,7 @@ abstract class AbstractAppender implements AutoCloseable {
       }*/
     } else {
       member.setNextSnapshotChunk(response.getNextChunkId());
+      snapshotReader.seek(member.getNextSnapshotChunk());
     }
     // Recursively append entries to the member.
     appendEntries(member);

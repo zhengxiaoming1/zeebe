@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 public final class RaftMemberContext {
 
   private static final int MAX_APPENDS = 2;
-  private static final int MAX_INSTALL_CHUNKS = 100;
+  private static final int MAX_INSTALL_SIZE = 32 * 1024; // 32KB
   private static final int APPEND_WINDOW_SIZE = 8;
   private final DefaultRaftMember member;
   private final DescriptiveStatistics timeStats = new DescriptiveStatistics(APPEND_WINDOW_SIZE);
@@ -173,17 +173,25 @@ public final class RaftMemberContext {
    * @return Indicates whether an install request can be sent to the member.
    */
   public boolean canInstall() {
-    return installing < MAX_INSTALL_CHUNKS;
+    return installing < MAX_INSTALL_SIZE;
   }
 
-  /** Starts an install request to the member. */
-  public void startInstall() {
-    installing++;
+  /**
+   * Starts an install request to the member.
+   *
+   * @param size
+   */
+  public void startInstall(final int size) {
+    installing += size;
   }
 
-  /** Completes an install request to the member. */
-  public void completeInstall() {
-    installing--;
+  /**
+   * Completes an install request to the member.
+   *
+   * @param size
+   */
+  public void completeInstall(final int size) {
+    installing -= size;
   }
 
   /**
