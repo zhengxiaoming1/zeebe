@@ -330,7 +330,7 @@ public final class RaftRule extends ExternalResource {
       final int size) {
 
     final var transientSnapshot =
-        persistedSnapshotStore.newTransientSnapshot(index, term, new WallClockTimestamp());
+        persistedSnapshotStore.newTransientSnapshot(index, term, new WallClockTimestamp(), 0);
     transientSnapshot.take(
         path -> {
           IoUtil.ensureDirectoryExists(path.toFile(), "snapshot dir should exist");

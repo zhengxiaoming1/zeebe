@@ -100,7 +100,8 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
         store.newTransientSnapshot(
             snapshotIndexedEntry.index(),
             snapshotIndexedEntry.entry().term(),
-            WallClockTimestamp.from(System.currentTimeMillis()));
+            WallClockTimestamp.from(System.currentTimeMillis()),
+            lowerBoundSnapshotPosition);
     takeSnapshot(transientSnapshot);
     return Optional.of(transientSnapshot);
   }

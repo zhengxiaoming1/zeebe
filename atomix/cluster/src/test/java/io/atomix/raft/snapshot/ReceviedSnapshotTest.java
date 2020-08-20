@@ -77,7 +77,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -113,7 +113,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -137,7 +137,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -165,7 +165,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -189,7 +189,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -218,7 +218,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -248,7 +248,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -281,7 +281,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -306,7 +306,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -324,7 +324,7 @@ public class ReceviedSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = senderSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();

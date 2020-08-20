@@ -50,10 +50,14 @@ public interface PersistedSnapshotStore extends CloseableSilently {
    * @param index the index to which the snapshot corresponds to
    * @param term the term to which the snapshots corresponds to
    * @param timestamp the time to which the snapshots corresponds to
+   * @param lowerBoundSnapshotPosition
    * @return the new transient snapshot
    */
   TransientSnapshot newTransientSnapshot(
-      final long index, final long term, final WallClockTimestamp timestamp);
+      final long index,
+      final long term,
+      final WallClockTimestamp timestamp,
+      final long lowerBoundSnapshotPosition);
 
   /**
    * Starts a new received volatile snapshot which can be persisted later.

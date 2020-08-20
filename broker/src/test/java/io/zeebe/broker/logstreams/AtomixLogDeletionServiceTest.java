@@ -129,7 +129,7 @@ public final class AtomixLogDeletionServiceTest {
   private void createSnapshot(final long index) {
     final var store = logStorageRule.getPersistedSnapshotStore();
     final var now = WallClockTimestamp.from(System.currentTimeMillis());
-    final var transientSnapshot = store.newTransientSnapshot(index, 0, now);
+    final var transientSnapshot = store.newTransientSnapshot(index, 0, now, 0);
     transientSnapshot.take(
         p -> {
           try {

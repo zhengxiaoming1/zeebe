@@ -20,6 +20,7 @@ import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
 import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.ReceivedSnapshot;
+import io.atomix.raft.snapshot.SnapshotId;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
@@ -109,9 +110,13 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   @Override
   public TransientSnapshot newTransientSnapshot(
-      final long index, final long term, final WallClockTimestamp timestamp) {
-    final var directory = buildPendingSnapshotDirectory(index, term, timestamp);
-    final var fileBasedSnapshotMetadata = new FileBasedSnapshotMetadata(index, term, timestamp);
+      final long index,
+      final long term,
+      final WallClockTimestamp timestamp,
+      final long processedPosition) {
+    final var directory = buildPendingSnapshotDirectory(index, term, timestamp, processedPosition);
+    final var fileBasedSnapshotMetadata =
+        new FileBasedSnapshotMetadata(index, term, timestamp, processedPosition);
     return new FileBasedTransientSnapshot(fileBasedSnapshotMetadata, directory, this);
   }
 
@@ -200,7 +205,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     }
   }
 
-  private void purgePendingSnapshots(final long cutoffIndex) {
+  private void purgePendingSnapshots(final SnapshotId cutoffIndex) {
     LOGGER.debug(
         "Search for orphaned snapshots below oldest valid snapshot with index {} in {}",
         cutoffIndex,
@@ -218,9 +223,9 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     }
   }
 
-  private void purgePendingSnapshot(final long cutoffIndex, final Path pendingSnapshot) {
+  private void purgePendingSnapshot(final SnapshotId cutoffIndex, final Path pendingSnapshot) {
     final var optionalMetadata = FileBasedSnapshotMetadata.ofPath(pendingSnapshot);
-    if (optionalMetadata.isPresent() && optionalMetadata.get().getIndex() < cutoffIndex) {
+    if (optionalMetadata.isPresent() && optionalMetadata.get().compareTo(cutoffIndex) < 0) {
       try {
         FileUtil.deleteFolder(pendingSnapshot);
         LOGGER.debug("Deleted orphaned snapshot {}", pendingSnapshot);
@@ -252,7 +257,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
     if (isCurrentSnapshotNewer(metadata)) {
       LOGGER.debug("Snapshot is older then {} already exists", currentPersistedSnapshot);
-      purgePendingSnapshots(metadata.getIndex() + 1);
+      purgePendingSnapshots(metadata);
       return currentPersistedSnapshot;
     }
 
@@ -293,7 +298,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       LOGGER.debug("Deleting snapshot {}", currentPersistedSnapshot);
       currentPersistedSnapshot.delete();
     }
-    purgePendingSnapshots(newPersistedSnapshot.getIndex());
+    purgePendingSnapshots(newPersistedSnapshot.getId());
 
     listeners.forEach(listener -> listener.onNewSnapshot(newPersistedSnapshot));
 
@@ -320,8 +325,11 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
   }
 
   private Path buildPendingSnapshotDirectory(
-      final long index, final long term, final WallClockTimestamp timestamp) {
-    final var metadata = new FileBasedSnapshotMetadata(index, term, timestamp);
+      final long index,
+      final long term,
+      final WallClockTimestamp timestamp,
+      final long processedPosition) {
+    final var metadata = new FileBasedSnapshotMetadata(index, term, timestamp, processedPosition);
     return pendingDirectory.resolve(metadata.getSnapshotIdAsString());
   }
 

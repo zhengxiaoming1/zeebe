@@ -69,7 +69,7 @@ public class FileBasedTransientSnapshotTest {
     final var time = WallClockTimestamp.from(123);
 
     // when
-    persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
 
     // then
     assertThat(pendingSnapshotsDir.toFile().listFiles()).isEmpty();
@@ -82,7 +82,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
 
     // when
     transientSnapshot.abort();
@@ -98,7 +98,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
 
     // when
     transientSnapshot.take(this::createSnapshotDir);
@@ -122,7 +122,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(this::createSnapshotDir);
 
     // when
@@ -139,7 +139,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(this::createSnapshotDir);
 
     // when
@@ -156,7 +156,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(this::createSnapshotDir);
     transientSnapshot.persist();
 
@@ -182,7 +182,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(this::createSnapshotDir);
 
     // when
@@ -208,12 +208,13 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var oldTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var oldTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     oldTransientSnapshot.take(this::createSnapshotDir);
     oldTransientSnapshot.persist();
 
     // when
-    final var newSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
+    final var newSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time, 0);
     newSnapshot.take(this::createSnapshotDir);
     newSnapshot.persist();
 
@@ -237,11 +238,12 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var oldTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var oldTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     oldTransientSnapshot.take(this::createSnapshotDir);
 
     // when
-    final var newSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
+    final var newSnapshot = persistedSnapshotStore.newTransientSnapshot(index + 1, term, time, 0);
     newSnapshot.take(this::createSnapshotDir);
     newSnapshot.persist();
 
@@ -266,11 +268,11 @@ public class FileBasedTransientSnapshotTest {
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
     final var oldTransientSnapshot =
-        persistedSnapshotStore.newTransientSnapshot(index + 1, term, time);
+        persistedSnapshotStore.newTransientSnapshot(index + 1, term, time, 0);
     oldTransientSnapshot.take(this::createSnapshotDir);
 
     // when
-    final var newSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var newSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     newSnapshot.take(this::createSnapshotDir);
     newSnapshot.persist();
 
@@ -302,7 +304,8 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var oldTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var oldTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
 
     // when
     oldTransientSnapshot.take(
@@ -326,7 +329,8 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var oldTransientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var oldTransientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
 
     // when
     oldTransientSnapshot.take(
@@ -351,7 +355,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     persistedSnapshotStore.addSnapshotListener(listener);
     transientSnapshot.take(this::createSnapshotDir);
 
@@ -371,7 +375,7 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     persistedSnapshotStore.addSnapshotListener(listener);
     persistedSnapshotStore.removeSnapshotListener(listener);
     transientSnapshot.take(this::createSnapshotDir);
@@ -391,12 +395,13 @@ public class FileBasedTransientSnapshotTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(this::createSnapshotDir);
     final var persistedSnapshot = transientSnapshot.persist();
 
     // when
-    final var transientSnapshot2 = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot2 =
+        persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot2.take(this::createSnapshotDir);
     final var persistedSnapshot2 = transientSnapshot2.persist();
 

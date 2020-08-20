@@ -87,7 +87,7 @@ public class FileBasedSnapshotStoreTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time);
+    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
     transientSnapshot.take(this::createSnapshotDir);
     final var persistedSnapshot = transientSnapshot.persist();
 

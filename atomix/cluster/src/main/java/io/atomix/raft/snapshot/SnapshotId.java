@@ -19,6 +19,8 @@ public interface SnapshotId extends Comparable<SnapshotId> {
   /** @return the term when the snapshot was taken */
   long getTerm();
 
+  long getProcessedPosition();
+
   /** @return the timestamp when the snapshot was taken */
   WallClockTimestamp getTimestamp();
 
@@ -43,6 +45,7 @@ public interface SnapshotId extends Comparable<SnapshotId> {
   default int compareTo(final SnapshotId other) {
     return Comparator.comparingLong(SnapshotId::getTerm)
         .thenComparing(SnapshotId::getIndex)
+        .thenComparing(SnapshotId::getProcessedPosition)
         .thenComparing(SnapshotId::getTimestamp)
         .compare(this, other);
   }
