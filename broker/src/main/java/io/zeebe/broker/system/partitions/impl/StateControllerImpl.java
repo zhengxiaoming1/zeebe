@@ -89,10 +89,14 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
     final var snapshotIndexedEntry = optionalIndexed.get();
     final long previousSnapshotIndex =
         store.getLatestSnapshot().map(PersistedSnapshot::getCompactionBound).orElse(-1L);
-    if (snapshotIndexedEntry.index() == previousSnapshotIndex) {
+    final long previousSnapshotProcessedPosition =
+        store.getLatestSnapshot().map(s -> s.getId().getProcessedPosition()).orElse(-1L);
+    if (snapshotIndexedEntry.index() == previousSnapshotIndex
+        && previousSnapshotProcessedPosition == lowerBoundSnapshotPosition) {
       LOG.debug(
-          "Previous snapshot was taken for the same indexed entry {}, will not take snapshot.",
-          snapshotIndexedEntry);
+          "Previous snapshot was taken for the same indexed entry {} and same processed position {}, will not take snapshot.",
+          snapshotIndexedEntry,
+          previousSnapshotProcessedPosition);
       return Optional.empty();
     }
 
