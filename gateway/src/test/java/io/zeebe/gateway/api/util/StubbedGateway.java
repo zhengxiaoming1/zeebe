@@ -12,6 +12,7 @@ import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.zeebe.gateway.EndpointManager;
+import io.zeebe.gateway.EndpointWrapper;
 import io.zeebe.gateway.impl.job.ActivateJobsHandler;
 import io.zeebe.gateway.impl.job.LongPollingActivateJobsHandler;
 import io.zeebe.gateway.protocol.GatewayGrpc;
@@ -42,9 +43,10 @@ public final class StubbedGateway {
     if (activateJobsHandler instanceof LongPollingActivateJobsHandler) {
       actorScheduler.submitActor((LongPollingActivateJobsHandler) activateJobsHandler);
     }
-    final EndpointManager endpointManager = new EndpointManager(brokerClient, activateJobsHandler);
+    final var endpoint =
+        new EndpointWrapper(new EndpointManager(brokerClient, activateJobsHandler));
     final InProcessServerBuilder serverBuilder =
-        InProcessServerBuilder.forName(SERVER_NAME).addService(endpointManager);
+        InProcessServerBuilder.forName(SERVER_NAME).addService(endpoint);
     server = serverBuilder.build();
     server.start();
   }

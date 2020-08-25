@@ -107,17 +107,16 @@ public final class Gateway {
     } else {
       activateJobsHandler = new RoundRobinActivateJobsHandler(brokerClient);
     }
-    final EndpointManager endpointManager = new EndpointManager(brokerClient, activateJobsHandler);
 
-    final ServerBuilder serverBuilder = serverBuilderFactory.apply(gatewayCfg);
-
+    final var endpoint =
+        new EndpointWrapper(new EndpointManager(brokerClient, activateJobsHandler));
+    final var serverBuilder = serverBuilderFactory.apply(gatewayCfg);
     if (gatewayCfg.getMonitoring().isEnabled()) {
       final MonitoringServerInterceptor monitoringInterceptor =
           MonitoringServerInterceptor.create(Configuration.allMetrics());
-      serverBuilder.addService(
-          ServerInterceptors.intercept(endpointManager, monitoringInterceptor));
+      serverBuilder.addService(ServerInterceptors.intercept(endpoint, monitoringInterceptor));
     } else {
-      serverBuilder.addService(endpointManager);
+      serverBuilder.addService(endpoint);
     }
 
     final SecurityCfg securityCfg = gatewayCfg.getSecurity();

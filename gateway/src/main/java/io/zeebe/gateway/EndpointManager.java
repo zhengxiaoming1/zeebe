@@ -9,7 +9,6 @@ package io.zeebe.gateway;
 
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.zeebe.gateway.ResponseMapper.BrokerResponseMapper;
 import io.zeebe.gateway.cmd.BrokerErrorException;
@@ -305,7 +304,6 @@ public final class EndpointManager extends GatewayGrpc.GatewayImplBase {
       return;
     }
 
-    suppressCancelledException(grpcRequest, streamObserver);
     brokerClient.sendRequestWithRetry(
         brokerRequest,
         (key, response) -> consumeResponse(responseMapper, streamObserver, key, response),
@@ -324,7 +322,6 @@ public final class EndpointManager extends GatewayGrpc.GatewayImplBase {
       return;
     }
 
-    suppressCancelledException(grpcRequest, streamObserver);
     requestRetryHandler.sendRequest(
         brokerRequest,
         (key, response) -> consumeResponse(responseMapper, streamObserver, key, response),
@@ -344,20 +341,11 @@ public final class EndpointManager extends GatewayGrpc.GatewayImplBase {
       return;
     }
 
-    suppressCancelledException(grpcRequest, streamObserver);
     requestRetryHandler.sendRequest(
         brokerRequest,
         (key, response) -> consumeResponse(responseMapper, streamObserver, key, response),
-        error -> streamObserver.onError(convertThrowable(error)),
+        error -> streamObserver.onError(error),
         timeout);
-  }
-
-  private <GrpcRequestT, GrpcResponseT> void suppressCancelledException(
-      final GrpcRequestT grpcRequest, final StreamObserver<GrpcResponseT> streamObserver) {
-    final ServerCallStreamObserver<GrpcResponseT> serverObserver =
-        (ServerCallStreamObserver<GrpcResponseT>) streamObserver;
-    serverObserver.setOnCancelHandler(
-        () -> Loggers.GATEWAY_LOGGER.trace("gRPC {} request cancelled", grpcRequest.getClass()));
   }
 
   private <BrokerResponseT, GrpcResponseT> void consumeResponse(
@@ -366,8 +354,9 @@ public final class EndpointManager extends GatewayGrpc.GatewayImplBase {
       final long key,
       final BrokerResponseT response) {
     final GrpcResponseT grpcResponse = responseMapper.apply(key, response);
-    streamObserver.onNext(grpcResponse);
-    streamObserver.onCompleted();
+    throw new RuntimeException("test");
+    //    streamObserver.onNext(grpcResponse);
+    //    streamObserver.onCompleted();
   }
 
   private <GrpcRequestT, BrokerResponseT, GrpcResponseT> BrokerRequest<BrokerResponseT> mapRequest(
