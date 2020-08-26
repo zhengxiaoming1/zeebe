@@ -38,6 +38,7 @@ import io.zeebe.broker.system.monitoring.DiskSpaceUsageMonitor;
 import io.zeebe.broker.system.partitions.TypedRecordProcessorsFactory;
 import io.zeebe.broker.system.partitions.ZeebePartition;
 import io.zeebe.broker.system.partitions.impl.AtomixPartitionMessagingService;
+import io.zeebe.broker.system.partitions.snapshot.FileBasedSnapshotStoreFactory;
 import io.zeebe.broker.transport.backpressure.PartitionAwareRequestLimiter;
 import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.engine.processing.EngineProcessors;
@@ -88,6 +89,7 @@ public final class Broker implements AutoCloseable {
   private final List<DiskSpaceUsageListener> diskSpaceUsageListeners = new ArrayList<>();
   private final SpringBrokerBridge springBrokerBridge;
   private DiskSpaceUsageMonitor diskSpaceUsageMonitor;
+  private FileBasedSnapshotStoreFactory snapshotStoreFactory;
 
   public Broker(final SystemContext systemContext, final SpringBrokerBridge springBrokerBridge) {
     brokerContext = systemContext;
@@ -195,7 +197,8 @@ public final class Broker implements AutoCloseable {
   }
 
   private AutoCloseable atomixCreateStep(final BrokerCfg brokerCfg) {
-    atomix = AtomixFactory.fromConfiguration(brokerCfg);
+    snapshotStoreFactory = new FileBasedSnapshotStoreFactory();
+    atomix = AtomixFactory.fromConfiguration(brokerCfg, snapshotStoreFactory);
 
     final var partitionGroup =
         (RaftPartitionGroup)
@@ -341,6 +344,7 @@ public final class Broker implements AutoCloseable {
                     brokerCfg,
                     commandHandler,
                     partitionIndexes.get(partitionId),
+                    snapshotStoreFactory,
                     createFactory(topologyManager, clusterCfg, atomix, managementRequestHandler));
             scheduleActor(zeebePartition);
             healthCheckService.registerMonitoredPartition(

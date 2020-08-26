@@ -1,26 +1,15 @@
 /*
- * Copyright © 2020  camunda services GmbH (info@camunda.com)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
  */
-package io.atomix.raft.snapshot.impl;
+package io.zeebe.broker.system.partitions.snapshot;
 
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
-import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.ReceivedSnapshot;
-import io.atomix.raft.snapshot.SnapshotId;
 import io.atomix.raft.snapshot.TransientSnapshot;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
@@ -40,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 
-public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
+public final class FileBasedSnapshotStore implements ActivePersistedSnapshotStore {
   // first is the metadata and the second the the received snapshot count
   private static final String RECEIVING_DIR_FORMAT = "%s-%d";
 
@@ -55,7 +44,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   private final SnapshotMetrics snapshotMetrics;
 
-  private final AtomicReference<PersistedSnapshot> currentPersistedSnapshotRef;
+  private final AtomicReference<FileBasedSnapshot> currentPersistedSnapshotRef;
   // used to write concurrently received snapshots in different pending directories
   private final AtomicLong receivingSnapshotStartCount;
 
@@ -74,8 +63,8 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     currentPersistedSnapshotRef = new AtomicReference<>(loadLatestSnapshot(snapshotsDirectory));
   }
 
-  private PersistedSnapshot loadLatestSnapshot(final Path snapshotDirectory) {
-    PersistedSnapshot latestPersistedSnapshot = null;
+  private FileBasedSnapshot loadLatestSnapshot(final Path snapshotDirectory) {
+    FileBasedSnapshot latestPersistedSnapshot = null;
     try (final var stream = Files.newDirectoryStream(snapshotDirectory)) {
       for (final var path : stream) {
         latestPersistedSnapshot = collectSnapshot(path);
@@ -86,7 +75,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     return latestPersistedSnapshot;
   }
 
-  private PersistedSnapshot collectSnapshot(final Path path) {
+  private FileBasedSnapshot collectSnapshot(final Path path) {
     final var optionalMeta = FileBasedSnapshotMetadata.ofPath(path);
     if (optionalMeta.isPresent()) {
       final var metadata = optionalMeta.get();
@@ -106,18 +95,6 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       return snapshot.getPath().getFileName().toString().equals(id);
     }
     return false;
-  }
-
-  @Override
-  public TransientSnapshot newTransientSnapshot(
-      final long index,
-      final long term,
-      final WallClockTimestamp timestamp,
-      final long processedPosition) {
-    final var directory = buildPendingSnapshotDirectory(index, term, timestamp, processedPosition);
-    final var fileBasedSnapshotMetadata =
-        new FileBasedSnapshotMetadata(index, term, timestamp, processedPosition);
-    return new FileBasedTransientSnapshot(fileBasedSnapshotMetadata, directory, this);
   }
 
   @Override
@@ -185,6 +162,30 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     }
   }
 
+  @Override
+  public Optional<TransientSnapshot> newTransientSnapshot(
+      final long index,
+      final long term,
+      final long processedPosition,
+      final long exportedPosition) {
+
+    final WallClockTimestamp timestamp = WallClockTimestamp.from(System.currentTimeMillis());
+    final var newSnapshotId =
+        new FileBasedSnapshotMetadata(index, term, processedPosition, exportedPosition, timestamp);
+    if (currentPersistedSnapshotRef.get() != null) {
+      if (currentPersistedSnapshotRef.get().getSnapshotId().compareTo(newSnapshotId) == 0) {
+        LOGGER.debug(
+            "Previous snapshot was taken for the same processed position {} and exported position {}, will not take snapshot.",
+            processedPosition,
+            exportedPosition);
+        return Optional.empty();
+      }
+    }
+    final var directory = buildPendingSnapshotDirectory(newSnapshotId);
+
+    return Optional.of(new FileBasedTransientSnapshot(newSnapshotId, directory, this));
+  }
+
   private void observeSnapshotSize(final PersistedSnapshot persistedSnapshot) {
     try (final var contents = Files.newDirectoryStream(persistedSnapshot.getPath())) {
       var totalSize = 0L;
@@ -249,7 +250,8 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
 
   private boolean isCurrentSnapshotNewer(final FileBasedSnapshotMetadata metadata) {
     final var persistedSnapshot = currentPersistedSnapshotRef.get();
-    return (persistedSnapshot != null && persistedSnapshot.getId().compareTo(metadata) >= 0);
+    return (persistedSnapshot != null
+        && persistedSnapshot.getSnapshotId().compareTo(metadata) >= 0);
   }
 
   PersistedSnapshot newSnapshot(final FileBasedSnapshotMetadata metadata, final Path directory) {
@@ -298,7 +300,7 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
       LOGGER.debug("Deleting snapshot {}", currentPersistedSnapshot);
       currentPersistedSnapshot.delete();
     }
-    purgePendingSnapshots(newPersistedSnapshot.getId());
+    purgePendingSnapshots(newPersistedSnapshot.getSnapshotId());
 
     listeners.forEach(listener -> listener.onNewSnapshot(newPersistedSnapshot));
 
@@ -324,13 +326,8 @@ public final class FileBasedSnapshotStore implements PersistedSnapshotStore {
     }
   }
 
-  private Path buildPendingSnapshotDirectory(
-      final long index,
-      final long term,
-      final WallClockTimestamp timestamp,
-      final long processedPosition) {
-    final var metadata = new FileBasedSnapshotMetadata(index, term, timestamp, processedPosition);
-    return pendingDirectory.resolve(metadata.getSnapshotIdAsString());
+  private Path buildPendingSnapshotDirectory(final SnapshotId id) {
+    return pendingDirectory.resolve(id.getSnapshotIdAsString());
   }
 
   private Path buildSnapshotDirectory(final FileBasedSnapshotMetadata metadata) {

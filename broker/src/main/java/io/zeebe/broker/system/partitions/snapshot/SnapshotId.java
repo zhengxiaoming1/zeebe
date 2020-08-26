@@ -5,7 +5,7 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.atomix.raft.snapshot;
+package io.zeebe.broker.system.partitions.snapshot;
 
 import io.atomix.utils.time.WallClockTimestamp;
 import java.util.Comparator;
@@ -20,6 +20,8 @@ public interface SnapshotId extends Comparable<SnapshotId> {
   long getTerm();
 
   long getProcessedPosition();
+
+  long getExporterPosition();
 
   /** @return the timestamp when the snapshot was taken */
   WallClockTimestamp getTimestamp();
@@ -46,7 +48,7 @@ public interface SnapshotId extends Comparable<SnapshotId> {
     return Comparator.comparingLong(SnapshotId::getTerm)
         .thenComparing(SnapshotId::getIndex)
         .thenComparing(SnapshotId::getProcessedPosition)
-        .thenComparing(SnapshotId::getTimestamp)
+        .thenComparing(SnapshotId::getExporterPosition)
         .compare(this, other);
   }
 }

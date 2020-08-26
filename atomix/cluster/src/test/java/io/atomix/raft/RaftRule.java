@@ -33,7 +33,7 @@ import io.atomix.raft.roles.LeaderRole;
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
 import io.atomix.raft.snapshot.PersistedSnapshotStore;
-import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.TestSnapshotStore;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.EntryValidator;
@@ -46,14 +46,11 @@ import io.atomix.storage.journal.JournalReader.Mode;
 import io.atomix.utils.AbstractIdentifier;
 import io.atomix.utils.concurrent.SingleThreadContext;
 import io.atomix.utils.concurrent.ThreadContext;
-import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.FileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,7 +68,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
-import org.agrona.IoUtil;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TemporaryFolder;
@@ -329,7 +325,7 @@ public final class RaftRule extends ExternalResource {
       final PersistedSnapshotStore persistedSnapshotStore,
       final int size) {
 
-    final var transientSnapshot =
+    /*final var transientSnapshot =
         persistedSnapshotStore.newTransientSnapshot(index, term, new WallClockTimestamp(), 0);
     transientSnapshot.take(
         path -> {
@@ -350,7 +346,7 @@ public final class RaftRule extends ExternalResource {
           // do something
           return true;
         });
-    transientSnapshot.persist();
+    transientSnapshot.persist();*/
   }
 
   public void awaitNewLeader() {
@@ -479,7 +475,7 @@ public final class RaftRule extends ExternalResource {
 
   public void copySnapshotOffline(final String sourceNode, final String targetNode)
       throws Exception {
-    final var snapshotOnNode = getSnapshotOnNode(sourceNode);
+    /* final var snapshotOnNode = getSnapshotOnNode(sourceNode);
 
     final var memberDirectory = getMemberDirectory(directory, targetNode);
     final var snapshotStore =
@@ -494,7 +490,7 @@ public final class RaftRule extends ExternalResource {
         receivedSnapshot.apply(chunk);
       }
       receivedSnapshot.persist();
-    }
+    }*/
   }
 
   private RaftStorage createStorage(
@@ -509,9 +505,7 @@ public final class RaftRule extends ExternalResource {
             .withMaxEntriesPerSegment(10)
             .withMaxSegmentSize(1024 * 10)
             .withFreeDiskSpace(100)
-            .withSnapshotStore(
-                new FileBasedSnapshotStoreFactory()
-                    .createSnapshotStore(memberDirectory.toPath(), "1"))
+            .withSnapshotStore(new TestSnapshotStore(memberDirectory.toPath(), "1"))
             .withNamespace(RaftNamespaces.RAFT_STORAGE);
     return configurator.apply(defaults).build();
   }

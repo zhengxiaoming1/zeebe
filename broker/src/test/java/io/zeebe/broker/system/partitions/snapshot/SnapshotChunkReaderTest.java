@@ -1,25 +1,17 @@
 /*
- * Copyright © 2020 camunda services GmbH (info@camunda.com)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.0. You may not use this file
+ * except in compliance with the Zeebe Community License 1.0.
  */
-package io.atomix.raft.snapshot;
+package io.zeebe.broker.system.partitions.snapshot;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.atomix.raft.snapshot.impl.FileBasedSnapshotStoreFactory;
+import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.util.ChecksumUtil;
@@ -46,7 +38,7 @@ import org.junit.rules.TemporaryFolder;
 public class SnapshotChunkReaderTest {
 
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private PersistedSnapshotStore persistedSnapshotStore;
+  private FileBasedSnapshotStore persistedSnapshotStore;
 
   @Before
   public void before() {
@@ -54,7 +46,8 @@ public class SnapshotChunkReaderTest {
     final String partitionName = "1";
     final File root = temporaryFolder.getRoot();
 
-    persistedSnapshotStore = factory.createSnapshotStore(root.toPath(), partitionName);
+    persistedSnapshotStore =
+        (FileBasedSnapshotStore) factory.createSnapshotStore(root.toPath(), partitionName);
   }
 
   @Test
@@ -62,8 +55,8 @@ public class SnapshotChunkReaderTest {
     // given
     final var index = 1L;
     final var term = 0L;
-    final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
+    final var transientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, 1, 0).get();
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -94,9 +87,20 @@ public class SnapshotChunkReaderTest {
     final var expectedSnapshotChecksum = ChecksumUtil.createCombinedChecksum(paths);
 
     // chunks should always read in order
-    assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(0), "file1", "this");
-    assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(1), "file2", "is");
-    assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(2), "file3", "content");
+    assertSnapshotChunk(
+        expectedSnapshotChecksum,
+        snapshotChunks.get(0),
+        "file1",
+        "this",
+        persistedSnapshot.getId());
+    assertSnapshotChunk(
+        expectedSnapshotChecksum, snapshotChunks.get(1), "file2", "is", persistedSnapshot.getId());
+    assertSnapshotChunk(
+        expectedSnapshotChecksum,
+        snapshotChunks.get(2),
+        "file3",
+        "content",
+        persistedSnapshot.getId());
   }
 
   @Test
@@ -105,7 +109,8 @@ public class SnapshotChunkReaderTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
+    final var transientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, 1, 0).get();
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -136,8 +141,14 @@ public class SnapshotChunkReaderTest {
     final var expectedSnapshotChecksum = ChecksumUtil.createCombinedChecksum(paths);
 
     // chunks should always read in order
-    assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(0), "file2", "is");
-    assertSnapshotChunk(expectedSnapshotChecksum, snapshotChunks.get(1), "file3", "content");
+    assertSnapshotChunk(
+        expectedSnapshotChecksum, snapshotChunks.get(0), "file2", "is", persistedSnapshot.getId());
+    assertSnapshotChunk(
+        expectedSnapshotChecksum,
+        snapshotChunks.get(1),
+        "file3",
+        "content",
+        persistedSnapshot.getId());
   }
 
   @Test
@@ -146,7 +157,8 @@ public class SnapshotChunkReaderTest {
     final var index = 1L;
     final var term = 0L;
     final var time = WallClockTimestamp.from(123);
-    final var transientSnapshot = persistedSnapshotStore.newTransientSnapshot(index, term, time, 0);
+    final var transientSnapshot =
+        persistedSnapshotStore.newTransientSnapshot(index, term, 1, 0).get();
     transientSnapshot.take(
         p -> takeSnapshot(p, List.of("file3", "file1", "file2"), List.of("content", "this", "is")));
     final var persistedSnapshot = transientSnapshot.persist();
@@ -168,8 +180,9 @@ public class SnapshotChunkReaderTest {
       final long expectedSnapshotChecksum,
       final SnapshotChunk snapshotChunk,
       final String fileName,
-      final String chunkContent) {
-    assertThat(snapshotChunk.getSnapshotId()).isEqualTo("1-0-123");
+      final String chunkContent,
+      final String snapshotId) {
+    assertThat(snapshotChunk.getSnapshotId()).isEqualTo(snapshotId);
     assertThat(snapshotChunk.getChunkName()).isEqualTo(fileName);
     assertThat(snapshotChunk.getContent()).isEqualTo(chunkContent.getBytes());
     assertThat(snapshotChunk.getTotalCount()).isEqualTo(3);

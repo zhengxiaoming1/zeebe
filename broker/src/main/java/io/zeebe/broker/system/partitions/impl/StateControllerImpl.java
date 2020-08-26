@@ -9,14 +9,13 @@ package io.zeebe.broker.system.partitions.impl;
 
 import io.atomix.raft.snapshot.PersistedSnapshot;
 import io.atomix.raft.snapshot.PersistedSnapshotListener;
-import io.atomix.raft.snapshot.PersistedSnapshotStore;
 import io.atomix.raft.snapshot.ReceivedSnapshot;
 import io.atomix.raft.snapshot.SnapshotChunk;
 import io.atomix.raft.snapshot.TransientSnapshot;
-import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.broker.system.partitions.AtomixRecordEntrySupplier;
 import io.zeebe.broker.system.partitions.SnapshotReplication;
 import io.zeebe.broker.system.partitions.StateController;
+import io.zeebe.broker.system.partitions.snapshot.ActivePersistedSnapshotStore;
 import io.zeebe.db.ZeebeDb;
 import io.zeebe.db.ZeebeDbFactory;
 import io.zeebe.logstreams.impl.Loggers;
@@ -40,7 +39,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
   private final Map<String, ReplicationContext> receivedSnapshots =
       new Object2NullableObjectHashMap<>();
 
-  private final PersistedSnapshotStore store;
+  private final ActivePersistedSnapshotStore store;
 
   private final Path runtimeDirectory;
   private final ZeebeDbFactory zeebeDbFactory;
@@ -54,7 +53,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
   public StateControllerImpl(
       final int partitionId,
       final ZeebeDbFactory zeebeDbFactory,
-      final PersistedSnapshotStore store,
+      final ActivePersistedSnapshotStore store,
       final Path runtimeDirectory,
       final SnapshotReplication replication,
       final AtomixRecordEntrySupplier entrySupplier,
@@ -87,10 +86,10 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
     }
 
     final var snapshotIndexedEntry = optionalIndexed.get();
-    final long previousSnapshotIndex =
+    /*final long previousSnapshotIndex =
         store.getLatestSnapshot().map(PersistedSnapshot::getCompactionBound).orElse(-1L);
     final long previousSnapshotProcessedPosition =
-        store.getLatestSnapshot().map(s -> s.getId().getProcessedPosition()).orElse(-1L);
+        store.getLatestSnapshot().map(s -> s.getSnapshotId().getProcessedPosition()).orElse(-1L);
     if (snapshotIndexedEntry.index() == previousSnapshotIndex
         && previousSnapshotProcessedPosition == lowerBoundSnapshotPosition) {
       LOG.debug(
@@ -98,16 +97,16 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
           snapshotIndexedEntry,
           previousSnapshotProcessedPosition);
       return Optional.empty();
-    }
+    }*/
 
-    final var transientSnapshot =
+    final Optional<TransientSnapshot> transientSnapshot =
         store.newTransientSnapshot(
             snapshotIndexedEntry.index(),
             snapshotIndexedEntry.entry().term(),
-            WallClockTimestamp.from(System.currentTimeMillis()),
+            lowerBoundSnapshotPosition,
             lowerBoundSnapshotPosition);
-    takeSnapshot(transientSnapshot);
-    return Optional.of(transientSnapshot);
+    transientSnapshot.ifPresent(this::takeSnapshot);
+    return transientSnapshot;
   }
 
   @Override

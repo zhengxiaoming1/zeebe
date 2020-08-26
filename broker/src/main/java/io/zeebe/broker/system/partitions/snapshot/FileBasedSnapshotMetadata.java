@@ -5,9 +5,8 @@
  * Licensed under the Zeebe Community License 1.0. You may not use this file
  * except in compliance with the Zeebe Community License 1.0.
  */
-package io.atomix.raft.snapshot.impl;
+package io.zeebe.broker.system.partitions.snapshot;
 
-import io.atomix.raft.snapshot.SnapshotId;
 import io.atomix.utils.time.WallClockTimestamp;
 import io.zeebe.util.ZbLogger;
 import java.nio.file.Path;
@@ -17,23 +16,27 @@ import org.slf4j.Logger;
 
 public final class FileBasedSnapshotMetadata implements SnapshotId {
   private static final Logger LOGGER = new ZbLogger(FileBasedSnapshotMetadata.class);
-  private static final int METADATA_PARTS = 4;
+  private static final int METADATA_PARTS = 5;
   private static final int METADATA_PARTS_OLD_VERSION = 3;
 
   private final long index;
   private final long term;
   private final WallClockTimestamp timestamp;
   private final long processedPosition;
+  private final long exporterPosition;
 
   FileBasedSnapshotMetadata(
       final long index,
       final long term,
-      final WallClockTimestamp timestamp,
-      final long processedPosition) {
+      final long processedPosition,
+      final long exporterPosition,
+      final WallClockTimestamp timestamp) {
     this.index = index;
     this.term = term;
+    // We keep timestamp for backward compatibility
     this.timestamp = timestamp;
     this.processedPosition = processedPosition;
+    this.exporterPosition = exporterPosition;
   }
 
   public static Optional<FileBasedSnapshotMetadata> ofPath(final Path path) {
@@ -50,11 +53,16 @@ public final class FileBasedSnapshotMetadata implements SnapshotId {
         final var term = Long.parseLong(parts[1]);
         final var timestamp = Long.parseLong(parts[2]);
         final var processedPosition = Long.parseLong(parts[3]);
+        final var exporterPostion = Long.parseLong(parts[4]);
 
         metadata =
             Optional.of(
                 new FileBasedSnapshotMetadata(
-                    index, term, WallClockTimestamp.from(timestamp), processedPosition));
+                    index,
+                    term,
+                    processedPosition,
+                    exporterPostion,
+                    WallClockTimestamp.from(timestamp)));
       } catch (final NumberFormatException e) {
         LOGGER.warn("Failed to parse part of snapshot metadata", e);
       }
@@ -66,7 +74,8 @@ public final class FileBasedSnapshotMetadata implements SnapshotId {
 
         metadata =
             Optional.of(
-                new FileBasedSnapshotMetadata(index, term, WallClockTimestamp.from(timestamp), 0));
+                new FileBasedSnapshotMetadata(
+                    index, term, 0, 0, WallClockTimestamp.from(timestamp)));
       } catch (final NumberFormatException e) {
         LOGGER.warn("Failed to parse part of snapshot metadata", e);
       }
@@ -90,6 +99,11 @@ public final class FileBasedSnapshotMetadata implements SnapshotId {
   }
 
   @Override
+  public long getExporterPosition() {
+    return exporterPosition;
+  }
+
+  @Override
   public WallClockTimestamp getTimestamp() {
     return timestamp;
   }
@@ -97,8 +111,12 @@ public final class FileBasedSnapshotMetadata implements SnapshotId {
   @Override
   public String getSnapshotIdAsString() {
     return String.format(
-        "%d-%d-%d-%d",
-        getIndex(), getTerm(), getTimestamp().unixTimestamp(), getProcessedPosition());
+        "%d-%d-%d-%d-%d",
+        getIndex(),
+        getTerm(),
+        getTimestamp().unixTimestamp(),
+        getProcessedPosition(),
+        getExporterPosition());
   }
 
   @Override

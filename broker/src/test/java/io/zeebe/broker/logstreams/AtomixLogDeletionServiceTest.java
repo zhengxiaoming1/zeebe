@@ -10,15 +10,14 @@ package io.zeebe.broker.logstreams;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.atomix.raft.snapshot.impl.FileBasedSnapshotStore;
-import io.atomix.raft.snapshot.impl.SnapshotMetrics;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.storage.journal.Indexed;
 import io.atomix.storage.journal.JournalSegmentDescriptor;
 import io.atomix.utils.time.WallClockTimestamp;
+import io.zeebe.broker.system.partitions.snapshot.FileBasedSnapshotStore;
+import io.zeebe.broker.system.partitions.snapshot.SnapshotMetrics;
 import io.zeebe.logstreams.util.AtomixLogStorageRule;
-import io.zeebe.util.FileUtil;
 import io.zeebe.util.sched.testing.ActorSchedulerRule;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -129,7 +128,8 @@ public final class AtomixLogDeletionServiceTest {
   private void createSnapshot(final long index) {
     final var store = logStorageRule.getPersistedSnapshotStore();
     final var now = WallClockTimestamp.from(System.currentTimeMillis());
-    final var transientSnapshot = store.newTransientSnapshot(index, 0, now, 0);
+    // TODO
+    /* final var transientSnapshot = store.newTransientSnapshot(index, 0, now, 0);
     transientSnapshot.take(
         p -> {
           try {
@@ -139,7 +139,7 @@ public final class AtomixLogDeletionServiceTest {
             throw new UncheckedIOException(e);
           }
         });
-    transientSnapshot.persist();
+    transientSnapshot.persist();*/
   }
 
   private static RaftStorage.Builder builder(
