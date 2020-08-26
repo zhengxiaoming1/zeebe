@@ -354,9 +354,8 @@ public final class EndpointManager extends GatewayGrpc.GatewayImplBase {
       final long key,
       final BrokerResponseT response) {
     final GrpcResponseT grpcResponse = responseMapper.apply(key, response);
-    throw new RuntimeException("test");
-    //    streamObserver.onNext(grpcResponse);
-    //    streamObserver.onCompleted();
+    streamObserver.onNext(grpcResponse);
+    streamObserver.onCompleted();
   }
 
   private <GrpcRequestT, BrokerResponseT, GrpcResponseT> BrokerRequest<BrokerResponseT> mapRequest(
