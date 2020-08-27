@@ -504,6 +504,9 @@ abstract class AbstractAppender implements AutoCloseable {
           member.getMember().memberId(),
           e);
       return Optional.empty();
+    } catch (final Exception e) {
+      e.printStackTrace();
+      return Optional.empty();
     }
   }
 
