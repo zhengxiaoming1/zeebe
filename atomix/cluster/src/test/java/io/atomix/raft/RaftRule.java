@@ -640,19 +640,21 @@ public final class RaftRule extends ExternalResource {
     @Override
     public void onNewSnapshot(final PersistedSnapshot persistedSnapshot) {
       final var raftServer = servers.get(memberId.id());
-      final var raftContext = raftServer.getContext();
-      final var serviceManager = raftContext.getLogCompactor();
-      serviceManager.setCompactableIndex(persistedSnapshot.getIndex());
+      if (raftServer != null) {
+        final var raftContext = raftServer.getContext();
+        final var serviceManager = raftContext.getLogCompactor();
+        serviceManager.setCompactableIndex(persistedSnapshot.getIndex());
 
-      raftServer
-          .compact()
-          .whenComplete(
-              (v, t) -> {
-                final var latch = compactAwaiters.get(memberId.id()).get();
-                if (latch != null) {
-                  latch.countDown();
-                }
-              });
+        raftServer
+            .compact()
+            .whenComplete(
+                (v, t) -> {
+                  final var latch = compactAwaiters.get(memberId.id()).get();
+                  if (latch != null) {
+                    latch.countDown();
+                  }
+                });
+      }
     }
   }
 }

@@ -188,8 +188,6 @@ public class RaftFailOverTest {
 
     assertThat(snapshot.getIndex()).isEqualTo(leaderSnapshot.getIndex()).isEqualTo(snapshotIndex);
     assertThat(snapshot.getTerm()).isEqualTo(snapshot.getTerm());
-    assertThat(snapshot.getPath().toFile().list())
-        .containsExactlyInAnyOrder(leaderSnapshot.getPath().toFile().list());
   }
 
   @Test
