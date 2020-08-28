@@ -45,7 +45,7 @@ public class ActorTask {
   /**
    * the priority class of the task. Only set if the task is scheduled as non-blocking, CPU-bound
    */
-  private int priority = ActorPriority.REGULAR.getPriorityClass();
+  private int priority = ActorPriority.HIGH.getPriorityClass();
   /**
    * jobs that are submitted to this task externally. A job is submitted "internally" if it is
    * submitted from a job within the same actor while the task is in RUNNING state.
