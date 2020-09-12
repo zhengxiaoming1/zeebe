@@ -174,4 +174,20 @@ public final class MessageCorrelationTest {
         .hasMessageContaining(
             "Expected to publish a new message with id 'foo', but a message with that id was already published");
   }
+
+  @Test
+  public void shouldReturnNonZeroMessageKey() {
+    // when
+    final PublishMessageResponse response =
+        CLIENT_RULE
+            .getClient()
+            .newPublishMessageCommand()
+            .messageName(MESSAGE_NAME)
+            .correlationKey(correlationValue)
+            .send()
+            .join();
+
+    // then
+    assertThat(response.getMessageKey()).isNotZero();
+  }
 }
