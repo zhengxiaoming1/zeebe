@@ -26,6 +26,7 @@ import io.zeebe.client.api.worker.JobWorker;
 import io.zeebe.client.api.worker.JobWorkerBuilderStep1;
 import io.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep2;
 import io.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
+import io.zeebe.client.api.worker.RetryDelaySupplier;
 import io.zeebe.client.impl.ZeebeObjectMapper;
 import io.zeebe.gateway.protocol.GatewayGrpc.GatewayStub;
 import io.zeebe.gateway.protocol.GatewayOuterClass.ActivateJobsRequest;
@@ -56,6 +57,7 @@ public final class JobWorkerBuilderImpl
   private Duration pollInterval;
   private Duration requestTimeout;
   private List<String> fetchVariables;
+  private RetryDelaySupplier retryDelaySupplier;
 
   public JobWorkerBuilderImpl(
       final ZeebeClientConfiguration configuration,
@@ -120,6 +122,7 @@ public final class JobWorkerBuilderImpl
     return this;
   }
 
+  @Override
   public JobWorkerBuilderStep3 requestTimeout(final Duration requestTimeout) {
     this.requestTimeout = requestTimeout;
     return this;
@@ -134,6 +137,12 @@ public final class JobWorkerBuilderImpl
   @Override
   public JobWorkerBuilderStep3 fetchVariables(final String... fetchVariables) {
     return fetchVariables(Arrays.asList(fetchVariables));
+  }
+
+  @Override
+  public JobWorkerBuilderStep3 retryDelaySupplier(final RetryDelaySupplier retryDelaySupplier) {
+    this.retryDelaySupplier = retryDelaySupplier;
+    return this;
   }
 
   @Override
@@ -164,7 +173,12 @@ public final class JobWorkerBuilderImpl
 
     final JobWorkerImpl jobWorker =
         new JobWorkerImpl(
-            maxJobsActive, executorService, pollInterval, jobRunnableFactory, jobPoller);
+            maxJobsActive,
+            executorService,
+            pollInterval,
+            jobRunnableFactory,
+            jobPoller,
+            retryDelaySupplier);
     closeables.add(jobWorker);
     return jobWorker;
   }

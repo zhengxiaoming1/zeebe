@@ -17,10 +17,10 @@ package io.zeebe.client.impl.worker;
 
 import io.zeebe.client.api.response.ActivatedJob;
 import io.zeebe.client.api.worker.JobWorker;
+import io.zeebe.client.api.worker.RetryDelaySupplier;
 import io.zeebe.client.impl.Loggers;
 import java.io.Closeable;
 import java.time.Duration;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,31 +38,37 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
   private final AtomicInteger remainingJobs;
 
   // job execution facilities
-  private final ExecutorService executor;
+  private final ScheduledExecutorService executor;
   private final JobRunnableFactory jobRunnableFactory;
+  private final long initialPollInterval;
+  private final RetryDelaySupplier retryDelaySupplier;
 
   // state synchronization
   private final AtomicBoolean acquiringJobs = new AtomicBoolean(true);
   private final AtomicReference<JobPoller> jobPoller;
+
+  private long pollInterval;
 
   public JobWorkerImpl(
       final int maxJobsActive,
       final ScheduledExecutorService executor,
       final Duration pollInterval,
       final JobRunnableFactory jobRunnableFactory,
-      final JobPoller jobPoller) {
-
+      final JobPoller jobPoller,
+      final RetryDelaySupplier retryDelaySupplier) {
     this.maxJobsActive = maxJobsActive;
     activationThreshold = Math.round(maxJobsActive * 0.3f);
     remainingJobs = new AtomicInteger(0);
 
     this.executor = executor;
+    initialPollInterval = pollInterval.toMillis();
     this.jobRunnableFactory = jobRunnableFactory;
 
     this.jobPoller = new AtomicReference<>(jobPoller);
+    this.retryDelaySupplier = retryDelaySupplier;
+    this.pollInterval = initialPollInterval;
 
-    executor.scheduleWithFixedDelay(
-        this::tryActivateJobs, 0, pollInterval.toMillis(), TimeUnit.MILLISECONDS);
+    schedulePoll();
   }
 
   @Override
@@ -99,10 +105,7 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
           jobPoller.poll(
               maxActivatedJobs,
               this::submitJob,
-              activatedJobs -> {
-                remainingJobs.addAndGet(activatedJobs);
-                this.jobPoller.set(jobPoller);
-              },
+              activatedJobs -> onJobPollerComplete(jobPoller, activatedJobs),
               this::isOpen);
         } catch (final Exception e) {
           LOG.warn("Failed to activate jobs", e);
@@ -114,6 +117,20 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
     }
   }
 
+  private void onJobPollerComplete(final JobPoller jobPoller, final int activatedJobs) {
+    remainingJobs.addAndGet(activatedJobs);
+    this.jobPoller.set(jobPoller);
+
+    // TODO: need to know if completed because of error or success
+    if (false) { // TODO: replace with if it was an error on which we should back off
+      pollInterval = retryDelaySupplier.supplyRetryDelay(pollInterval);
+    } else {
+      pollInterval = initialPollInterval;
+    }
+
+    schedulePoll();
+  }
+
   private boolean shouldActivateJobs(final int remainingJobs) {
     return acquiringJobs.get() && remainingJobs <= activationThreshold;
   }
@@ -123,9 +140,13 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
   }
 
   private void jobHandlerFinished() {
-    final int remainingJobs = this.remainingJobs.decrementAndGet();
-    if (shouldActivateJobs(remainingJobs)) {
+    final int actualRemainingJobs = remainingJobs.decrementAndGet();
+    if (shouldActivateJobs(actualRemainingJobs)) {
       activateJobs();
     }
+  }
+
+  private void schedulePoll() {
+    executor.schedule(this::tryActivateJobs, pollInterval, TimeUnit.MILLISECONDS);
   }
 }

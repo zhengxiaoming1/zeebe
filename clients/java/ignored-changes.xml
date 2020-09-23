@@ -38,4 +38,14 @@
     <method>java.lang.String getGatewayAddress()</method>
     <differenceType>7012</differenceType>
   </difference>
+  <difference>
+    <className>io/zeebe/client/api/worker/JobWorkerBuilderStep1$JobWorkerBuilderStep3</className>
+    <method>io.zeebe.client.api.worker.JobWorkerBuilderStep1$JobWorkerBuilderStep3 retryDelaySupplier(io.zeebe.client.api.worker.RetryDelaySupplier)</method>
+    <differenceType>7012</differenceType>
+  </difference>
+  <difference>
+    <className>io/zeebe/client/impl/worker/JobWorkerImpl</className>
+    <method>JobWorkerImpl(int, java.util.concurrent.ScheduledExecutorService, java.time.Duration, io.zeebe.client.impl.worker.JobRunnableFactory, io.zeebe.client.impl.worker.JobPoller)</method>
+    <differenceType>7004</differenceType>
+  </difference>
 </differences>
