@@ -37,9 +37,24 @@ import io.zeebe.broker.system.management.deployment.PushDeploymentRequestHandler
 import io.zeebe.broker.system.monitoring.BrokerHealthCheckService;
 import io.zeebe.broker.system.monitoring.DiskSpaceUsageListener;
 import io.zeebe.broker.system.monitoring.DiskSpaceUsageMonitor;
+import io.zeebe.broker.system.partitions.Component;
+import io.zeebe.broker.system.partitions.PartitionContext;
 import io.zeebe.broker.system.partitions.TypedRecordProcessorsFactory;
 import io.zeebe.broker.system.partitions.ZeebePartition;
 import io.zeebe.broker.system.partitions.impl.AtomixPartitionMessagingService;
+import io.zeebe.broker.system.partitions.impl.PartitionTransitionImpl;
+import io.zeebe.broker.system.partitions.impl.components.ExporterDirectorComponent;
+import io.zeebe.broker.system.partitions.impl.components.FollowerPostStorageComponent;
+import io.zeebe.broker.system.partitions.impl.components.LeaderPostStorageComponent;
+import io.zeebe.broker.system.partitions.impl.components.LogDeletionComponent;
+import io.zeebe.broker.system.partitions.impl.components.LogStreamComponent;
+import io.zeebe.broker.system.partitions.impl.components.RaftLogReaderComponent;
+import io.zeebe.broker.system.partitions.impl.components.RocksDbMetricExporterComponent;
+import io.zeebe.broker.system.partitions.impl.components.SnapshotDirectorComponent;
+import io.zeebe.broker.system.partitions.impl.components.SnapshotReplicationComponent;
+import io.zeebe.broker.system.partitions.impl.components.StateControllerComponent;
+import io.zeebe.broker.system.partitions.impl.components.StreamProcessorComponent;
+import io.zeebe.broker.system.partitions.impl.components.ZeebeDbComponent;
 import io.zeebe.broker.transport.backpressure.PartitionAwareRequestLimiter;
 import io.zeebe.broker.transport.commandapi.CommandApiService;
 import io.zeebe.engine.processing.EngineProcessors;
@@ -73,12 +88,30 @@ import org.slf4j.Logger;
 public final class Broker implements AutoCloseable {
 
   public static final Logger LOG = Loggers.SYSTEM_LOGGER;
-
+  private static final List<Component<?>> LEADER_COMPONENTS =
+      List.of(
+          new LogStreamComponent(),
+          new RaftLogReaderComponent(),
+          new SnapshotReplicationComponent(),
+          new StateControllerComponent(),
+          new LogDeletionComponent(),
+          new LeaderPostStorageComponent(),
+          new ZeebeDbComponent(),
+          new StreamProcessorComponent(),
+          new SnapshotDirectorComponent(),
+          new RocksDbMetricExporterComponent(),
+          new ExporterDirectorComponent());
+  private static final List<Component<?>> FOLLOWER_COMPONENTS =
+      List.of(
+          new RaftLogReaderComponent(),
+          new SnapshotReplicationComponent(),
+          new StateControllerComponent(),
+          new LogDeletionComponent(),
+          new FollowerPostStorageComponent());
   private final SystemContext brokerContext;
   private final List<PartitionListener> partitionListeners;
   private boolean isClosed = false;
   private Atomix atomix;
-
   private CompletableFuture<Broker> startFuture;
   private TopologyManagerImpl topologyManager;
   private LeaderManagementRequestHandler managementRequestHandler;
@@ -354,9 +387,10 @@ public final class Broker implements AutoCloseable {
                     atomix.getCommunicationService(),
                     atomix.getMembershipService(),
                     owningPartition.members());
-            final ZeebePartition zeebePartition =
-                new ZeebePartition(
-                    localBroker,
+
+            final PartitionContext context =
+                new PartitionContext(
+                    localBroker.getNodeId(),
                     owningPartition,
                     partitionListeners,
                     messagingService,
@@ -366,6 +400,10 @@ public final class Broker implements AutoCloseable {
                     partitionIndexes.get(partitionId),
                     snapshotStoreSupplier,
                     createFactory(topologyManager, clusterCfg, atomix, managementRequestHandler));
+            final PartitionTransitionImpl transitionBehavior =
+                new PartitionTransitionImpl(context, LEADER_COMPONENTS, FOLLOWER_COMPONENTS);
+            final ZeebePartition zeebePartition = new ZeebePartition(context, transitionBehavior);
+
             scheduleActor(zeebePartition);
             healthCheckService.registerMonitoredPartition(
                 owningPartition.id().id(), zeebePartition);
