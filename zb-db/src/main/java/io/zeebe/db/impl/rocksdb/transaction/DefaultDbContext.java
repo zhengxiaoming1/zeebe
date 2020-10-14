@@ -7,6 +7,7 @@
  */
 package io.zeebe.db.impl.rocksdb.transaction;
 
+import static io.zeebe.db.impl.ZeebeDbConstants.ZB_DB_BYTE_ORDER;
 import static io.zeebe.db.impl.rocksdb.transaction.RocksDbInternal.RECOVERABLE_ERROR_CODES;
 
 import io.zeebe.db.DbContext;
@@ -43,11 +44,19 @@ public final class DefaultDbContext implements DbContext {
 
   private final Queue<ExpandableArrayBuffer> prefixKeyBuffers;
 
+  private final UnsafeBuffer columnFamilyKeyWriteBuffer;
+  private final byte[] columnFamilyKeyByteArray;
+  private final UnsafeBuffer iteratingColumnFamilyKeyBuffer;
+
   DefaultDbContext(final ZeebeTransaction transaction) {
     this.transaction = transaction;
     prefixKeyBuffers = new ArrayDeque<>();
     prefixKeyBuffers.add(new ExpandableArrayBuffer());
     prefixKeyBuffers.add(new ExpandableArrayBuffer());
+
+    columnFamilyKeyByteArray = new byte[Long.BYTES];
+    columnFamilyKeyWriteBuffer = new UnsafeBuffer(columnFamilyKeyByteArray);
+    iteratingColumnFamilyKeyBuffer = new UnsafeBuffer(0, 0);
   }
 
   @Override
@@ -172,5 +181,16 @@ public final class DefaultDbContext implements DbContext {
   private boolean isRocksDbExceptionRecoverable(final RocksDBException rdbex) {
     final Status status = rdbex.getStatus();
     return RECOVERABLE_ERROR_CODES.contains(status.getCode());
+  }
+
+
+  public byte[] asColumnFamilyKeyByteArray(final long columnFamilyKey) {
+    columnFamilyKeyWriteBuffer.putLong(0, columnFamilyKey, ZB_DB_BYTE_ORDER);
+    return columnFamilyKeyByteArray;
+  }
+
+  public long readColumnFamilyKey(final byte[] keyBytes) {
+    iteratingColumnFamilyKeyBuffer.wrap(keyBytes, 0, Long.BYTES);
+    return iteratingColumnFamilyKeyBuffer.getLong(0, ZB_DB_BYTE_ORDER);
   }
 }

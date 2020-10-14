@@ -19,9 +19,9 @@ import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 
 class TransactionalColumnFamily<
-        ColumnFamilyNames extends Enum<ColumnFamilyNames>,
-        KeyType extends DbKey,
-        ValueType extends DbValue>
+    ColumnFamilyNames extends Enum<ColumnFamilyNames>,
+    KeyType extends DbKey,
+    ValueType extends DbValue>
     implements ColumnFamily<KeyType, ValueType> {
 
   private final ZeebeTransactionDb<ColumnFamilyNames> transactionDb;
@@ -136,7 +136,7 @@ class TransactionalColumnFamily<
 
   @Override
   public boolean isEmpty(final DbContext context) {
-    return transactionDb.isEmpty(handle, context);
+    return transactionDb.isEmpty(columnFamilyKey.getValue(), handle, context);
   }
 
   public ValueType get(final DbContext context, final KeyType key) {
