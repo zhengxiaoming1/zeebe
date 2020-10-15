@@ -430,7 +430,7 @@ public class VariablesState {
    * Provides all variables of a scope to the given consumer until a condition is met.
    *
    * @param variableFilter evaluated with the name of each variable; the variable is consumed only
-   * if the filter returns true
+   *     if the filter returns true
    * @param variableConsumer a consumer that receives variable name and value
    * @param completionCondition evaluated after every consumption; if true, consumption stops.
    * @return true if the completion condition was met
@@ -629,9 +629,7 @@ public class VariablesState {
       documentLength = document.capacity();
     }
 
-    /**
-     * excluding string header
-     */
+    /** excluding string header */
     public int getNameOffset() {
       return nameOffset;
     }
@@ -640,9 +638,7 @@ public class VariablesState {
       return nameLength;
     }
 
-    /**
-     * including header
-     */
+    /** including header */
     public int getValueOffset() {
       return valueOffset;
     }

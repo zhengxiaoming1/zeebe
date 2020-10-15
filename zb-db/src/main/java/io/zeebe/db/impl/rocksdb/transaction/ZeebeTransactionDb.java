@@ -78,13 +78,13 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
   }
 
   public static <ColumnFamilyNames extends Enum<ColumnFamilyNames>>
-  ZeebeTransactionDb<ColumnFamilyNames> openTransactionalDb(
-      final DBOptions options,
-      final String path,
-      final List<ColumnFamilyDescriptor> columnFamilyDescriptors,
-      final List<AutoCloseable> closables,
-      final Class<ColumnFamilyNames> columnFamilyTypeClass)
-      throws RocksDBException {
+      ZeebeTransactionDb<ColumnFamilyNames> openTransactionalDb(
+          final DBOptions options,
+          final String path,
+          final List<ColumnFamilyDescriptor> columnFamilyDescriptors,
+          final List<AutoCloseable> closables,
+          final Class<ColumnFamilyNames> columnFamilyTypeClass)
+          throws RocksDBException {
     final EnumMap<ColumnFamilyNames, Long> columnFamilyMap = new EnumMap<>(columnFamilyTypeClass);
 
     final List<ColumnFamilyHandle> handles = new ArrayList<>();
@@ -122,11 +122,11 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
 
   @Override
   public <KeyType extends DbKey, ValueType extends DbValue>
-  ColumnFamily<KeyType, ValueType> createColumnFamily(
-      final ColumnFamilyNames columnFamily,
-      final DbContext context,
-      final KeyType keyInstance,
-      final ValueType valueInstance) {
+      ColumnFamily<KeyType, ValueType> createColumnFamily(
+          final ColumnFamilyNames columnFamily,
+          final DbContext context,
+          final KeyType keyInstance,
+          final ValueType valueInstance) {
     return new TransactionalColumnFamily<>(this, columnFamily, context, keyInstance, valueInstance);
   }
 
@@ -313,10 +313,9 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
         });
   }
 
-  private boolean isNotSameColumnFamily(final DbContext dbContext, final long columnFamilyKey,
-      final byte[] keyBytes) {
-    return dbContext.readColumnFamilyKey(keyBytes)
-        != columnFamilyKey;
+  private boolean isNotSameColumnFamily(
+      final DbContext dbContext, final long columnFamilyKey, final byte[] keyBytes) {
+    return dbContext.readColumnFamilyKey(keyBytes) != columnFamilyKey;
   }
 
   public <KeyType extends DbKey, ValueType extends DbValue> void whileTrue(
@@ -395,10 +394,10 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
                     boolean shouldVisitNext = true;
 
                     for (RocksDbInternal.seek(
-                        iterator,
-                        getNativeHandle(iterator),
-                        prefixKeyBuffer.byteArray(),
-                        prefixLength);
+                            iterator,
+                            getNativeHandle(iterator),
+                            prefixKeyBuffer.byteArray(),
+                            prefixLength);
                         iterator.isValid() && shouldVisitNext;
                         iterator.next()) {
                       final byte[] keyBytes = iterator.key();
@@ -449,8 +448,8 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
     return iteratorConsumer.visit(keyInstance, valueInstance);
   }
 
-  public boolean isEmpty(final long columnFamilyKey, final long columnFamilyHandle,
-      final DbContext context) {
+  public boolean isEmpty(
+      final long columnFamilyKey, final long columnFamilyHandle, final DbContext context) {
     final AtomicBoolean isEmpty = new AtomicBoolean(false);
     ensureInOpenTransaction(
         context,
@@ -472,7 +471,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
 
   @Override
   public boolean isEmpty(final ColumnFamilyNames columnFamilyName, final DbContext context) {
-//    final var columnFamilyHandle = columnFamilyMap.get(columnFamilyName);
+    //    final var columnFamilyHandle = columnFamilyMap.get(columnFamilyName);
     return isEmpty(columnFamilyName.ordinal(), getNativeHandle(defaultHandle), context);
   }
 

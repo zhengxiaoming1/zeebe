@@ -19,9 +19,9 @@ import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 
 class TransactionalColumnFamily<
-    ColumnFamilyNames extends Enum<ColumnFamilyNames>,
-    KeyType extends DbKey,
-    ValueType extends DbValue>
+        ColumnFamilyNames extends Enum<ColumnFamilyNames>,
+        KeyType extends DbKey,
+        ValueType extends DbValue>
     implements ColumnFamily<KeyType, ValueType> {
 
   private final ZeebeTransactionDb<ColumnFamilyNames> transactionDb;

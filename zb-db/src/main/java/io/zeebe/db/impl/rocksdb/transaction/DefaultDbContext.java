@@ -183,7 +183,6 @@ public final class DefaultDbContext implements DbContext {
     return RECOVERABLE_ERROR_CODES.contains(status.getCode());
   }
 
-
   public byte[] asColumnFamilyKeyByteArray(final long columnFamilyKey) {
     columnFamilyKeyWriteBuffer.putLong(0, columnFamilyKey, ZB_DB_BYTE_ORDER);
     return columnFamilyKeyByteArray;
