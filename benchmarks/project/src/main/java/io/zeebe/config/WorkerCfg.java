@@ -30,12 +30,13 @@ public class WorkerCfg {
   private boolean completeJobsAsync;
 
   private String payloadPath;
+  private String fetchVariables;
 
   public String getJobType() {
     return jobType;
   }
 
-  public void setJobType(String jobType) {
+  public void setJobType(final String jobType) {
     this.jobType = jobType;
   }
 
@@ -43,7 +44,7 @@ public class WorkerCfg {
     return workerName;
   }
 
-  public void setWorkerName(String workerName) {
+  public void setWorkerName(final String workerName) {
     this.workerName = workerName;
   }
 
@@ -51,7 +52,7 @@ public class WorkerCfg {
     return threads;
   }
 
-  public void setThreads(int threads) {
+  public void setThreads(final int threads) {
     this.threads = threads;
   }
 
@@ -59,7 +60,7 @@ public class WorkerCfg {
     return capacity;
   }
 
-  public void setCapacity(int capacity) {
+  public void setCapacity(final int capacity) {
     this.capacity = capacity;
   }
 
@@ -67,7 +68,7 @@ public class WorkerCfg {
     return pollingDelay;
   }
 
-  public void setPollingDelay(Duration pollingDelay) {
+  public void setPollingDelay(final Duration pollingDelay) {
     this.pollingDelay = pollingDelay;
   }
 
@@ -75,7 +76,7 @@ public class WorkerCfg {
     return completionDelay;
   }
 
-  public void setCompletionDelay(Duration completionDelay) {
+  public void setCompletionDelay(final Duration completionDelay) {
     this.completionDelay = completionDelay;
   }
 
@@ -83,7 +84,7 @@ public class WorkerCfg {
     return payloadPath;
   }
 
-  public void setPayloadPath(String payloadPath) {
+  public void setPayloadPath(final String payloadPath) {
     this.payloadPath = payloadPath;
   }
 
@@ -91,7 +92,19 @@ public class WorkerCfg {
     return completeJobsAsync;
   }
 
-  public void setCompleteJobsAsync(boolean completeJobsAsync) {
+  public void setCompleteJobsAsync(final boolean completeJobsAsync) {
     this.completeJobsAsync = completeJobsAsync;
+  }
+
+  public String getFetchVariables() {
+    return fetchVariables;
+  }
+
+  public void setFetchVariables(final String fetchVariables) {
+    this.fetchVariables = fetchVariables;
+  }
+
+  public boolean shouldExplicitFetchVariables() {
+    return fetchVariables != null;
   }
 }

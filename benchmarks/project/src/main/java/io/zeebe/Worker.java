@@ -32,7 +32,7 @@ public class Worker extends App {
 
   private final AppCfg appCfg;
 
-  Worker(AppCfg appCfg) {
+  Worker(final AppCfg appCfg) {
     this.appCfg = appCfg;
   }
 
@@ -48,7 +48,7 @@ public class Worker extends App {
     final ZeebeClient client = createZeebeClient();
     printTopology(client);
 
-    final JobWorker worker =
+    final var workerBuilder =
         client
             .newWorker()
             .jobType(jobType)
@@ -62,13 +62,18 @@ public class Worker extends App {
                   } else {
                     try {
                       Thread.sleep(completionDelay);
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                       e.printStackTrace();
                     }
                     requestFutures.add(command.send());
                   }
-                })
-            .open();
+                });
+
+    if (workerCfg.shouldExplicitFetchVariables()) {
+      workerBuilder.fetchVariables(workerCfg.getFetchVariables());
+    }
+
+    final JobWorker worker = workerBuilder.open();
 
     final ResponseChecker responseChecker = new ResponseChecker(requestFutures);
     responseChecker.start();
@@ -109,7 +114,7 @@ public class Worker extends App {
     return builder.build();
   }
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     createApp(Worker::new);
   }
 
