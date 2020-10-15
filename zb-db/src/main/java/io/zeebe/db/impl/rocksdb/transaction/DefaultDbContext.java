@@ -23,6 +23,7 @@ import java.util.Queue;
 import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
+import org.agrona.ExpandableDirectByteBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ReadOptions;
@@ -43,7 +44,7 @@ public final class DefaultDbContext implements DbContext {
   private final DirectBuffer keyViewBuffer = new UnsafeBuffer(0, 0);
   private final DirectBuffer valueViewBuffer = new UnsafeBuffer(0, 0);
 
-  private final Queue<ExpandableArrayBuffer> prefixKeyBuffers;
+  private final Queue<ExpandableDirectByteBuffer> prefixKeyBuffers;
 
   private final UnsafeBuffer columnFamilyKeyWriteBuffer;
   private final ByteBuffer columnFamilyKeyByteBuffer;
@@ -52,8 +53,8 @@ public final class DefaultDbContext implements DbContext {
   DefaultDbContext(final ZeebeTransaction transaction) {
     this.transaction = transaction;
     prefixKeyBuffers = new ArrayDeque<>();
-    prefixKeyBuffers.add(new ExpandableArrayBuffer());
-    prefixKeyBuffers.add(new ExpandableArrayBuffer());
+    prefixKeyBuffers.add(new ExpandableDirectByteBuffer());
+    prefixKeyBuffers.add(new ExpandableDirectByteBuffer());
 
     columnFamilyKeyByteBuffer = ByteBuffer.allocateDirect(Long.BYTES);
     columnFamilyKeyWriteBuffer = new UnsafeBuffer(columnFamilyKeyByteBuffer);
@@ -120,12 +121,13 @@ public final class DefaultDbContext implements DbContext {
   }
 
   @Override
-  public void withPrefixKeyBuffer(final Consumer<ExpandableArrayBuffer> prefixKeyBufferConsumer) {
+  public void withPrefixKeyBuffer(
+      final Consumer<ExpandableDirectByteBuffer> prefixKeyBufferConsumer) {
     if (prefixKeyBuffers.peek() == null) {
       throw new IllegalStateException(
           "Currently nested prefix iterations are not supported! This will cause unexpected behavior.");
     }
-    final ExpandableArrayBuffer prefixKeyBuffer = prefixKeyBuffers.remove();
+    final ExpandableDirectByteBuffer prefixKeyBuffer = prefixKeyBuffers.remove();
     try {
       prefixKeyBufferConsumer.accept(prefixKeyBuffer);
     } finally {

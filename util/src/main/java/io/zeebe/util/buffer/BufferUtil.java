@@ -10,6 +10,7 @@ package io.zeebe.util.buffer;
 import static io.zeebe.util.EnsureUtil.ensureGreaterThanOrEqual;
 import static io.zeebe.util.StringUtil.getBytes;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -17,6 +18,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 
 public final class BufferUtil {
+
   public static final int NO_WRAP = 1;
   public static final int DEFAULT_WRAP = 16; // bytes
 
@@ -227,7 +229,7 @@ public final class BufferUtil {
    * @return true if array starts with the all bytes contained in prefix
    */
   public static boolean startsWith(
-      final byte[] prefix,
+      final ByteBuffer prefix,
       final int prefixOffset,
       final int prefixLength,
       final byte[] content,
@@ -238,7 +240,7 @@ public final class BufferUtil {
     }
 
     for (int i = prefixOffset; i < prefixLength; i++, contentOffset++) {
-      if (content[contentOffset] != prefix[i]) {
+      if (content[contentOffset] != prefix.get(i)) {
         return false;
       }
     }

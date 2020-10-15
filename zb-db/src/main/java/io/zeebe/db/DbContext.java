@@ -10,7 +10,7 @@ package io.zeebe.db;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
-import org.agrona.ExpandableArrayBuffer;
+import org.agrona.ExpandableDirectByteBuffer;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksIterator;
@@ -70,7 +70,7 @@ public interface DbContext {
    * @param prefixKeyBufferConsumer consumer of the shared prefix key buffer
    * @throws RuntimeException if no shared prefix buffer is available at the moment
    */
-  void withPrefixKeyBuffer(Consumer<ExpandableArrayBuffer> prefixKeyBufferConsumer);
+  void withPrefixKeyBuffer(Consumer<ExpandableDirectByteBuffer> prefixKeyBufferConsumer);
 
   /**
    * Create a new iterator on the shared transaction

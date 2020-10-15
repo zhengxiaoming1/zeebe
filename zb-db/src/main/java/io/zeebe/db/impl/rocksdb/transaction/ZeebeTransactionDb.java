@@ -393,16 +393,15 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
 
                     boolean shouldVisitNext = true;
 
-                    for (RocksDbInternal.seek(
-                            iterator,
-                            getNativeHandle(iterator),
-                            prefixKeyBuffer.byteArray(),
-                            prefixLength);
+                    final var byteBuffer = prefixKeyBuffer.byteBuffer();
+                    byteBuffer.rewind();
+                    byteBuffer.limit(prefixLength);
+                    for (iterator.seek(byteBuffer);
                         iterator.isValid() && shouldVisitNext;
                         iterator.next()) {
                       final byte[] keyBytes = iterator.key();
                       if (!startsWith(
-                          prefixKeyBuffer.byteArray(),
+                          prefixKeyBuffer.byteBuffer(),
                           0,
                           prefixLength,
                           keyBytes,
