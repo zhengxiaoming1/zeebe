@@ -11,8 +11,8 @@ services:
   starter:
     build:
       context: .
-      target: starter
-    image: gcr.io/zeebe-io/starter:zeebe-chaos
+      target: starter-gameday
+    image: gcr.io/zeebe-io/starter:zell-gameday
     links:
       - zeebe
     environment:
@@ -21,8 +21,8 @@ services:
   worker:
     build:
       context: .
-      target: worker
-    image: gcr.io/zeebe-io/worker:zeebe-chaos
+      target: worker-gameday
+    image: gcr.io/zeebe-io/worker:zell-gameday
     links:
       - zeebe
     environment:
@@ -31,8 +31,8 @@ services:
   all-in-one:
     build:
       context: .
-      target: all-in-one
-    image: gcr.io/zeebe-io/all-in-one:zeebe-chaos
+      target: all-in-one-gameday
+    image: gcr.io/zeebe-io/all-in-one:zell-gameday
     links:
       - zeebe
     environment:
