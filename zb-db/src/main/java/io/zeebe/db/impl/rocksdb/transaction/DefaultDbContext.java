@@ -17,6 +17,7 @@ import io.zeebe.db.TransactionOperation;
 import io.zeebe.db.ZeebeDbException;
 import io.zeebe.db.ZeebeDbTransaction;
 import io.zeebe.util.exception.RecoverableException;
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.function.Consumer;
@@ -45,7 +46,7 @@ public final class DefaultDbContext implements DbContext {
   private final Queue<ExpandableArrayBuffer> prefixKeyBuffers;
 
   private final UnsafeBuffer columnFamilyKeyWriteBuffer;
-  private final byte[] columnFamilyKeyByteArray;
+  private final ByteBuffer columnFamilyKeyByteBuffer;
   private final UnsafeBuffer iteratingColumnFamilyKeyBuffer;
 
   DefaultDbContext(final ZeebeTransaction transaction) {
@@ -54,8 +55,8 @@ public final class DefaultDbContext implements DbContext {
     prefixKeyBuffers.add(new ExpandableArrayBuffer());
     prefixKeyBuffers.add(new ExpandableArrayBuffer());
 
-    columnFamilyKeyByteArray = new byte[Long.BYTES];
-    columnFamilyKeyWriteBuffer = new UnsafeBuffer(columnFamilyKeyByteArray);
+    columnFamilyKeyByteBuffer = ByteBuffer.allocateDirect(Long.BYTES);
+    columnFamilyKeyWriteBuffer = new UnsafeBuffer(columnFamilyKeyByteBuffer);
     iteratingColumnFamilyKeyBuffer = new UnsafeBuffer(0, 0);
   }
 
@@ -183,9 +184,10 @@ public final class DefaultDbContext implements DbContext {
     return RECOVERABLE_ERROR_CODES.contains(status.getCode());
   }
 
-  public byte[] asColumnFamilyKeyByteArray(final long columnFamilyKey) {
+  public ByteBuffer asColumnFamilyKeyByteBuffer(final long columnFamilyKey) {
     columnFamilyKeyWriteBuffer.putLong(0, columnFamilyKey, ZB_DB_BYTE_ORDER);
-    return columnFamilyKeyByteArray;
+    columnFamilyKeyByteBuffer.rewind();
+    return columnFamilyKeyByteBuffer;
   }
 
   public long readColumnFamilyKey(final byte[] keyBytes) {

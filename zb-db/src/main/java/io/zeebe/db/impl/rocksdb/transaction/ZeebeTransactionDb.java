@@ -297,7 +297,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
         transaction -> {
           try (final RocksIterator iterator =
               newIterator(columnFamilyHandle, context, defaultReadOptions)) {
-            for (iterator.seek(context.asColumnFamilyKeyByteArray(columnFamilyKey.getValue()));
+            for (iterator.seek(context.asColumnFamilyKeyByteBuffer(columnFamilyKey.getValue()));
                 iterator.isValid();
                 iterator.next()) {
               final var keyBytes = iterator.key();
@@ -331,7 +331,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
           try (final RocksIterator iterator =
               newIterator(columnFamilyHandle, context, defaultReadOptions)) {
             boolean shouldVisitNext = true;
-            for (iterator.seek(context.asColumnFamilyKeyByteArray(columnFamilyKey.getValue()));
+            for (iterator.seek(context.asColumnFamilyKeyByteBuffer(columnFamilyKey.getValue()));
                 iterator.isValid() && shouldVisitNext;
                 iterator.next()) {
 
@@ -412,13 +412,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
                       }
 
                       shouldVisitNext =
-                          visit(
-                              columnFamilyKey,
-                              context,
-                              keyInstance,
-                              valueInstance,
-                              visitor,
-                              iterator);
+                          visit(keyBytes, context, keyInstance, valueInstance, visitor, iterator);
                     }
                   }
                 }));
@@ -437,6 +431,16 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
       return false;
     }
 
+    return visit(keyBytes, context, keyInstance, valueInstance, iteratorConsumer, iterator);
+  }
+
+  private <KeyType extends DbKey, ValueType extends DbValue> boolean visit(
+      final byte[] keyBytes,
+      final DbContext context,
+      final KeyType keyInstance,
+      final ValueType valueInstance,
+      final KeyValuePairVisitor<KeyType, ValueType> iteratorConsumer,
+      final RocksIterator iterator) {
     context.wrapKeyView(keyBytes);
     context.wrapValueView(iterator.value());
 
@@ -456,7 +460,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
         transaction -> {
           try (final RocksIterator iterator =
               newIterator(columnFamilyHandle, context, defaultReadOptions)) {
-            iterator.seek(context.asColumnFamilyKeyByteArray(columnFamilyKey));
+            iterator.seek(context.asColumnFamilyKeyByteBuffer(columnFamilyKey));
             final boolean hasEntry = iterator.isValid();
             if (hasEntry) {
               final var keyBytes = iterator.key();

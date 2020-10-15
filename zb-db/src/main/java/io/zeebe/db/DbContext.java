@@ -7,6 +7,7 @@
  */
 package io.zeebe.db;
 
+import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -103,7 +104,7 @@ public interface DbContext {
    */
   ZeebeDbTransaction getCurrentTransaction();
 
-  byte[] asColumnFamilyKeyByteArray(long columnFamilyKey);
+  ByteBuffer asColumnFamilyKeyByteBuffer(long columnFamilyKey);
 
   long readColumnFamilyKey(byte[] keyBytes);
 }
