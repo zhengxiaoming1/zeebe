@@ -9,7 +9,6 @@ package io.zeebe.broker.it.health;
 
 import static io.zeebe.broker.clustering.atomix.AtomixFactory.GROUP_NAME;
 import static io.zeebe.protocol.Protocol.START_PARTITION_ID;
-import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.atomix.primitive.partition.PartitionId;
@@ -18,12 +17,14 @@ import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.util.GrpcClientRule;
 import io.zeebe.broker.test.EmbeddedBrokerRule;
 import java.time.Duration;
+import org.awaitility.Awaitility;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.Timeout;
 
 public class HealthMonitoringTest {
+
   private static final String JOB_TYPE = "testTask";
   private static final Duration SNAPSHOT_PERIOD = Duration.ofMinutes(5);
   private final Timeout testTimeout = Timeout.seconds(120);
@@ -56,7 +57,9 @@ public class HealthMonitoringTest {
     raftPartition.getServer().stop();
 
     // then
-    waitUntil(() -> !isBrokerHealthy());
+
+    Awaitility.await();
+    //        waitUntil(() -> !isBrokerHealthy());
   }
 
   private boolean isBrokerHealthy() {
