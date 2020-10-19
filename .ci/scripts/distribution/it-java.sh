@@ -5,7 +5,7 @@ export JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -XX:MaxRAMFraction=$((LIMITS_CPU))"
 
 tmpfile=$(mktemp)
 
-mvn -o -B --fail-never -T1C -s ${MAVEN_SETTINGS_XML} verify -P skip-unstable-ci,parallel-tests -pl qa/integration-tests -DtestMavenId=2 -Dsurefire.rerunFailingTestsCount=7 | tee ${tmpfile}
+mvn -o -B --fail-never -s ${MAVEN_SETTINGS_XML} verify -P skip-unstable-ci -pl qa/integration-tests -DtestMavenId=2 -Dsurefire.rerunFailingTestsCount=7 | tee ${tmpfile}
 
 status=${PIPESTATUS[0]}
 
