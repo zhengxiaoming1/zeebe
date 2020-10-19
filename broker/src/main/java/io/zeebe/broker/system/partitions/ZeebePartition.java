@@ -44,6 +44,7 @@ public final class ZeebePartition extends Actor
 
   private final PartitionContext context;
   private final PartitionTransition transition;
+  private CompletableActorFuture<Void> closeFuture;
 
   public ZeebePartition(final PartitionContext context, final PartitionTransition transition) {
     this.context = context;
@@ -158,6 +159,10 @@ public final class ZeebePartition extends Actor
     return transition.toInactive();
   }
 
+  private ActorFuture<Void> currentTransition() {
+    return transition.currentTransition();
+  }
+
   private CompletableFuture<Void> onRaftFailed() {
     final CompletableFuture<Void> inactiveTransitionFuture = new CompletableFuture<>();
     actor.run(
@@ -205,9 +210,21 @@ public final class ZeebePartition extends Actor
 
   @Override
   public ActorFuture<Void> closeAsync() {
-    final var closeFuture = new CompletableActorFuture<Void>();
+    if (closeFuture != null) {
+      return closeFuture;
+    }
 
-    transitionToInactive().onComplete((nothing, err) -> super.closeAsync().onComplete(closeFuture));
+    closeFuture = new CompletableActorFuture<>();
+
+    actor.call(
+        () ->
+            currentTransition()
+                .onComplete(
+                    (nothing, err) -> {
+                      LOG.warn("Closing Zeebe Partition {} {}", nothing, err);
+                      super.closeAsync();
+                    }));
+
     return closeFuture;
   }
 
@@ -220,6 +237,7 @@ public final class ZeebePartition extends Actor
 
               context.getComponentHealthMonitor().removeComponent(raftPartitionHealth.getName());
               raftPartitionHealth.close();
+              closeFuture.complete(null);
             });
   }
 

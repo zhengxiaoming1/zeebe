@@ -33,4 +33,6 @@ public interface PartitionTransition {
    * @return an ActorFuture completed when the transition is complete
    */
   ActorFuture<Void> toInactive();
+
+  ActorFuture<Void> currentTransition();
 }

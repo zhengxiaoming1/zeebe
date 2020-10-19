@@ -41,27 +41,40 @@ public class PartitionTransitionImpl implements PartitionTransition {
   @Override
   public ActorFuture<Void> toFollower() {
     final CompletableActorFuture<Void> future = new CompletableActorFuture<>();
-    currentTransition.onComplete((nothing, err) -> transition(future, followerSteps));
+    enqueueTransition(future, followerSteps);
     return future;
   }
 
   @Override
   public ActorFuture<Void> toLeader() {
     final CompletableActorFuture<Void> future = new CompletableActorFuture<>();
-    currentTransition.onComplete((nothing, err) -> transition(future, leaderSteps));
+    enqueueTransition(future, leaderSteps);
     return future;
   }
 
   @Override
   public ActorFuture<Void> toInactive() {
     final CompletableActorFuture<Void> future = new CompletableActorFuture<>();
-    currentTransition.onComplete((nothing, err) -> transition(future, EMPTY_LIST));
+    enqueueTransition(future, EMPTY_LIST);
     return future;
+  }
+
+  private void enqueueTransition(
+      final CompletableActorFuture<Void> nextTransitionFuture,
+      final List<PartitionStep> partitionStepList) {
+    final var nextCurrentTransition = currentTransition();
+    currentTransition = nextTransitionFuture;
+    nextCurrentTransition.onComplete(
+        (nothing, err) -> transition(nextTransitionFuture, partitionStepList));
+  }
+
+  @Override
+  public ActorFuture<Void> currentTransition() {
+    return currentTransition;
   }
 
   private void transition(
       final CompletableActorFuture<Void> future, final List<PartitionStep> steps) {
-    currentTransition = future;
     closePartition()
         .onComplete(
             (nothing, err) -> {
@@ -76,6 +89,7 @@ public class PartitionTransitionImpl implements PartitionTransition {
   private void installPartition(
       final CompletableActorFuture<Void> future, final List<PartitionStep> steps) {
     if (steps.isEmpty()) {
+      LOG.warn("Partition installation complete, installed {} steps!", openedSteps.size());
       future.complete(null);
       return;
     }
@@ -110,6 +124,7 @@ public class PartitionTransitionImpl implements PartitionTransition {
   private void stepByStepClosing(
       final CompletableActorFuture<Void> future, final List<PartitionStep> steps) {
     if (steps.isEmpty()) {
+      LOG.warn("Completed all necessary steps, transition complete.");
       future.complete(null);
       return;
     }
