@@ -178,6 +178,12 @@ pipeline {
                                 sh '.ci/scripts/distribution/it-java.sh'
                             }
                         }
+
+                        container('maven') {
+                            configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
+                                sh '.ci/scripts/distribution/upgrade-java.sh'
+                            }
+                        }
                     }
 
                     post {
@@ -187,12 +193,18 @@ pipeline {
                     }
                 }
 
-                stage('Upgrade (Java)') {
+                stage('IT (Java)') {
                     environment {
-                      SUREFIRE_REPORT_NAME_SUFFIX = 'upgrade-testrun'
+                      SUREFIRE_REPORT_NAME_SUFFIX = 'it-testrun'
                     }
 
                     steps {
+                        container('maven') {
+                            configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
+                                sh '.ci/scripts/distribution/it-java.sh'
+                            }
+                        }
+
                         container('maven') {
                             configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
                                 sh '.ci/scripts/distribution/upgrade-java.sh'
