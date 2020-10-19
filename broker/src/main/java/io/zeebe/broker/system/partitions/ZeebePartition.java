@@ -207,10 +207,7 @@ public final class ZeebePartition extends Actor
   public ActorFuture<Void> closeAsync() {
     final var closeFuture = new CompletableActorFuture<Void>();
 
-    transitionToInactive()
-        .onComplete((nothing, err) ->
-            super.closeAsync().onComplete(closeFuture)
-        );
+    transitionToInactive().onComplete((nothing, err) -> super.closeAsync().onComplete(closeFuture));
     return closeFuture;
   }
 
