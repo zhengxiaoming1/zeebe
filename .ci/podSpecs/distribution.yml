@@ -30,10 +30,10 @@ spec:
           value: /home/shared
       resources:
         limits:
-          cpu: 8
+          cpu: 16
           memory: 32Gi
         requests:
-          cpu: 8
+          cpu: 16
           memory: 32Gi
       securityContext:
         privileged: true
