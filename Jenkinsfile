@@ -193,32 +193,6 @@ pipeline {
                     }
                 }
 
-                stage('IT (Java)') {
-                    environment {
-                      SUREFIRE_REPORT_NAME_SUFFIX = 'it-testrun'
-                    }
-
-                    steps {
-                        container('maven') {
-                            configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
-                                sh '.ci/scripts/distribution/it-java.sh'
-                            }
-                        }
-
-                        container('maven') {
-                            configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
-                                sh '.ci/scripts/distribution/upgrade-java.sh'
-                            }
-                        }
-                    }
-
-                    post {
-                        always {
-                            junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
-                        }
-                    }
-                }
-
                 stage('Build Docs') {
                     steps {
                       retry(3) {
