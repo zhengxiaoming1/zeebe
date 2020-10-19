@@ -178,7 +178,21 @@ pipeline {
                                 sh '.ci/scripts/distribution/it-java.sh'
                             }
                         }
+                    }
 
+                    post {
+                        always {
+                            junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
+                        }
+                    }
+                }
+
+                stage('Upgrade (Java)') {
+                    environment {
+                      SUREFIRE_REPORT_NAME_SUFFIX = 'upgrade-testrun'
+                    }
+
+                    steps {
                         container('maven') {
                             configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
                                 sh '.ci/scripts/distribution/upgrade-java.sh'
