@@ -173,7 +173,7 @@ pipeline {
                     }
 
                     steps {
-                        container('maven') {
+                        container('maven-it') {
                             configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
                                 sh '.ci/scripts/distribution/it-java.sh'
                             }
@@ -193,7 +193,7 @@ pipeline {
                     }
 
                     steps {
-                        container('maven') {
+                        container('maven-upgrade') {
                             configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
                                 sh '.ci/scripts/distribution/upgrade-java.sh'
                             }
