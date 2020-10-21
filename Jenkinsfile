@@ -96,8 +96,6 @@ pipeline {
             }
         }
 
-
-
         stage('Test') {
             parallel {
                 stage('Go') {
@@ -118,7 +116,7 @@ pipeline {
                     }
                }
 
-               stage('Analyse (Java)') {
+                stage('Analyse (Java)') {
                       steps {
                           container('maven') {
                                configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
@@ -147,6 +145,7 @@ pipeline {
                         }
                     }
                 }
+
                 stage('Unit 8 (Java 8)') {
                     environment {
                       SUREFIRE_REPORT_NAME_SUFFIX = 'java8-testrun'
@@ -168,6 +167,15 @@ pipeline {
                 }
 
                 stage('IT (Java)') {
+                    agent {
+                        kubernetes {
+                            cloud 'zeebe-ci'
+                            label "zeebe-ci-build_${buildName.take(16)}-it"
+                            defaultContainer 'jnlp'
+                            yamlFile '.ci/podSpecs/distribution.yml'
+                        }
+                    }
+
                     environment {
                       SUREFIRE_REPORT_NAME_SUFFIX = 'it-testrun'
                     }
