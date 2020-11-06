@@ -53,7 +53,6 @@ public final class TopologyTest extends GatewayTest {
   public void shouldUpdatePartitionHealth() {
     // given
     final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
-    topology.setPartitionHealthy(0, 1);
     topology.setPartitionUnhealthy(0, 1);
 
     // when
@@ -65,20 +64,17 @@ public final class TopologyTest extends GatewayTest {
   }
 
   @Test
-  public void shouldUpdatePartitionHealthUnhealthy() {
+  public void shouldUpdateMultiplePartitionHealths() {
     // given
     final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
-    topology.setPartitionHealthy(0, 1);
-    final var topologyAfterUpdate =
-        (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
-    topologyAfterUpdate.setPartitionUnhealthy(0, 1);
-    topologyAfterUpdate.setPartitionHealthy(0, 6);
+    topology.setPartitionUnhealthy(0, 1);
+    topology.setPartitionHealthy(0, 6);
 
     // when
-    final var responseAfterUpdate = client.topology(TopologyRequest.newBuilder().build());
+    final var response = client.topology(TopologyRequest.newBuilder().build());
 
     // then
-    final var brokerInfo = responseAfterUpdate.getBrokers(0);
+    final var brokerInfo = response.getBrokers(0);
     assertThat(brokerInfo.getPartitions(0).getHealth()).isEqualTo(PartitionBrokerHealth.UNHEALTHY);
     assertThat(brokerInfo.getPartitions(5).getHealth()).isEqualTo(PartitionBrokerHealth.HEALTHY);
   }
