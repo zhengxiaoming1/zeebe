@@ -11,21 +11,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.zeebe.gateway.api.util.GatewayTest;
 import io.zeebe.gateway.impl.broker.cluster.BrokerClusterStateImpl;
-import io.zeebe.gateway.protocol.GatewayOuterClass.BrokerInfo;
 import io.zeebe.gateway.protocol.GatewayOuterClass.Partition.PartitionBrokerHealth;
 import io.zeebe.gateway.protocol.GatewayOuterClass.TopologyRequest;
-import io.zeebe.gateway.protocol.GatewayOuterClass.TopologyResponse;
 import org.junit.Test;
 
-public class TopologyTest extends GatewayTest {
+public final class TopologyTest extends GatewayTest {
 
   @Test
   public void shouldResponseWithInitialUnhealthyPartitions() {
     // when
-    final TopologyResponse topologyResponse = client.topology(TopologyRequest.newBuilder().build());
+    final var response = client.topology(TopologyRequest.newBuilder().build());
 
     // then
-    assertThat(topologyResponse.getBrokersList())
+    assertThat(response.getBrokersList())
         .isNotEmpty()
         .allSatisfy(
             brokerInfo ->
@@ -40,36 +38,47 @@ public class TopologyTest extends GatewayTest {
   @Test
   public void shouldUpdatePartitionHealthHealthy() {
     // given
-    final BrokerClusterStateImpl topology =
-        (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
+    final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
     topology.setPartitionHealthy(0, 1);
 
     // when
-    final TopologyResponse topologyResponse = client.topology(TopologyRequest.newBuilder().build());
+    final var response = client.topology(TopologyRequest.newBuilder().build());
 
     // then
-    final PartitionBrokerHealth health =
-        topologyResponse.getBrokers(0).getPartitions(0).getHealth();
+    final var health = response.getBrokers(0).getPartitions(0).getHealth();
     assertThat(health).isEqualTo(PartitionBrokerHealth.HEALTHY);
+  }
+
+  @Test
+  public void shouldUpdatePartitionHealth() {
+    // given
+    final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
+    topology.setPartitionHealthy(0, 1);
+    topology.setPartitionUnhealthy(0, 1);
+
+    // when
+    final var response = client.topology(TopologyRequest.newBuilder().build());
+
+    // then
+    final var health = response.getBrokers(0).getPartitions(0).getHealth();
+    assertThat(health).isEqualTo(PartitionBrokerHealth.UNHEALTHY);
   }
 
   @Test
   public void shouldUpdatePartitionHealthUnhealthy() {
     // given
-    final BrokerClusterStateImpl topology =
-        (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
+    final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
     topology.setPartitionHealthy(0, 1);
-    final BrokerClusterStateImpl topologyAfterUpdate =
+    final var topologyAfterUpdate =
         (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
     topologyAfterUpdate.setPartitionUnhealthy(0, 1);
     topologyAfterUpdate.setPartitionHealthy(0, 6);
 
     // when
-    final TopologyResponse responseAfterUpdate =
-        client.topology(TopologyRequest.newBuilder().build());
+    final var responseAfterUpdate = client.topology(TopologyRequest.newBuilder().build());
 
     // then
-    final BrokerInfo brokerInfo = responseAfterUpdate.getBrokers(0);
+    final var brokerInfo = responseAfterUpdate.getBrokers(0);
     assertThat(brokerInfo.getPartitions(0).getHealth()).isEqualTo(PartitionBrokerHealth.UNHEALTHY);
     assertThat(brokerInfo.getPartitions(5).getHealth()).isEqualTo(PartitionBrokerHealth.HEALTHY);
   }
