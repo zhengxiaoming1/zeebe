@@ -33,6 +33,10 @@ func (a ByPartitionID) Len() int           { return len(a) }
 func (a ByPartitionID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByPartitionID) Less(i, j int) bool { return a[i].PartitionId < a[j].PartitionId }
 
+var (
+	jsonFlag bool
+)
+
 var statusCmd = &cobra.Command{
 	Use:     "status",
 	Short:   "Checks the current status of the cluster",
@@ -49,7 +53,11 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 
-		printStatus(resp)
+		if jsonFlag {
+			printJSON(resp)
+		} else {
+			printStatus(resp)
+		}
 		return nil
 	},
 }
@@ -92,6 +100,8 @@ func printStatus(resp *pb.TopologyResponse) {
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
+
+	statusCmd.Flags().BoolVar(&jsonFlag, "json", false, "Specify to format output as JSON")
 }
 
 const unknownState = "Unknown"
