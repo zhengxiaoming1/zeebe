@@ -1296,6 +1296,21 @@
                 and don't set the system property -->
                 <testForkNumber>$${surefire.forkNumber}</testForkNumber>
               </systemPropertyVariables>
+              <properties>
+                <!--
+                  allow junit5 parallel execution, configured on the number of cores
+                  note that this does not make tests parallel, this is still controlled in the tests
+                  themselves via the @Execution annotation. furthermore, child modules can define
+                  their own parallel configuration
+                -->
+                <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
+                <junit.jupiter.execution.parallel.mode.default>same_thread</junit.jupiter.execution.parallel.mode.default>
+                <junit.jupiter.execution.parallel.mode.classes.default>same_thread</junit.jupiter.execution.parallel.mode.classes.default>
+
+                <!-- will configure based on cpuCount * factor -->
+                <junit.jupiter.execution.parallel.config.strategy>dynamic</junit.jupiter.execution.parallel.config.strategy>
+                <junit.jupiter.execution.parallel.config.dynamic.factor>0.5</junit.jupiter.execution.parallel.config.dynamic.factor>
+              </properties>
             </configuration>
           </plugin>
         </plugins>
