@@ -1,13 +1,22 @@
 #!/bin/bash -eux
 
-
-export JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -XX:MaxRAMFraction=$((LIMITS_CPU))"
-
+# getconf is a POSIX way to get the number of processors available which works on both Linux and macOS
+LIMITS_CPU=${LIMITS_CPU:-$(getconf _NPROCESSORS_ONLN)}
+FORK_COUNT=${FORK_COUNT:-}
+MAVEN_PROPERTIES=(
+  -DtestMavenId=2
+  -Dsurefire.rerunFailingTestsCount=7
+)
 tmpfile=$(mktemp)
 
-mvn -B -T$LIMITS_CPU -s ${MAVEN_SETTINGS_XML} test-compile -Pprepare-offline -pl qa/integration-tests -pl update-tests
+if [ ! -z "$FORK_COUNT" ]; then
+  MAVEN_PROPERTIES+=("-DforkCount=$FORK_COUNT")
+  # if we know the fork count, we can limit the max heap for each fork to ensure we're not OOM killed
+  JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS} -XX:MaxRAMPercentage=$((100 / ($LIMITS_CPU * $FORK_COUNT)))"
+fi
 
-mvn -o -B --fail-never -T$LIMITS_CPU -s ${MAVEN_SETTINGS_XML} verify -P skip-unstable-ci,parallel-tests -pl qa/integration-tests -pl update-tests -DtestMavenId=2 -Dsurefire.rerunFailingTestsCount=7 | tee ${tmpfile}
+mvn -B -T$LIMITS_CPU -s ${MAVEN_SETTINGS_XML} test-compile -Pprepare-offline -pl qa/integration-tests -pl update-tests
+mvn -o -B --fail-never -T$LIMITS_CPU -s ${MAVEN_SETTINGS_XML} verify -P skip-unstable-ci,parallel-tests -pl qa/integration-tests -pl update-tests "${MAVEN_PROPERTIES[@]}" | tee ${tmpfile}
 
 status=${PIPESTATUS[0]}
 
