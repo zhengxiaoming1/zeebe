@@ -26,7 +26,7 @@ if grep -q "\[WARNING\] Flakes:" ${tmpfile}; then
 
   awk '/^\[WARNING\] Flakes:.*$/{flag=1}/^\[ERROR\] Tests run:.*Flakes: [0-9]*$/{print;flag=0}flag' ${tmpfile} > ${tmpfile2}
 
-  grep "\[ERROR\]   Run 1: " ${tmpfile} | awk '{print $4}' >> ./target/FlakyTests.txt
+  grep "\[ERROR\]   Run 1: " ${tmpfile2} | awk '{print $4}' >> ./target/FlakyTests.txt
 
   echo ERROR: Flaky Tests detected>&2
 
