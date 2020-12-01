@@ -137,6 +137,10 @@ pipeline {
                         always {
                             junit testResults: "**/*/TEST-go.xml", keepLongStdio: true
                         }
+
+                        failure {
+                            onVerificationFailure()
+                        }
                     }
                 }
 
@@ -156,6 +160,11 @@ pipeline {
                     post {
                         always {
                             junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
+                            checkTestCoverage()
+                        }
+
+                        failure {
+                            onVerificationFailure()
                         }
                     }
                 }
@@ -174,6 +183,11 @@ pipeline {
                     post {
                         always {
                             junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
+                            checkTestCoverage()
+                        }
+
+                        failure {
+                            onVerificationFailure()
                         }
                     }
                 }
@@ -231,34 +245,13 @@ pipeline {
                             post {
                                 always {
                                     junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
+                                    checkTestCoverage()
+                                }
+
+                                failure {
+                                    onVerificationFailure()
                                 }
                             }
-                        }
-                    }
-                }
-            }
-
-            post {
-                always {
-                    jacoco(
-                        execPattern: '**/*.exec',
-                        classPattern: '**/target/classes',
-                        sourcePattern: '**/src/main/java,**/generated-sources/protobuf/java,**/generated-sources/assertj-assertions,**/generated-sources/sbe',
-                        exclusionPattern: '**/io/zeebe/gateway/protocol/**,'
-                            + '**/*Encoder.class,**/*Decoder.class,**/MetaAttribute.class,'
-                            + '**/io/zeebe/protocol/record/**/*Assert.class,**/io/zeebe/protocol/record/Assertions.class,', // classes from generated resources
-                        runAlways: true
-                    )
-                    zip zipFile: 'test-coverage-reports.zip', archive: true, glob: "**/target/site/jacoco/**"
-                }
-
-                failure {
-                    zip zipFile: 'test-reports.zip', archive: true, glob: "**/*/surefire-reports/**"
-                    archive "**/hs_err_*.log"
-
-                    script {
-                        if (fileExists('./target/FlakyTests.txt')) {
-                            currentBuild.description = "Flaky Tests: <br>" + readFile('./target/FlakyTests.txt').split('\n').join('<br>')
                         }
                     }
                 }
@@ -459,4 +452,28 @@ def templatePodspec(String podspecPath, flags = [:]) {
     templateString = templateString.replaceAll('PODSPEC_TEMPLATE_NODE_POOL', nodePoolName)
 
     templateString
+}
+
+def checkTestCoverage() {
+    jacoco(
+        execPattern: '**/*.exec',
+        classPattern: '**/target/classes',
+        sourcePattern: '**/src/main/java,**/generated-sources/protobuf/java,**/generated-sources/assertj-assertions,**/generated-sources/sbe',
+        exclusionPattern: '**/io/zeebe/gateway/protocol/**,'
+            + '**/*Encoder.class,**/*Decoder.class,**/MetaAttribute.class,'
+            + '**/io/zeebe/protocol/record/**/*Assert.class,**/io/zeebe/protocol/record/Assertions.class,', // classes from generated resources
+        runAlways: true
+    )
+    zip zipFile: 'test-coverage-reports.zip', archive: true, glob: "**/target/site/jacoco/**"
+}
+
+def onVerificationFailure() {
+    zip zipFile: 'test-reports.zip', archive: true, glob: "**/*/surefire-reports/**"
+    archive "**/hs_err_*.log"
+
+    script {
+        if (fileExists('./target/FlakyTests.txt')) {
+            currentBuild.description = "Flaky Tests: <br>" + readFile('./target/FlakyTests.txt').split('\n').join('<br>')
+        }
+    }
 }
