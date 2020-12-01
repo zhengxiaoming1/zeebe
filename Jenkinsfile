@@ -137,10 +137,6 @@ pipeline {
                         always {
                             junit testResults: "**/*/TEST-go.xml", keepLongStdio: true
                         }
-
-                        failure {
-                            onVerificationFailure()
-                        }
                     }
                 }
 
@@ -160,12 +156,10 @@ pipeline {
                     post {
                         always {
                             junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
-                            checkTestCoverage()
                         }
 
                         failure {
-                            onVerificationFailure()
-                            archive "**/elasticsearch-exporter/target/failsafe-reports/*.txt"
+                            zip zipFile: 'es-failsafe.zip', archive: true, glob: "**/elasticsearch-exporter/target/failsafe-reports/*.txt"
                         }
                     }
                 }
@@ -184,11 +178,6 @@ pipeline {
                     post {
                         always {
                             junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
-                            checkTestCoverage()
-                        }
-
-                        failure {
-                            onVerificationFailure()
                         }
                     }
                 }
@@ -243,6 +232,7 @@ pipeline {
                                 }
                             }
 
+                            // the normal post steps must be ran on every agent
                             post {
                                 always {
                                     junit testResults: "**/*/TEST*${SUREFIRE_REPORT_NAME_SUFFIX}*.xml", keepLongStdio: true
@@ -255,6 +245,17 @@ pipeline {
                             }
                         }
                     }
+                }
+            }
+
+            // the normal post steps must be ran on every agent
+            post {
+                always {
+                    checkTestCoverage()
+                }
+
+                failure {
+                    onVerificationFailure()
                 }
             }
         }
