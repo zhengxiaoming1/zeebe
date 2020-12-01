@@ -165,6 +165,7 @@ pipeline {
 
                         failure {
                             onVerificationFailure()
+                            archive "**/elasticsearch-exporter/target/failsafe-reports/*.txt"
                         }
                     }
                 }
