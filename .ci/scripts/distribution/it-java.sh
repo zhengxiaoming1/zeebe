@@ -16,8 +16,10 @@ if [ ! -z "$SUREFIRE_FORK_COUNT" ]; then
   JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS} -XX:MaxRAMPercentage=$((100 / (MAVEN_PARALLELISM * $SUREFIRE_FORK_COUNT)))"
 fi
 
-mvn -B -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} test-compile -Pprepare-offline -pl qa/integration-tests -pl update-tests
-mvn -o -B --fail-never -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} verify -P skip-unstable-ci,parallel-tests -pl qa/integration-tests -pl update-tests "${MAVEN_PROPERTIES[@]}" | tee ${tmpfile}
+# make sure to specify the profiles used in the verify goal when running preparing to go offline, as
+# these may require some additional plugin dependencies
+mvn -B -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} test-compile -Pprepare-offline,skip-unstable-ci,parallel-tests -pl qa/integration-tests,update-tests
+mvn -o -B --fail-never -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} verify -P skip-unstable-ci,parallel-tests -pl qa/integration-tests,update-tests "${MAVEN_PROPERTIES[@]}" | tee ${tmpfile}
 
 status=${PIPESTATUS[0]}
 
