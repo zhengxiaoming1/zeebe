@@ -16,7 +16,7 @@ public final class SocketUtil {
   static final Logger LOG = LoggerFactory.getLogger("io.zeebe.test.util.SocketUtil");
 
   private static final String DEFAULT_HOST = "localhost";
-  private static final int BASE_PORT = 25600;
+  private static final int BASE_PORT = 1025;
   private static final int PORT_RANGE_PER_TEST_FORK = 100;
   private static final int MAX_TEST_FORKS_PER_STAGE = 39;
   private static final int PORT_RANGE_PER_TEST_STAGE =
